@@ -1,5 +1,5 @@
 // Settings Screen - App settings and profile
-import React, {useState} from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import {useAuth, useSubscription, useTheme} from '@/shared/contexts';
+import {useAuth, useUser, useSubscription, useTheme} from '@/shared/contexts';
 import {RootStackParamList} from '@/shared/types';
 import {COLORS, SUBSCRIPTION_PLANS, TRIAL_SCAN_LIMIT} from '@/shared/utils/constants';
 import {formatDate} from '@/shared/utils/helpers';
@@ -78,17 +78,35 @@ function SettingSection({
 export function SettingsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const {user, signOut} = useAuth();
+  const {profile, toggleNotifications, togglePriceAlerts} = useUser();
   const {subscription, trialScansUsed} = useSubscription();
   const {isDarkMode, toggleTheme} = useTheme();
 
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [priceAlertsEnabled, setPriceAlertsEnabled] = useState(true);
+  // Use profile settings or defaults
+  const notificationsEnabled = profile?.notificationsEnabled ?? true;
+  const priceAlertsEnabled = profile?.priceAlertsEnabled ?? true;
 
   const currentPlan = subscription?.planId 
     ? SUBSCRIPTION_PLANS[subscription.planId] 
     : SUBSCRIPTION_PLANS.free;
 
   const trialRemaining = Math.max(0, TRIAL_SCAN_LIMIT - trialScansUsed);
+
+  const handleToggleNotifications = async (value: boolean) => {
+    try {
+      await toggleNotifications(value);
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de modifier les notifications');
+    }
+  };
+
+  const handleTogglePriceAlerts = async (value: boolean) => {
+    try {
+      await togglePriceAlerts(value);
+    } catch (error) {
+      Alert.alert('Erreur', 'Impossible de modifier les alertes de prix');
+    }
+  };
 
   const handleSignOut = () => {
     Alert.alert(
@@ -228,7 +246,7 @@ export function SettingsScreen() {
             rightElement={
               <Switch
                 value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
+                onValueChange={handleToggleNotifications}
                 trackColor={{false: COLORS.gray[200], true: COLORS.primary[300]}}
                 thumbColor={notificationsEnabled ? COLORS.primary[500] : '#ffffff'}
               />
@@ -242,7 +260,7 @@ export function SettingsScreen() {
             rightElement={
               <Switch
                 value={priceAlertsEnabled}
-                onValueChange={setPriceAlertsEnabled}
+                onValueChange={handleTogglePriceAlerts}
                 trackColor={{false: COLORS.gray[200], true: COLORS.primary[300]}}
                 thumbColor={priceAlertsEnabled ? COLORS.primary[500] : '#ffffff'}
               />

@@ -35,3 +35,17 @@ export {
   completeRegistration,
   checkIdentifierAvailability,
 } from './auth/verification';
+
+// Phase 1.1 - Price Alerts functions
+export {
+  checkPriceAlerts,
+  scheduledAlertCheck,
+  createPriceAlert,
+  getUserAlerts,
+} from './alerts/priceAlerts';
+
+// Phase 1.2 - Natural Language Query functions
+export {
+  processNLQuery,
+  getSpendingSuggestions,
+} from './assistant/naturalLanguage';

@@ -6,12 +6,20 @@ export * from './subscription.types';
 
 // Navigation types
 export type RootStackParamList = {
+  Welcome: undefined;
   Main: undefined;
   Scanner: undefined;
+  MultiPhotoScanner: undefined;
   ReceiptDetail: {receiptId: string};
   PriceComparison: {receiptId: string};
   Subscription: undefined;
   Settings: undefined;
+  // Phase 1.1 Screens
+  PriceAlerts: undefined;
+  Achievements: undefined;
+  // Phase 1.2 Screens
+  ShoppingList: undefined;
+  AIAssistant: undefined;
 };
 
 export type MainTabParamList = {

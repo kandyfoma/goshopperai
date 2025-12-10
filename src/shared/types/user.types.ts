@@ -23,7 +23,7 @@ export interface UserProfile {
   isInDRC?: boolean;
   verified?: boolean;
   verifiedAt?: Date;
-  preferredLanguage: 'fr' | 'en';
+  preferredLanguage: 'fr' | 'ln' | 'sw' | 'en';
   preferredCurrency: 'USD' | 'CDF';
   defaultCity?: string;
   notificationsEnabled: boolean;

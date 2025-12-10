@@ -1,0 +1,258 @@
+// Receipt Storage Service - Handles saving receipts and shop organization
+import firestore, {FirebaseFirestoreTypes} from '@react-native-firebase/firestore';
+import storage from '@react-native-firebase/storage';
+import {Receipt} from '@/shared/types';
+import {APP_ID} from './config';
+
+const RECEIPTS_COLLECTION = (userId: string) => 
+  `apps/${APP_ID}/users/${userId}/receipts`;
+
+const SHOPS_COLLECTION = (userId: string) =>
+  `apps/${APP_ID}/users/${userId}/shops`;
+
+export interface Shop {
+  id: string;
+  name: string;
+  nameNormalized: string;
+  address?: string;
+  phone?: string;
+  receiptCount: number;
+  totalSpent: number;
+  currency: 'USD' | 'CDF';
+  lastVisit: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+class ReceiptStorageService {
+  /**
+   * Save a receipt and update/create the associated shop
+   */
+  async saveReceipt(receipt: Receipt, userId: string): Promise<string> {
+    const batch = firestore().batch();
+    
+    // 1. Save receipt
+    const receiptRef = firestore()
+      .collection(RECEIPTS_COLLECTION(userId))
+      .doc(receipt.id);
+    
+    batch.set(receiptRef, {
+      ...receipt,
+      date: firestore.Timestamp.fromDate(receipt.date),
+      createdAt: firestore.FieldValue.serverTimestamp(),
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+      scannedAt: firestore.FieldValue.serverTimestamp(),
+    });
+    
+    // 2. Update or create shop
+    await this.updateShopFromReceipt(receipt, userId, batch);
+    
+    await batch.commit();
+    
+    return receipt.id;
+  }
+
+  /**
+   * Update or create a shop based on receipt data
+   * Shop is automatically detected from receipt - user doesn't create manually
+   */
+  private async updateShopFromReceipt(
+    receipt: Receipt,
+    userId: string,
+    batch: FirebaseFirestoreTypes.WriteBatch,
+  ): Promise<void> {
+    const shopId = receipt.storeNameNormalized || 
+      this.normalizeStoreName(receipt.storeName);
+    
+    const shopRef = firestore()
+      .collection(SHOPS_COLLECTION(userId))
+      .doc(shopId);
+    
+    const shopDoc = await shopRef.get();
+    
+    if (shopDoc.exists) {
+      // Update existing shop
+      batch.update(shopRef, {
+        receiptCount: firestore.FieldValue.increment(1),
+        totalSpent: firestore.FieldValue.increment(receipt.total),
+        lastVisit: firestore.Timestamp.fromDate(receipt.date),
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+        // Update address/phone if not set
+        ...(receipt.storeAddress && !shopDoc.data()?.address 
+          ? {address: receipt.storeAddress} 
+          : {}),
+        ...(receipt.storePhone && !shopDoc.data()?.phone 
+          ? {phone: receipt.storePhone} 
+          : {}),
+      });
+    } else {
+      // Create new shop - automatically from receipt data
+      const newShop: Omit<Shop, 'createdAt' | 'updatedAt'> = {
+        id: shopId,
+        name: receipt.storeName,
+        nameNormalized: shopId,
+        address: receipt.storeAddress,
+        phone: receipt.storePhone,
+        receiptCount: 1,
+        totalSpent: receipt.total,
+        currency: receipt.currency,
+        lastVisit: receipt.date,
+      };
+      
+      batch.set(shopRef, {
+        ...newShop,
+        lastVisit: firestore.Timestamp.fromDate(receipt.date),
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
+  /**
+   * Get all receipts for a user
+   */
+  async getReceipts(userId: string): Promise<Receipt[]> {
+    const snapshot = await firestore()
+      .collection(RECEIPTS_COLLECTION(userId))
+      .orderBy('date', 'desc')
+      .get();
+    
+    return snapshot.docs.map(doc => this.docToReceipt(doc));
+  }
+
+  /**
+   * Get receipts by shop
+   */
+  async getReceiptsByShop(userId: string, shopId: string): Promise<Receipt[]> {
+    const snapshot = await firestore()
+      .collection(RECEIPTS_COLLECTION(userId))
+      .where('storeNameNormalized', '==', shopId)
+      .orderBy('date', 'desc')
+      .get();
+    
+    return snapshot.docs.map(doc => this.docToReceipt(doc));
+  }
+
+  /**
+   * Get all shops for a user
+   */
+  async getShops(userId: string): Promise<Shop[]> {
+    const snapshot = await firestore()
+      .collection(SHOPS_COLLECTION(userId))
+      .orderBy('lastVisit', 'desc')
+      .get();
+    
+    return snapshot.docs.map(doc => ({
+      ...doc.data(),
+      id: doc.id,
+      lastVisit: doc.data().lastVisit?.toDate() || new Date(),
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+    })) as Shop[];
+  }
+
+  /**
+   * Get a single receipt
+   */
+  async getReceipt(userId: string, receiptId: string): Promise<Receipt | null> {
+    const doc = await firestore()
+      .collection(RECEIPTS_COLLECTION(userId))
+      .doc(receiptId)
+      .get();
+    
+    if (!doc.exists) return null;
+    return this.docToReceipt(doc);
+  }
+
+  /**
+   * Delete a receipt and update shop stats
+   */
+  async deleteReceipt(userId: string, receiptId: string): Promise<void> {
+    const receipt = await this.getReceipt(userId, receiptId);
+    if (!receipt) return;
+    
+    const batch = firestore().batch();
+    
+    // Delete receipt
+    const receiptRef = firestore()
+      .collection(RECEIPTS_COLLECTION(userId))
+      .doc(receiptId);
+    batch.delete(receiptRef);
+    
+    // Update shop stats
+    const shopId = receipt.storeNameNormalized;
+    if (shopId) {
+      const shopRef = firestore()
+        .collection(SHOPS_COLLECTION(userId))
+        .doc(shopId);
+      
+      const shopDoc = await shopRef.get();
+      if (shopDoc.exists) {
+        const newCount = (shopDoc.data()?.receiptCount || 1) - 1;
+        
+        if (newCount <= 0) {
+          // Delete shop if no more receipts
+          batch.delete(shopRef);
+        } else {
+          batch.update(shopRef, {
+            receiptCount: firestore.FieldValue.increment(-1),
+            totalSpent: firestore.FieldValue.increment(-receipt.total),
+            updatedAt: firestore.FieldValue.serverTimestamp(),
+          });
+        }
+      }
+    }
+    
+    await batch.commit();
+  }
+
+  /**
+   * Upload receipt images to storage
+   */
+  async uploadReceiptImages(
+    userId: string,
+    receiptId: string,
+    imageUris: string[],
+  ): Promise<string[]> {
+    const uploadPromises = imageUris.map(async (uri, index) => {
+      const path = `apps/${APP_ID}/users/${userId}/receipts/${receiptId}/image_${index}.jpg`;
+      const ref = storage().ref(path);
+      
+      await ref.putFile(uri);
+      return ref.getDownloadURL();
+    });
+    
+    return Promise.all(uploadPromises);
+  }
+
+  /**
+   * Convert Firestore doc to Receipt
+   */
+  private docToReceipt(doc: FirebaseFirestoreTypes.DocumentSnapshot): Receipt {
+    const data = doc.data()!;
+    return {
+      ...data,
+      id: doc.id,
+      date: data.date?.toDate() || new Date(),
+      purchaseDate: data.date?.toDate() || new Date(),
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date(),
+      scannedAt: data.scannedAt?.toDate() || new Date(),
+    } as Receipt;
+  }
+
+  /**
+   * Normalize store name for ID
+   */
+  private normalizeStoreName(name: string): string {
+    return name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '_')
+      .trim();
+  }
+}
+
+export const receiptStorageService = new ReceiptStorageService();

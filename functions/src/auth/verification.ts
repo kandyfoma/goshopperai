@@ -11,7 +11,6 @@ import { config, collections } from '../config';
 const db = admin.firestore();
 
 // Verification code settings
-const CODE_LENGTH = 6;
 const CODE_EXPIRY_MINUTES = 10;
 const MAX_ATTEMPTS = 3;
 const RESEND_COOLDOWN_SECONDS = 60;

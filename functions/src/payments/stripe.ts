@@ -117,8 +117,9 @@ export const createCardPaymentIntent = functions
     } catch (error: unknown) {
       console.error('Stripe payment intent error:', error);
 
-      if (error instanceof Stripe.errors.StripeError) {
-        throw new functions.https.HttpsError('unavailable', error.message);
+      const stripeError = error as { message?: string };
+      if (stripeError.message) {
+        throw new functions.https.HttpsError('unavailable', stripeError.message);
       }
 
       throw new functions.https.HttpsError(
@@ -307,12 +308,6 @@ async function activateCardSubscription(
   const billingPeriodStart = new Date(now);
   const billingPeriodEnd = new Date(now);
   billingPeriodEnd.setMonth(billingPeriodEnd.getMonth() + 1);
-
-  const planScanLimits: Record<string, number> = {
-    basic: 25,
-    standard: 100,
-    premium: -1,
-  };
 
   await subscriptionRef.set(
     {

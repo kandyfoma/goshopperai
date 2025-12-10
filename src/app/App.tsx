@@ -11,6 +11,7 @@ import {SafeAreaProvider} from 'react-native-safe-area-context';
 
 import {RootNavigator} from '@/navigation/RootNavigator';
 import {AuthProvider} from '@/shared/contexts/AuthContext';
+import {UserProvider} from '@/shared/contexts/UserContext';
 import {SubscriptionProvider} from '@/shared/contexts/SubscriptionContext';
 import {ThemeProvider} from '@/shared/contexts/ThemeContext';
 import {initializeFirebase} from '@/shared/services/firebase/config';
@@ -32,16 +33,18 @@ function App(): React.JSX.Element {
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
-            <SubscriptionProvider>
-              <NavigationContainer>
-                <StatusBar
-                  barStyle="dark-content"
-                  backgroundColor="transparent"
-                  translucent
-                />
-                <RootNavigator />
-              </NavigationContainer>
-            </SubscriptionProvider>
+            <UserProvider>
+              <SubscriptionProvider>
+                <NavigationContainer>
+                  <StatusBar
+                    barStyle="dark-content"
+                    backgroundColor="transparent"
+                    translucent
+                  />
+                  <RootNavigator />
+                </NavigationContainer>
+              </SubscriptionProvider>
+            </UserProvider>
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>

@@ -483,7 +483,612 @@ Users can choose from tiered subscription plans with different scan limits and f
 
 ---
 
-## Non-Functional Requirements
+## Feature 9: Long Receipt / Multi-Photo Capture
+
+### Description
+Users can capture very long receipts that don't fit in a single photo by taking multiple overlapping photos. The system automatically merges them into a single receipt.
+
+### User Stories
+- As a user, I want to scan long receipts that don't fit in one photo.
+- As a user, I want to take multiple photos and have them merged automatically.
+- As a user, I want to review and retake individual photos before processing.
+
+### Acceptance Criteria
+
+| ID | Criteria | Priority |
+|----|----------|----------|
+| LR-1 | "Long Receipt" button available on home screen | Must |
+| LR-2 | User can capture up to 5 photos per receipt | Must |
+| LR-3 | Photo thumbnails shown with add/remove/retake options | Must |
+| LR-4 | Overlap guidance shown for better merging | Should |
+| LR-5 | All photos processed as single receipt (counts as 1 scan) | Must |
+| LR-6 | Store info taken from first photo | Must |
+| LR-7 | All items merged from all photos | Must |
+| LR-8 | Totals taken from last photo | Must |
+| LR-9 | Processing progress shown for each photo | Must |
+| LR-10 | Error handling for individual photo failures | Must |
+
+### Technical Implementation
+
+**Frontend:**
+- `MultiPhotoScannerScreen` with photo management
+- Up to 5 photos per receipt
+- Visual thumbnails with status indicators
+- Single API call with image array
+
+**Backend:**
+- `parseReceiptV2` Cloud Function accepts image arrays
+- Parallel processing of all images
+- Smart merging: header from first, items from all, totals from last
+- Deduplication of overlapping items
+
+### User Flow
+
+```
+Home Screen → Long Receipt Button → Multi-Photo Scanner
+    ↓
+Take Photo 1 (header) → Take Photo 2 (middle) → Take Photo 3 (bottom)
+    ↓
+Review Thumbnails → Add/Remove/Retake Photos → Process All
+    ↓
+AI Merges All Photos → Single Receipt Created → Receipt Detail
+```
+
+### Edge Cases
+| Case | Handling |
+|------|----------|
+| Photos out of order | AI sorts by content (header→items→totals) |
+| Missing overlap | Attempt merge; warn if confidence low |
+| Different lighting | Process individually; merge results |
+| Only 1 photo | Falls back to single-photo processing |
+| Network timeout | Retry logic for individual photos |
+
+---
+
+## Feature 10: Shop Categorization & Organization
+
+### Description
+Shops are automatically created and organized from scanned receipts. Users can view receipts grouped by store with spending analytics per shop.
+
+### User Stories
+- As a user, I want to see all my receipts organized by store.
+- As a user, I want to know how much I've spent at each store.
+- As a user, I want to see when I last visited each store.
+
+### Acceptance Criteria
+
+| ID | Criteria | Priority |
+|----|----------|----------|
+| SC-1 | Shop automatically created when receipt scanned | Must |
+| SC-2 | Shop name extracted from receipt header by AI | Must |
+| SC-3 | Known stores normalized (Shoprite, Carrefour, etc.) | Must |
+| SC-4 | Shop stats updated: receipt count, total spent, last visit | Must |
+| SC-5 | Shop list view shows all shops with key metrics | Must |
+| SC-6 | Receipts filterable by shop | Must |
+| SC-7 | Shop detail view shows all receipts for that shop | Should |
+| SC-8 | Shop deletion removes all associated receipts | Should |
+
+### Data Structure
+
+**Shop Document:**
+```typescript
+{
+  id: string;              // Normalized shop name
+  name: string;            // Original shop name
+  nameNormalized: string;  // For matching
+  address?: string;
+  phone?: string;
+  receiptCount: number;
+  totalSpent: number;
+  currency: 'USD' | 'CDF';
+  lastVisit: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+**Receipt Organization:**
+- Receipts stored in `users/{userId}/receipts/` collection
+- Each receipt has `storeNameNormalized` field
+- Shops stored in `users/{userId}/shops/` collection
+- Automatic shop creation/update on receipt save
+
+### Known Store Mappings
+
+| Detected Name | Normalized ID | Display Name |
+|---------------|---------------|--------------|
+| Shoprite, shoprite | shoprite | Shoprite |
+| Carrefour, carrefour | carrefour | Carrefour |
+| Peloustore, pelou store | peloustore | Peloustore |
+| Hasson & Frères, hasson | hasson_freres | Hasson & Frères |
+
+### Technical Notes
+- Shop creation happens in `receiptStorageService.saveReceipt()`
+- Real-time updates via Firestore listeners
+- Shop deletion cascades to receipts (with confirmation)
+- Shop names normalized for consistent matching
+
+---
+
+## Feature 11: User Profile & Settings Management
+
+### Description
+Users can manage their profile settings including language preferences, notification settings, and account preferences. Settings are persisted to Firestore and cached locally.
+
+### User Stories
+- As a user, I want to change my language preferences.
+- As a user, I want to control notification settings.
+- As a user, I want to manage my account preferences.
+
+### Acceptance Criteria
+
+| ID | Criteria | Priority |
+|----|----------|----------|
+| UP-1 | User profile created automatically on first scan | Must |
+| UP-2 | Profile settings persisted to Firestore | Must |
+| UP-3 | Local caching for offline access | Must |
+| UP-4 | Language preference: French/Lingala/Swahili/English | Must |
+| UP-5 | Notification toggle for price alerts | Must |
+| UP-6 | Currency preference: USD/CDF | Must |
+| UP-7 | Profile data synced across devices | Must |
+| UP-8 | Settings screen with all preferences | Must |
+
+### Profile Data Structure
+
+```typescript
+interface UserProfile {
+  userId: string;
+  displayName?: string;
+  phoneNumber?: string;
+  preferredLanguage: 'fr' | 'ln' | 'sw' | 'en';
+  preferredCurrency: 'USD' | 'CDF';
+  notificationsEnabled: boolean;
+  priceAlertsEnabled: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### Settings Available
+
+| Setting | Options | Default | Persistence |
+|---------|---------|---------|-------------|
+| Language | French, Lingala, Swahili, English | French | Firestore |
+| Currency | USD, CDF | USD | Firestore |
+| Notifications | On/Off | On | Firestore |
+| Price Alerts | On/Off | On | Firestore |
+
+### Technical Implementation
+
+**UserContext:**
+- Manages profile state with Firestore real-time listeners
+- AsyncStorage caching for offline access
+- Automatic profile creation for new users
+- Convenience methods for common updates
+
+**Settings Screen:**
+- Real-time updates to profile
+- Immediate UI feedback
+- Error handling for failed updates
+
+---
+
+## Feature 12: First-Time User Onboarding
+
+### Description
+New users see a welcoming onboarding flow that explains the app's features and guides them through their first scan.
+
+### User Stories
+- As a new user, I want to understand what the app does.
+- As a new user, I want to see the app's key features.
+- As a new user, I want guidance for my first scan.
+
+### Acceptance Criteria
+
+| ID | Criteria | Priority |
+|----|----------|----------|
+| ON-1 | Welcome screen shown only on first launch | Must |
+| ON-2 | 4-slide onboarding with key features | Must |
+| ON-3 | Bilingual content (French + Lingala) | Must |
+| ON-4 | Visual slides with large emojis | Must |
+| ON-5 | Swipe navigation between slides | Must |
+| ON-6 | Skip option available | Should |
+| ON-7 | Onboarding completion marked in storage | Must |
+| ON-8 | Direct navigation to home screen after completion | Must |
+
+### Onboarding Slides
+
+| Slide | Title (French) | Title (Lingala) | Content |
+|-------|----------------|-----------------|---------|
+| 1 | Bienvenue! | Boyei malamu! | Welcome message with app overview |
+| 2 | Photographiez | Zwa foto | How to scan receipts |
+| 3 | Analyse IA | Analyse ya AI | AI processing explanation |
+| 4 | Économisez | Bombi mbongo | Savings and price comparison |
+
+### Technical Implementation
+
+**WelcomeScreen:**
+- 4 slides with swipe navigation
+- Dot indicators for progress
+- Large 100px emojis for visual appeal
+- French primary, Lingala secondary text
+- AsyncStorage flag for completion tracking
+
+**Navigation Logic:**
+- Check `onboarding_complete` flag on app launch
+- Show Welcome screen for new users
+- Skip to Main screen for returning users
+
+---
+
+## Feature 13: Enhanced UI/UX for Target Users
+
+### Description
+The app's interface is optimized for Congolese housewives with larger touch targets, bilingual support, and simplified navigation.
+
+### User Stories
+- As a Congolese housewife, I want large, easy-to-tap buttons.
+- As a user, I want the app in French and Lingala.
+- As a user, I want clear visual guidance for each action.
+
+### Acceptance Criteria
+
+| ID | Criteria | Priority |
+|----|----------|----------|
+| UX-1 | Minimum touch target: 60x60 points | Must |
+| UX-2 | Large scan button (72px icon) on home screen | Must |
+| UX-3 | Bilingual labels: French + Lingala | Must |
+| UX-4 | Visual step-by-step guides | Must |
+| UX-5 | High contrast colors for readability | Must |
+| UX-6 | Friendly, welcoming color scheme | Must |
+| UX-7 | Large emoji icons for visual clarity | Must |
+| UX-8 | Simplified navigation with clear CTAs | Must |
+
+### UI Improvements Implemented
+
+**Home Screen:**
+- Giant SCANNER button with "Zwa foto" (Lingala)
+- Time-based greeting in French + Lingala
+- 3-step visual guide with emojis
+- Large quick action cards
+
+**Profile Screen:**
+- Friendly avatar with family emoji
+- Large stat cards with emoji indicators
+- Bilingual action buttons
+- Gamification badges
+
+**Scanner:**
+- Multi-photo support for long receipts
+- Visual progress indicators
+- Clear error messages in local languages
+
+**Settings:**
+- Large toggle switches
+- Bilingual labels
+- Profile persistence
+
+### Design Principles
+
+| Principle | Implementation |
+|-----------|----------------|
+| **Large Touch Targets** | 60px minimum, 72px for primary actions |
+| **Visual Hierarchy** | Emojis guide attention, clear typography |
+| **Bilingual Support** | French primary, Lingala for key terms |
+| **Simplified Flow** | 3-step guides, minimal text |
+| **Cultural Relevance** | DRC flag, local currency, familiar stores |
+
+---
+
+## Feature 14: Price Alerts (Phase 1.1)
+
+### Description
+Users can set target prices for items they frequently purchase and receive notifications when prices drop to or below their target.
+
+### User Stories
+- As a user, I want to set a price alert for an item so I know when it's on sale.
+- As a user, I want to see all my active price alerts in one place.
+- As a user, I want to be notified when a price drops to my target.
+- As a user, I want to delete or modify my alerts easily.
+
+### Acceptance Criteria
+
+| ID | Criteria | Priority |
+|----|----------|----------|
+| PA-1 | User can create a price alert from any product | Must |
+| PA-2 | Alert form includes product name, target price | Must |
+| PA-3 | List of all user's alerts accessible from nav | Must |
+| PA-4 | Active alerts show current lowest price | Should |
+| PA-5 | Triggered alerts highlighted with "Deal Found!" badge | Must |
+| PA-6 | User can toggle alerts active/inactive | Should |
+| PA-7 | User can delete alerts via swipe or button | Must |
+| PA-8 | Push notification sent when alert triggers | Must |
+| PA-9 | Notification includes store name and current price | Must |
+| PA-10 | Alerts checked when new prices recorded | Must |
+| PA-11 | Daily scheduled check for all active alerts | Should |
+
+### Technical Notes
+- Firestore collection: `apps/{appId}/users/{userId}/priceAlerts`
+- Cloud Function triggers on new price data writes
+- Scheduled Cloud Function runs daily at 9:00 AM
+- FCM push notifications for alert triggers
+- Price matching uses normalized product names
+
+### Data Model
+```typescript
+interface PriceAlert {
+  id: string;
+  userId: string;
+  productName: string;
+  productNameNormalized: string;
+  targetPrice: number;
+  currency: string;
+  currentLowestPrice?: number;
+  currentLowestStore?: string;
+  isActive: boolean;
+  isTriggered: boolean;
+  notificationSent: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  triggeredAt?: Timestamp;
+}
+```
+
+---
+
+## Feature 15: Offline Queue & Sync (Phase 1.1)
+
+### Description
+Users can scan receipts while offline. Scans are queued locally and automatically synchronized when network connectivity is restored.
+
+### User Stories
+- As a user, I want to scan receipts even when I have no internet.
+- As a user, I want my offline scans to automatically upload when I'm back online.
+- As a user, I want to see how many scans are waiting to sync.
+
+### Acceptance Criteria
+
+| ID | Criteria | Priority |
+|----|----------|----------|
+| OQ-1 | Offline scans stored locally in AsyncStorage | Must |
+| OQ-2 | Network status monitored continuously | Must |
+| OQ-3 | Pending receipts count shown in UI | Should |
+| OQ-4 | Auto-sync triggered when online | Must |
+| OQ-5 | Manual sync button available | Should |
+| OQ-6 | Sync status indicator (syncing, synced, error) | Should |
+| OQ-7 | Failed syncs retried up to 3 times | Must |
+| OQ-8 | Partial sync supported (some succeed, some fail) | Should |
+
+### Technical Notes
+- Uses `@react-native-community/netinfo` for connectivity monitoring
+- Local storage via AsyncStorage with key `@goshopperai_offline_queue`
+- Queue processed FIFO (First In, First Out)
+- Exponential backoff for retry logic
+
+### Data Model
+```typescript
+interface QueuedReceipt {
+  id: string;
+  images: string[]; // Base64 encoded
+  timestamp: number;
+  retryCount: number;
+  status: 'pending' | 'syncing' | 'failed' | 'complete';
+  error?: string;
+}
+```
+
+---
+
+## Feature 16: Push Notifications (Phase 1.1)
+
+### Description
+Users receive push notifications for price alerts, savings tips, and app updates. Supports both foreground and background notification handling.
+
+### User Stories
+- As a user, I want to receive alerts when prices drop.
+- As a user, I want to control which notifications I receive.
+- As a user, I want notifications to open the relevant screen in the app.
+
+### Acceptance Criteria
+
+| ID | Criteria | Priority |
+|----|----------|----------|
+| PN-1 | FCM permission requested on onboarding | Must |
+| PN-2 | FCM token stored in user profile | Must |
+| PN-3 | Foreground notifications display in-app | Must |
+| PN-4 | Background notifications show in system tray | Must |
+| PN-5 | Tap notification opens relevant screen | Must |
+| PN-6 | Topic subscription for price-alerts | Must |
+| PN-7 | Topic subscription for savings-tips | Should |
+| PN-8 | Notification history stored locally | Should |
+| PN-9 | Settings to enable/disable notification types | Should |
+| PN-10 | Token refresh handled automatically | Must |
+
+### Technical Notes
+- Uses `@react-native-firebase/messaging`
+- FCM topics: `price-alerts`, `savings-tips`
+- Notification channels configured for Android
+- Deep linking for notification actions
+
+### Notification Types
+| Type | Trigger | Content |
+|------|---------|---------|
+| price_alert | Price drops below target | "🔔 {product} is now ${price} at {store}!" |
+| savings_tip | Weekly on Saturday | AI-generated savings suggestion |
+| sync_complete | Offline queue processed | "{count} receipts synced" |
+| achievement | Achievement unlocked | "🏆 You earned: {achievement}!" |
+
+---
+
+## Feature 17: Savings Gamification & Achievements (Phase 1.1)
+
+### Description
+Users earn achievements and track progress through gamification elements that encourage consistent app usage and smart shopping habits.
+
+### User Stories
+- As a user, I want to see my savings progress visually.
+- As a user, I want to earn badges for my achievements.
+- As a user, I want to maintain streaks for daily activity.
+- As a user, I want to level up as I save more money.
+
+### Acceptance Criteria
+
+| ID | Criteria | Priority |
+|----|----------|----------|
+| SG-1 | Achievements screen accessible from home | Must |
+| SG-2 | 12+ achievements available at launch | Must |
+| SG-3 | Achievement progress shown visually | Must |
+| SG-4 | Unlocked achievements display unlock date | Should |
+| SG-5 | Total savings amount tracked | Must |
+| SG-6 | Daily streak counter maintained | Should |
+| SG-7 | Level progression based on total savings | Should |
+| SG-8 | Weekly savings summary shown | Should |
+| SG-9 | Achievement notification when unlocked | Should |
+| SG-10 | Statistics header with key metrics | Must |
+
+### Achievements List
+
+| ID | Name | Description | Target |
+|----|------|-------------|--------|
+| first_scan | Premier Pas | First receipt scanned | 1 scan |
+| savings_hunter | Chasseur d'Économies | First $10 saved | $10 |
+| budget_master | Maître du Budget | Track 30 receipts | 30 receipts |
+| shop_explorer | Explorateur | Shop at 5+ stores | 5 stores |
+| category_pro | Expert Catégories | Use 10+ categories | 10 categories |
+| streak_starter | Régularité | 7-day scan streak | 7 days |
+| streak_master | Habitué | 30-day scan streak | 30 days |
+| big_saver | Grand Économe | Save $100 total | $100 |
+| price_watcher | Surveillant Prix | Set 5 price alerts | 5 alerts |
+| deal_finder | Dénicheur | Find 3 triggered alerts | 3 triggers |
+| early_adopter | Pionnier | Use app in first month | - |
+| multi_photo | Pro Scanner | Use multi-photo scan | 1 use |
+
+### Level Progression
+| Level | Name | Required Savings |
+|-------|------|------------------|
+| 1 | Débutant | $0 |
+| 2 | Économe | $25 |
+| 3 | Chasseur | $100 |
+| 4 | Expert | $250 |
+| 5 | Maître | $500 |
+| 6 | Légende | $1000 |
+
+---
+
+## Feature 18: Smart Shopping List (Phase 1.2)
+
+### Description
+Users can create shopping lists that automatically suggest the best stores to shop at based on their purchase history and current prices.
+
+### User Stories
+- As a user, I want to create shopping lists for my purchases.
+- As a user, I want the app to suggest where to buy items cheapest.
+- As a user, I want to check off items as I shop.
+- As a user, I want to quickly add items from previous receipts.
+
+### Acceptance Criteria
+
+| ID | Criteria | Priority |
+|----|----------|----------|
+| SL-1 | Create multiple shopping lists | Must |
+| SL-2 | Add items with name and optional quantity | Must |
+| SL-3 | Check/uncheck items in list | Must |
+| SL-4 | Delete items via swipe | Must |
+| SL-5 | Delete entire lists | Must |
+| SL-6 | "Optimize" button finds best store(s) | Must |
+| SL-7 | Show potential savings from optimization | Should |
+| SL-8 | Suggest items from receipt history | Should |
+| SL-9 | Show estimated price per item | Should |
+| SL-10 | Group items by recommended store | Should |
+
+### Technical Notes
+- Firestore collection: `apps/{appId}/users/{userId}/shoppingLists`
+- Optimization uses price data from all stores
+- Suggestions based on frequency of purchases
+
+### Data Model
+```typescript
+interface ShoppingList {
+  id: string;
+  userId: string;
+  name: string;
+  items: ShoppingListItem[];
+  isComplete: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+interface ShoppingListItem {
+  id: string;
+  name: string;
+  quantity: number;
+  estimatedPrice?: number;
+  bestStore?: string;
+  isChecked: boolean;
+}
+
+interface OptimizationResult {
+  totalEstimated: number;
+  potentialSavings: number;
+  recommendedStore: string;
+  storeBreakdown: { store: string; items: string[]; total: number }[];
+}
+```
+
+---
+
+## Feature 19: Natural Language Spending Queries (Phase 1.2)
+
+### Description
+Users can ask questions about their spending in natural language (French/Lingala) and receive AI-powered insights and analysis.
+
+### User Stories
+- As a user, I want to ask "How much did I spend on food this month?"
+- As a user, I want to ask "Which store is cheapest for rice?"
+- As a user, I want conversational interactions in my language.
+
+### Acceptance Criteria
+
+| ID | Criteria | Priority |
+|----|----------|----------|
+| NL-1 | Chat interface for queries | Must |
+| NL-2 | French language support | Must |
+| NL-3 | Lingala language support | Should |
+| NL-4 | Quick suggestion chips | Should |
+| NL-5 | Query history maintained in session | Should |
+| NL-6 | Responses include data where applicable | Must |
+| NL-7 | Follow-up questions suggested | Should |
+| NL-8 | Loading state during AI processing | Must |
+| NL-9 | Error handling for failed queries | Must |
+| NL-10 | Context includes user's spending data | Must |
+
+### Query Examples
+
+| Query | Response Type |
+|-------|---------------|
+| "Combien j'ai dépensé ce mois?" | spending_summary |
+| "Où est-ce que je dépense le plus?" | category_breakdown |
+| "Quel magasin est le moins cher?" | store_comparison |
+| "Combien coûte le riz chez Shoprite?" | item_search |
+| "Suis-je dans mon budget?" | budget_analysis |
+
+### Technical Notes
+- Cloud Function: `processNLQuery`
+- Uses Gemini AI for query processing
+- User spending context gathered from Firestore
+- Responses include structured data + natural language
+
+### AI Prompt Context
+```
+User's spending context includes:
+- This month's total and receipts count
+- Last month comparison
+- Category breakdown (top categories)
+- Store breakdown (top 5 stores)
+- Recent items sample (last 10)
+```
+
+---
 
 ### Performance
 | Metric | Target |
