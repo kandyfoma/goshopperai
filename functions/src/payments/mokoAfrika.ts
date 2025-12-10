@@ -1,0 +1,390 @@
+/**
+ * Moko Afrika Payment Integration
+ * Handles Mobile Money payments for DRC market
+ * Supports: M-Pesa, Orange Money, Airtel Money, AfriMoney
+ */
+
+import * as functions from 'firebase-functions';
+import * as admin from 'firebase-admin';
+import axios from 'axios';
+import * as crypto from 'crypto';
+import { config, collections } from '../config';
+import { MokoPaymentRequest, MokoPaymentResponse, PaymentRecord } from '../types';
+
+const db = admin.firestore();
+
+/**
+ * Generate signature for Moko Afrika API
+ */
+function generateSignature(payload: string): string {
+  return crypto
+    .createHmac('sha256', config.moko.secretKey)
+    .update(payload)
+    .digest('hex');
+}
+
+/**
+ * Generate unique transaction ID
+ */
+function generateTransactionId(): string {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 8);
+  return `GSA-${timestamp}-${random}`.toUpperCase();
+}
+
+/**
+ * Map provider to Moko Afrika provider code
+ */
+function getProviderCode(provider: string): string {
+  const providerMap: Record<string, string> = {
+    'mpesa': 'MPESA_CD',
+    'orange': 'ORANGE_CD',
+    'airtel': 'AIRTEL_CD',
+    'afrimoney': 'AFRIMONEY_CD',
+  };
+  return providerMap[provider] || 'MPESA_CD';
+}
+
+/**
+ * Initiate Mobile Money payment via Moko Afrika
+ */
+export const initiateMokoPayment = functions
+  .region(config.app.region)
+  .runWith({
+    timeoutSeconds: 30,
+    memory: '256MB',
+  })
+  .https.onCall(async (data, context): Promise<MokoPaymentResponse> => {
+    // Verify authentication
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'User must be authenticated to make payments'
+      );
+    }
+    
+    const userId = context.auth.uid;
+    const request = data as MokoPaymentRequest;
+    
+    // Validate request
+    if (!request.phoneNumber || !request.provider || !request.planId) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Phone number, provider, and plan are required'
+      );
+    }
+    
+    // Validate phone number format (DRC format)
+    const phoneRegex = /^(\+?243|0)?[89]\d{8}$/;
+    if (!phoneRegex.test(request.phoneNumber.replace(/\s/g, ''))) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Invalid phone number format. Use DRC format: +243XXXXXXXXX'
+      );
+    }
+    
+    // Get plan pricing
+    const planPricing = config.pricing[request.planId as keyof typeof config.pricing];
+    if (!planPricing) {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Invalid plan selected'
+      );
+    }
+    
+    const amount = request.currency === 'CDF' 
+      ? planPricing.price * 2700 // Approximate USD to CDF
+      : planPricing.price;
+    
+    const transactionId = generateTransactionId();
+    
+    try {
+      // Create payment record first
+      const paymentRef = db.collection(collections.payments(userId)).doc(transactionId);
+      const now = admin.firestore.FieldValue.serverTimestamp();
+      
+      const paymentRecord: Partial<PaymentRecord> = {
+        userId,
+        transactionId,
+        amount,
+        currency: request.currency || 'USD',
+        provider: request.provider,
+        phoneNumber: request.phoneNumber,
+        planId: request.planId,
+        status: 'pending',
+        createdAt: now as unknown as Date,
+        updatedAt: now as unknown as Date,
+      };
+      
+      await paymentRef.set(paymentRecord);
+      
+      // Prepare Moko Afrika API request
+      const mokoPayload = {
+        merchant_id: config.moko.merchantId,
+        transaction_id: transactionId,
+        amount: amount.toFixed(2),
+        currency: request.currency || 'USD',
+        phone_number: request.phoneNumber.replace(/\s/g, ''),
+        provider: getProviderCode(request.provider),
+        description: `GoShopperAI ${request.planId} subscription`,
+        callback_url: config.moko.callbackUrl,
+        metadata: {
+          user_id: userId,
+          plan_id: request.planId,
+        },
+      };
+      
+      const signature = generateSignature(JSON.stringify(mokoPayload));
+      
+      // Call Moko Afrika API
+      const response = await axios.post(
+        `${config.moko.baseUrl}/payments/initiate`,
+        mokoPayload,
+        {
+          headers: {
+            'Authorization': `Bearer ${config.moko.apiKey}`,
+            'X-Signature': signature,
+            'Content-Type': 'application/json',
+          },
+          timeout: 25000,
+        }
+      );
+      
+      // Update payment record with Moko reference
+      await paymentRef.update({
+        mokoReference: response.data.reference || response.data.transaction_id,
+        status: response.data.status === 'PENDING' ? 'pending' : 'pending',
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      
+      return {
+        success: true,
+        transactionId,
+        status: 'pending',
+        message: 'Payment initiated. Please confirm on your phone.',
+      };
+      
+    } catch (error) {
+      console.error('Moko Afrika payment error:', error);
+      
+      // Update payment record as failed
+      const paymentRef = db.collection(collections.payments(userId)).doc(transactionId);
+      await paymentRef.update({
+        status: 'failed',
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }).catch(() => {}); // Ignore if not created
+      
+      if (axios.isAxiosError(error)) {
+        const errorMessage = error.response?.data?.message || 'Payment service unavailable';
+        throw new functions.https.HttpsError('unavailable', errorMessage);
+      }
+      
+      throw new functions.https.HttpsError(
+        'internal',
+        'Failed to initiate payment. Please try again.'
+      );
+    }
+  });
+
+/**
+ * Verify payment status
+ */
+export const verifyMokoPayment = functions
+  .region(config.app.region)
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+    }
+    
+    const userId = context.auth.uid;
+    const { transactionId } = data;
+    
+    if (!transactionId) {
+      throw new functions.https.HttpsError('invalid-argument', 'Transaction ID required');
+    }
+    
+    try {
+      // Get payment record
+      const paymentRef = db.collection(collections.payments(userId)).doc(transactionId);
+      const paymentDoc = await paymentRef.get();
+      
+      if (!paymentDoc.exists) {
+        throw new functions.https.HttpsError('not-found', 'Payment not found');
+      }
+      
+      const payment = paymentDoc.data() as PaymentRecord;
+      
+      // If already completed or failed, return current status
+      if (payment.status === 'completed' || payment.status === 'failed') {
+        return {
+          success: payment.status === 'completed',
+          status: payment.status,
+          transactionId,
+        };
+      }
+      
+      // Query Moko Afrika for status
+      const signature = generateSignature(transactionId);
+      
+      const response = await axios.get(
+        `${config.moko.baseUrl}/payments/status/${payment.mokoReference || transactionId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${config.moko.apiKey}`,
+            'X-Signature': signature,
+          },
+          timeout: 10000,
+        }
+      );
+      
+      const mokoStatus = response.data.status?.toUpperCase();
+      let newStatus: PaymentRecord['status'] = 'pending';
+      
+      if (mokoStatus === 'COMPLETED' || mokoStatus === 'SUCCESS') {
+        newStatus = 'completed';
+      } else if (mokoStatus === 'FAILED' || mokoStatus === 'CANCELLED') {
+        newStatus = 'failed';
+      }
+      
+      // Update payment record
+      await paymentRef.update({
+        status: newStatus,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        ...(newStatus === 'completed' && {
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }),
+      });
+      
+      // If completed, update subscription
+      if (newStatus === 'completed') {
+        await activateSubscription(userId, payment.planId as 'basic' | 'premium', payment);
+      }
+      
+      return {
+        success: newStatus === 'completed',
+        status: newStatus,
+        transactionId,
+      };
+      
+    } catch (error) {
+      console.error('Payment verification error:', error);
+      
+      if (error instanceof functions.https.HttpsError) {
+        throw error;
+      }
+      
+      throw new functions.https.HttpsError('internal', 'Failed to verify payment');
+    }
+  });
+
+/**
+ * Webhook handler for Moko Afrika callbacks
+ */
+export const mokoPaymentWebhook = functions
+  .region(config.app.region)
+  .https.onRequest(async (req, res) => {
+    // Verify webhook signature
+    const signature = req.headers['x-signature'] as string;
+    const expectedSignature = generateSignature(JSON.stringify(req.body));
+    
+    if (signature !== expectedSignature) {
+      console.error('Invalid webhook signature');
+      res.status(401).json({ error: 'Invalid signature' });
+      return;
+    }
+    
+    const { transaction_id, status, metadata } = req.body;
+    
+    if (!transaction_id || !status) {
+      res.status(400).json({ error: 'Missing required fields' });
+      return;
+    }
+    
+    try {
+      const userId = metadata?.user_id;
+      
+      if (!userId) {
+        console.error('Missing user_id in webhook metadata');
+        res.status(400).json({ error: 'Missing user_id' });
+        return;
+      }
+      
+      const paymentRef = db.collection(collections.payments(userId)).doc(transaction_id);
+      const paymentDoc = await paymentRef.get();
+      
+      if (!paymentDoc.exists) {
+        console.error('Payment not found:', transaction_id);
+        res.status(404).json({ error: 'Payment not found' });
+        return;
+      }
+      
+      const payment = paymentDoc.data() as PaymentRecord;
+      
+      const mokoStatus = status.toUpperCase();
+      let newStatus: PaymentRecord['status'] = 'pending';
+      
+      if (mokoStatus === 'COMPLETED' || mokoStatus === 'SUCCESS') {
+        newStatus = 'completed';
+      } else if (mokoStatus === 'FAILED' || mokoStatus === 'CANCELLED') {
+        newStatus = 'failed';
+      }
+      
+      // Update payment record
+      await paymentRef.update({
+        status: newStatus,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        ...(newStatus === 'completed' && {
+          completedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }),
+      });
+      
+      // If completed, activate subscription
+      if (newStatus === 'completed') {
+        await activateSubscription(userId, payment.planId as 'basic' | 'premium', payment);
+      }
+      
+      res.status(200).json({ success: true, status: newStatus });
+      
+    } catch (error) {
+      console.error('Webhook processing error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+/**
+ * Helper: Activate subscription after successful payment
+ */
+async function activateSubscription(
+  userId: string, 
+  planId: 'basic' | 'premium',
+  payment: PaymentRecord
+): Promise<void> {
+  const subscriptionRef = db.doc(collections.subscription(userId));
+  const now = new Date();
+  const endDate = new Date(now);
+  endDate.setMonth(endDate.getMonth() + 1); // 1 month subscription
+  
+  await subscriptionRef.set({
+    userId,
+    isSubscribed: true,
+    planId,
+    status: 'active',
+    subscriptionStartDate: admin.firestore.Timestamp.fromDate(now),
+    subscriptionEndDate: admin.firestore.Timestamp.fromDate(endDate),
+    lastPaymentDate: admin.firestore.Timestamp.fromDate(now),
+    lastPaymentAmount: payment.amount,
+    currency: payment.currency,
+    paymentMethod: 'mobile_money',
+    paymentProvider: 'moko_afrika',
+    mobileMoneyProvider: payment.provider as 'mpesa' | 'orange' | 'airtel' | 'afrimoney',
+    transactionId: payment.transactionId,
+    customerPhone: payment.phoneNumber,
+    autoRenew: true,
+    // Preserve trial info
+    trialScansUsed: admin.firestore.FieldValue.increment(0),
+    trialScansLimit: config.app.trialScanLimit,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+  
+  console.log(`Subscription activated for user ${userId}, plan: ${planId}`);
+}
