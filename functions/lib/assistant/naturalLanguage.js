@@ -65,7 +65,7 @@ exports.processNLQuery = functions
         // Build prompt for Gemini
         const prompt = buildPrompt(query, spendingContext, conversationHistory || []);
         // Call Gemini
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+        const model = genAI.getGenerativeModel({ model: config_1.config.gemini.model });
         const result = await model.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
@@ -241,7 +241,7 @@ exports.getSpendingSuggestions = functions
         // Gather context
         const context = await gatherSpendingContext(userId);
         // Generate suggestions with AI
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+        const model = genAI.getGenerativeModel({ model: config_1.config.gemini.model });
         const prompt = `
 Basé sur ce contexte de dépenses, génère 3 suggestions personnalisées pour économiser de l'argent.
 

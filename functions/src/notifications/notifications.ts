@@ -295,7 +295,7 @@ ${spendingData}
 
 Format: One short sentence with a specific tip.`;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const model = genAI.getGenerativeModel({ model: config.gemini.model });
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const tip = response.text().trim();

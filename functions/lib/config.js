@@ -14,7 +14,7 @@ exports.config = {
     // Gemini AI
     gemini: {
         apiKey: process.env.GEMINI_API_KEY || '',
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.0-flash-exp',
         maxTokens: 4096,
     },
     // Moko Afrika (Mobile Money for DRC)

@@ -4,6 +4,8 @@
  */
 
 import * as admin from 'firebase-admin';
+import * as fs from 'fs';
+import * as path from 'path';
 import { config } from './config';
 
 // Initialize Firebase Admin
@@ -16,6 +18,8 @@ if (!admin.apps.length) {
     admin.initializeApp();
   } else {
     // Local development - use service account or emulator
+    const serviceAccountPath = path.resolve(__dirname, '../serviceAccountKey.json');
+
     if (config.firebase.serviceAccountKey) {
       // Use service account key from environment variable
       const serviceAccount = JSON.parse(config.firebase.serviceAccountKey);
@@ -24,6 +28,19 @@ if (!admin.apps.length) {
         projectId: config.firebase.projectId,
         databaseURL: config.firebase.databaseURL,
       });
+    } else if (fs.existsSync(serviceAccountPath)) {
+      // Use service account key from file
+      try {
+        const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount),
+          projectId: config.firebase.projectId,
+          databaseURL: config.firebase.databaseURL,
+        });
+        console.log('✅ Firebase initialized with service account file');
+      } catch (error) {
+        console.error('Error loading service account file:', error);
+      }
     } else if (process.env.FIREBASE_EMULATOR_HOST) {
       // Use Firebase emulator
       admin.initializeApp({

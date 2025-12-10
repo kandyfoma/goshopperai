@@ -39,6 +39,8 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getSpendingSuggestions = exports.processNLQuery = exports.checkSubscriptionExpiration = exports.sendAdminBroadcast = exports.sendSyncCompleteNotification = exports.sendAchievementNotification = exports.sendWeeklySavingsTips = exports.getUserAlerts = exports.createPriceAlert = exports.scheduledAlertCheck = exports.checkPriceAlerts = exports.checkIdentifierAvailability = exports.completeRegistration = exports.verifyCode = exports.sendVerificationCode = exports.getPriceHistory = exports.getPriceComparison = exports.savePriceData = exports.extendTrial = exports.checkExpiredSubscriptions = exports.cancelSubscription = exports.getSubscriptionPricing = exports.renewSubscription = exports.upgradeSubscription = exports.recordScanUsage = exports.getSubscriptionStatus = exports.stripeWebhook = exports.confirmCardPayment = exports.createCardPaymentIntent = exports.mokoPaymentWebhook = exports.verifyMokoPayment = exports.initiateMokoPayment = exports.parseReceiptV2 = exports.parseReceipt = void 0;
 const admin = __importStar(require("firebase-admin"));
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 const config_1 = require("./config");
 // Initialize Firebase Admin
 if (!admin.apps.length) {
@@ -50,6 +52,7 @@ if (!admin.apps.length) {
     }
     else {
         // Local development - use service account or emulator
+        const serviceAccountPath = path.resolve(__dirname, '../serviceAccountKey.json');
         if (config_1.config.firebase.serviceAccountKey) {
             // Use service account key from environment variable
             const serviceAccount = JSON.parse(config_1.config.firebase.serviceAccountKey);
@@ -58,6 +61,21 @@ if (!admin.apps.length) {
                 projectId: config_1.config.firebase.projectId,
                 databaseURL: config_1.config.firebase.databaseURL,
             });
+        }
+        else if (fs.existsSync(serviceAccountPath)) {
+            // Use service account key from file
+            try {
+                const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+                admin.initializeApp({
+                    credential: admin.credential.cert(serviceAccount),
+                    projectId: config_1.config.firebase.projectId,
+                    databaseURL: config_1.config.firebase.databaseURL,
+                });
+                console.log('✅ Firebase initialized with service account file');
+            }
+            catch (error) {
+                console.error('Error loading service account file:', error);
+            }
         }
         else if (process.env.FIREBASE_EMULATOR_HOST) {
             // Use Firebase emulator
