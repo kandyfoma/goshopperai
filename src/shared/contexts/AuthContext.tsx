@@ -31,32 +31,31 @@ export function AuthProvider({children}: AuthProviderProps) {
 
   // Listen to auth state changes
   useEffect(() => {
-    const unsubscribe = authService.onAuthStateChanged(user => {
-      setState({
-        user,
-        isLoading: false,
-        isAuthenticated: !!user,
-        error: null,
+    try {
+      const unsubscribe = authService.onAuthStateChanged(user => {
+        setState({
+          user,
+          isLoading: false,
+          isAuthenticated: !!user,
+          error: null,
+        });
       });
-    });
 
-    return unsubscribe;
+      return unsubscribe;
+    } catch (error) {
+      console.warn('Auth state listener setup failed:', error);
+      // Set to not loading, not authenticated
+      setState({
+        user: null,
+        isLoading: false,
+        isAuthenticated: false,
+        error: 'Firebase not initialized',
+      });
+      return () => {};
+    }
   }, []);
 
-  // Auto sign-in anonymously if not authenticated
-  useEffect(() => {
-    const autoSignIn = async () => {
-      if (!state.isLoading && !state.isAuthenticated) {
-        try {
-          await authService.signInAnonymously();
-        } catch (error) {
-          console.error('Auto sign-in failed:', error);
-        }
-      }
-    };
-
-    autoSignIn();
-  }, [state.isLoading, state.isAuthenticated]);
+  // Removed auto sign-in - users must now register/login explicitly
 
   const signIn = useCallback(async () => {
     setState(prev => ({...prev, isLoading: true, error: null}));

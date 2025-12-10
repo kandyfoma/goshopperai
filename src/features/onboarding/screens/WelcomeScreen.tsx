@@ -88,10 +88,10 @@ export function WelcomeScreen() {
   };
 
   const handleGetStarted = () => {
-    // Navigate to main app
+    // Navigate to login screen
     navigation.reset({
       index: 0,
-      routes: [{name: 'Main'}],
+      routes: [{name: 'Login'}],
     });
   };
 

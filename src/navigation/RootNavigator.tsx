@@ -3,10 +3,11 @@ import React, {useEffect, useState} from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {RootStackParamList} from '@/shared/types';
+import {useAuth} from '@/shared/contexts';
 
 // Screens
 import {MainTabNavigator} from './MainTabNavigator';
-import {WelcomeScreen} from '@/features/onboarding/screens';
+import {WelcomeScreen, LoginScreen, RegisterScreen} from '@/features/onboarding/screens';
 import {ScannerScreen, MultiPhotoScannerScreen, ReceiptDetailScreen, PriceComparisonScreen} from '@/features/scanner/screens';
 import {SubscriptionScreen} from '@/features/subscription/screens';
 import {SettingsScreen} from '@/features/settings/screens';
@@ -22,6 +23,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const ONBOARDING_KEY = '@goshopperai_onboarding_complete';
 
 export function RootNavigator() {
+  const {isAuthenticated, isLoading} = useAuth();
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -43,14 +45,22 @@ export function RootNavigator() {
     checkFirstLaunch();
   }, []);
 
-  // Show nothing while checking first launch status
-  if (isFirstLaunch === null) {
+  // Show nothing while checking first launch status or auth
+  if (isFirstLaunch === null || isLoading) {
     return null;
+  }
+
+  // Determine initial route based on auth status and first launch
+  let initialRoute: keyof RootStackParamList = 'Main';
+  if (isFirstLaunch) {
+    initialRoute = 'Welcome';
+  } else if (!isAuthenticated) {
+    initialRoute = 'Login';
   }
 
   return (
     <Stack.Navigator
-      initialRouteName={isFirstLaunch ? 'Welcome' : 'Main'}
+      initialRouteName={initialRoute}
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
@@ -60,6 +70,20 @@ export function RootNavigator() {
         component={WelcomeScreen}
         options={{
           animation: 'fade',
+        }}
+      />
+      <Stack.Screen 
+        name="Login" 
+        component={LoginScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen 
+        name="Register" 
+        component={RegisterScreen}
+        options={{
+          animation: 'slide_from_right',
         }}
       />
       <Stack.Screen name="Main" component={MainTabNavigator} />

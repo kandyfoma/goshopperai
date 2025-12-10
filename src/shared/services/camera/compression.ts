@@ -50,11 +50,26 @@ class ImageCompressionService {
   ): Promise<string> {
     const compressedPath = await this.compressForAI(imagePath, options);
     
-    // Read compressed image as base64
-    const RNFS = require('react-native-fs');
-    const base64 = await RNFS.readFile(compressedPath, 'base64');
-    
-    return base64;
+    // Read compressed image as base64 using fetch
+    try {
+      const response = await fetch(compressedPath);
+      const blob = await response.blob();
+      
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          // Remove data:image/...;base64, prefix
+          const base64 = base64data.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('Failed to convert image to base64:', error);
+      throw error;
+    }
   }
 
   /**

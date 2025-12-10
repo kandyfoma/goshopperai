@@ -1,4 +1,4 @@
-package com.goshopperai
+package com.goshopperai.app
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
