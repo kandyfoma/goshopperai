@@ -6,8 +6,11 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import {useRoute, RouteProp} from '@react-navigation/native';
+import firestore from '@react-native-firebase/firestore';
+import functions from '@react-native-firebase/functions';
 import {RootStackParamList, PriceComparison} from '@/shared/types';
 import {COLORS} from '@/shared/utils/constants';
 import {formatCurrency} from '@/shared/utils/helpers';
@@ -20,72 +23,44 @@ export function PriceComparisonScreen() {
 
   const [comparisons, setComparisons] = useState<PriceComparison[]>([]);
   const [totalSavings, setTotalSavings] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // TODO: Fetch price comparisons from Firestore
-    // Mock data for now
-    const mockComparisons: PriceComparison[] = [
-      {
-        productName: 'Riz Basmati 5kg',
-        productNameNormalized: 'riz basmati 5kg',
-        unit: 'kg',
-        currentPrice: 12.99,
-        currentStore: 'Shoprite',
-        bestPrice: 10.99,
-        bestStore: 'Carrefour',
-        bestDate: new Date(),
-        averagePrice: 11.50,
-        minPrice: 10.99,
-        maxPrice: 13.50,
-        priceCount: 15,
-        potentialSavings: 2.00,
-        savingsPercentage: 15.4,
-        allPrices: [],
-      },
-      {
-        productName: 'Huile de palme 1L',
-        productNameNormalized: 'huile palme 1l',
-        unit: 'L',
-        currentPrice: 4.50,
-        currentStore: 'Shoprite',
-        bestPrice: 4.50,
-        bestStore: 'Shoprite',
-        bestDate: new Date(),
-        averagePrice: 4.75,
-        minPrice: 4.50,
-        maxPrice: 5.20,
-        priceCount: 12,
-        potentialSavings: 0,
-        savingsPercentage: 0,
-        allPrices: [],
-      },
-      {
-        productName: 'Coca-Cola 1.5L',
-        productNameNormalized: 'coca cola 1.5l',
-        unit: 'L',
-        currentPrice: 2.00,
-        currentStore: 'Shoprite',
-        bestPrice: 1.80,
-        bestStore: 'City Market',
-        bestDate: new Date(),
-        averagePrice: 1.95,
-        minPrice: 1.80,
-        maxPrice: 2.20,
-        priceCount: 25,
-        potentialSavings: 0.60, // 3 × 0.20
-        savingsPercentage: 10,
-        allPrices: [],
-      },
-    ];
-
-    setComparisons(mockComparisons);
-    
-    const savings = mockComparisons.reduce(
-      (sum, c) => sum + c.potentialSavings, 
-      0
-    );
-    setTotalSavings(savings);
+    loadPriceComparisons();
   }, [receiptId]);
+
+  const loadPriceComparisons = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Call Cloud Function to get price comparisons
+      const functionsInstance = functions();
+      functionsInstance.useFunctionsEmulator('http://localhost:5001'); // For development
+      
+      const result = await functionsInstance
+        .httpsCallable('getPriceComparison')({
+          receiptId,
+        });
+
+      if (result.data.success && result.data.comparisons) {
+        setComparisons(result.data.comparisons);
+        setTotalSavings(result.data.totalSavings || 0);
+      } else {
+        setError('Aucune comparaison de prix disponible');
+        setComparisons([]);
+        setTotalSavings(0);
+      }
+    } catch (err: any) {
+      console.error('Error loading price comparisons:', err);
+      setError('Erreur lors du chargement des comparaisons');
+      setComparisons([]);
+      setTotalSavings(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getPriceStatus = (comparison: PriceComparison) => {
     if (comparison.potentialSavings === 0) {
@@ -96,6 +71,28 @@ export function PriceComparisonScreen() {
     }
     return {label: 'Prix correct', color: COLORS.warning};
   };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={COLORS.primary[500]} />
+          <Text style={styles.loadingText}>Comparaison des prix...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loading}>
+          <Text style={styles.errorIcon}>❌</Text>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -346,5 +343,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.gray[500],
     textAlign: 'center',
+  },
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: COLORS.gray[600],
+  },
+  errorIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 16,
+    color: COLORS.gray[600],
+    textAlign: 'center',
+    marginBottom: 20,
   },
 });

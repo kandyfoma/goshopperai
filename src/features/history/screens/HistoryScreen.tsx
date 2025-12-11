@@ -9,9 +9,11 @@ import {
   SafeAreaView,
   TextInput,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import firestore from '@react-native-firebase/firestore';
 import {Receipt, RootStackParamList} from '@/shared/types';
 import {COLORS} from '@/shared/utils/constants';
 import {formatCurrency, formatDate} from '@/shared/utils/helpers';
@@ -34,71 +36,66 @@ export function HistoryScreen() {
   }, [user]);
 
   const loadReceipts = async () => {
-    // TODO: Fetch from Firestore
-    // Mock data for now
-    const mockReceipts: Receipt[] = [
-      {
-        id: '1',
-        userId: user?.id || '',
-        storeName: 'Shoprite',
-        storeNameNormalized: 'shoprite',
-        storeAddress: 'Gombe, Kinshasa',
-        date: new Date(2024, 11, 15),
-        purchaseDate: new Date(2024, 11, 15),
-        total: 45.50,
-        totalAmount: 45.50,
-        currency: 'USD',
-        items: [],
-        imageUrls: [],
-        status: 'processed',
-        processingStatus: 'completed',
-        createdAt: new Date(2024, 11, 15),
-        updatedAt: new Date(2024, 11, 15),
-        scannedAt: new Date(2024, 11, 15),
-      },
-      {
-        id: '2',
-        userId: user?.id || '',
-        storeName: 'Carrefour',
-        storeNameNormalized: 'carrefour',
-        storeAddress: 'Lemba, Kinshasa',
-        date: new Date(2024, 11, 14),
-        purchaseDate: new Date(2024, 11, 14),
-        total: 78.20,
-        totalAmount: 78.20,
-        currency: 'USD',
-        items: [],
-        imageUrls: [],
-        status: 'processed',
-        processingStatus: 'completed',
-        createdAt: new Date(2024, 11, 14),
-        updatedAt: new Date(2024, 11, 14),
-        scannedAt: new Date(2024, 11, 14),
-      },
-      {
-        id: '3',
-        userId: user?.id || '',
-        storeName: 'City Market',
-        storeNameNormalized: 'city market',
-        storeAddress: 'Ngaliema, Kinshasa',
-        date: new Date(2024, 11, 12),
-        purchaseDate: new Date(2024, 11, 12),
-        total: 32750,
-        totalAmount: 32750,
-        currency: 'CDF',
-        items: [],
-        imageUrls: [],
-        status: 'processed',
-        processingStatus: 'completed',
-        createdAt: new Date(2024, 11, 12),
-        updatedAt: new Date(2024, 11, 12),
-        scannedAt: new Date(2024, 11, 12),
-      },
-    ];
+    if (!user?.uid) {
+      setIsLoading(false);
+      return;
+    }
 
-    setReceipts(mockReceipts);
-    setFilteredReceipts(mockReceipts);
-    setIsLoading(false);
+    try {
+      setIsLoading(true);
+      
+      const receiptsSnapshot = await firestore()
+        .collection('artifacts')
+        .doc('goshopperai')
+        .collection('users')
+        .doc(user.uid)
+        .collection('receipts')
+        .orderBy('scannedAt', 'desc')
+        .get();
+
+      const receiptsData: Receipt[] = receiptsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          userId: data.userId,
+          storeName: data.storeName || 'Magasin inconnu',
+          storeNameNormalized: data.storeNameNormalized || '',
+          storeAddress: data.storeAddress,
+          storePhone: data.storePhone,
+          receiptNumber: data.receiptNumber,
+          date: data.date ? new Date(data.date.seconds * 1000) : (data.scannedAt?.toDate() || new Date()),
+          currency: data.currency || 'USD',
+          items: (data.items || []).map((item: any) => ({
+            id: item.id || Math.random().toString(36).substring(7),
+            name: item.name || 'Article inconnu',
+            nameNormalized: item.nameNormalized || '',
+            quantity: item.quantity || 1,
+            unitPrice: item.unitPrice || 0,
+            totalPrice: item.totalPrice || 0,
+            unit: item.unit,
+            category: item.category || 'Autres',
+            confidence: item.confidence || 0.85,
+          })),
+          subtotal: data.subtotal,
+          tax: data.tax,
+          total: data.total || 0,
+          processingStatus: data.processingStatus || 'completed',
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          scannedAt: data.scannedAt?.toDate() || new Date(),
+        };
+      });
+
+      setReceipts(receiptsData);
+      setFilteredReceipts(receiptsData);
+    } catch (error) {
+      console.error('Error loading receipts:', error);
+      // Keep empty array on error
+      setReceipts([]);
+      setFilteredReceipts([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const onRefresh = useCallback(async () => {
@@ -209,6 +206,17 @@ export function HistoryScreen() {
       )}
     </View>
   );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={COLORS.primary[500]} />
+          <Text style={styles.loadingText}>Chargement de l'historique...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -438,5 +446,15 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: COLORS.gray[600],
   },
 });

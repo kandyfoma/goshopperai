@@ -1,6 +1,7 @@
 // Root Navigator - Main app navigation structure
 import React, {useEffect, useState} from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import {ActivityIndicator, View, StyleSheet} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {RootStackParamList} from '@/shared/types';
 import {useAuth} from '@/shared/contexts';
@@ -26,6 +27,8 @@ export function RootNavigator() {
   const {isAuthenticated, isLoading} = useAuth();
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
 
+  console.log('🧭 RootNavigator render - isAuthenticated:', isAuthenticated, 'isLoading:', isLoading);
+
   useEffect(() => {
     const checkFirstLaunch = async () => {
       try {
@@ -45,47 +48,54 @@ export function RootNavigator() {
     checkFirstLaunch();
   }, []);
 
-  // Show nothing while checking first launch status or auth
+  // Show loading screen while checking first launch status or auth
   if (isFirstLaunch === null || isLoading) {
-    return null;
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#10B981" />
+      </View>
+    );
   }
 
-  // Determine initial route based on auth status and first launch
-  let initialRoute: keyof RootStackParamList = 'Main';
-  if (isFirstLaunch) {
-    initialRoute = 'Welcome';
-  } else if (!isAuthenticated) {
-    initialRoute = 'Login';
+  // If not authenticated, show auth screens
+  if (!isAuthenticated) {
+    console.log('🔒 Showing auth screens (not authenticated)');
+    return (
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}>
+        {isFirstLaunch ? (
+          <Stack.Screen 
+            name="Welcome" 
+            component={WelcomeScreen}
+            options={{ animation: 'fade' }}
+          />
+        ) : null}
+        <Stack.Screen 
+          name="Login" 
+          component={LoginScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen 
+          name="Register" 
+          component={RegisterScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+      </Stack.Navigator>
+    );
   }
 
+  // Authenticated - show main app
+  console.log('✅ Showing main app (authenticated)');
   return (
     <Stack.Navigator
-      initialRouteName={initialRoute}
+      initialRouteName="Main"
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
       }}>
-      <Stack.Screen 
-        name="Welcome" 
-        component={WelcomeScreen}
-        options={{
-          animation: 'fade',
-        }}
-      />
-      <Stack.Screen 
-        name="Login" 
-        component={LoginScreen}
-        options={{
-          animation: 'slide_from_right',
-        }}
-      />
-      <Stack.Screen 
-        name="Register" 
-        component={RegisterScreen}
-        options={{
-          animation: 'slide_from_right',
-        }}
-      />
       <Stack.Screen name="Main" component={MainTabNavigator} />
       <Stack.Screen
         name="Scanner"
@@ -148,6 +158,26 @@ export function RootNavigator() {
         component={AIAssistantScreen}
         options={{headerShown: false}}
       />
+      {/* Keep auth screens accessible for re-login scenarios */}
+      <Stack.Screen 
+        name="Login" 
+        component={LoginScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen 
+        name="Register" 
+        component={RegisterScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
     </Stack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+});

@@ -5,7 +5,7 @@ import firestore from '@react-native-firebase/firestore';
 import {APP_ID} from './config';
 
 const RECEIPTS_COLLECTION = (userId: string) =>
-  `apps/${APP_ID}/users/${userId}/receipts`;
+  `artifacts/goshopperai/users/${userId}/receipts`;
 
 export interface QueryResult {
   answer: string;

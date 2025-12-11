@@ -11,6 +11,7 @@ import firestore from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useAuth} from './AuthContext';
 import {UserProfile} from '@/shared/types';
+import {COLLECTIONS} from '@/shared/services/firebase/config';
 
 const USER_PROFILE_CACHE_KEY = '@goshopperai_user_profile';
 
@@ -68,13 +69,9 @@ export function UserProvider({children}: UserProviderProps) {
     setIsLoading(true);
 
     // Real-time listener for profile changes
+    // Path: artifacts/goshopperai/users/{userId}
     const unsubscribe = firestore()
-      .collection('apps')
-      .doc('goshopperai')
-      .collection('users')
-      .doc(user.uid)
-      .collection('profile')
-      .doc('main')
+      .doc(COLLECTIONS.userProfile(user.uid))
       .onSnapshot(
         async doc => {
           if (doc.exists) {
@@ -129,12 +126,7 @@ export function UserProvider({children}: UserProviderProps) {
       };
 
       await firestore()
-        .collection('apps')
-        .doc('goshopperai')
-        .collection('users')
-        .doc(userId)
-        .collection('profile')
-        .doc('main')
+        .doc(COLLECTIONS.userProfile(userId))
         .set({
           ...defaultProfile,
           createdAt: firestore.FieldValue.serverTimestamp(),
@@ -161,12 +153,7 @@ export function UserProvider({children}: UserProviderProps) {
 
       try {
         await firestore()
-          .collection('apps')
-          .doc('goshopperai')
-          .collection('users')
-          .doc(user.uid)
-          .collection('profile')
-          .doc('main')
+          .doc(COLLECTIONS.userProfile(user.uid))
           .update({
             ...updates,
             updatedAt: firestore.FieldValue.serverTimestamp(),
@@ -225,12 +212,7 @@ export function UserProvider({children}: UserProviderProps) {
     setIsLoading(true);
     try {
       const doc = await firestore()
-        .collection('apps')
-        .doc('goshopperai')
-        .collection('users')
-        .doc(user.uid)
-        .collection('profile')
-        .doc('main')
+        .doc(COLLECTIONS.userProfile(user.uid))
         .get();
 
       if (doc.exists) {

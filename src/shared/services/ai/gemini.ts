@@ -2,15 +2,18 @@
 // Uses Cloud Functions as a proxy for security
 
 import functions from '@react-native-firebase/functions';
+import auth from '@react-native-firebase/auth';
 import {Receipt, ReceiptItem, ReceiptScanResult} from '@/shared/types';
 import {generateUUID} from '@/shared/utils/helpers';
 
 // Cloud Functions region - must match deployed functions
 const FUNCTIONS_REGION = 'europe-west1';
+const PROJECT_ID = 'goshopperai';
 
 interface ParseReceiptResponse {
   success: boolean;
-  data?: {
+  receiptId?: string;
+  receipt?: {
     storeName: string;
     storeAddress?: string;
     storePhone?: string;
@@ -31,12 +34,12 @@ interface ParseReceiptResponse {
     total: number;
     rawText?: string;
   };
+  // Legacy support for data field
+  data?: ParseReceiptResponse['receipt'];
   error?: string;
 }
 
 class GeminiService {
-  private parseReceiptFunction = functions('europe-west1').httpsCallable('parseReceipt');
-
   /**
    * Parse a receipt image using Gemini AI via Cloud Function
    */
@@ -45,23 +48,69 @@ class GeminiService {
     userId: string,
   ): Promise<ReceiptScanResult> {
     try {
-      // Call Cloud Function (handles rate limiting, caching, API key security)
-      const response = await this.parseReceiptFunction({
-        imageBase64: imageBase64,
-        mimeType: 'image/jpeg',
-      });
+      // Get current user's auth token for authenticated call
+      const currentUser = auth().currentUser;
+      if (!currentUser) {
+        return {
+          success: false,
+          error: 'Veuillez vous connecter pour scanner.',
+        };
+      }
+      
+      const idToken = await currentUser.getIdToken();
+      
+      // Call Cloud Function via HTTP with Firebase Auth
+      // This is needed because the function is deployed in europe-west1
+      const response = await fetch(
+        `https://${FUNCTIONS_REGION}-${PROJECT_ID}.cloudfunctions.net/parseReceipt`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            data: {
+              imageBase64: imageBase64,
+              mimeType: 'image/jpeg',
+            },
+          }),
+        }
+      );
+      
+      // Check if HTTP response is OK
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('HTTP error response:', response.status, errorText);
+        throw new Error(`Erreur serveur (${response.status}): ${errorText}`);
+      }
+      
+      const responseData = await response.json();
+      console.log('Cloud Function response:', JSON.stringify(responseData).substring(0, 500));
+      
+      // Handle error in response
+      if (responseData.error) {
+        const errorMsg = typeof responseData.error === 'object' 
+          ? responseData.error.message || JSON.stringify(responseData.error)
+          : responseData.error;
+        throw new Error(errorMsg);
+      }
+      
+      // Handle callable function response format
+      const result = (responseData.result || responseData) as ParseReceiptResponse;
+      
+      // Get receipt data from either 'receipt' or 'data' field
+      const receiptData = result.receipt || result.data;
 
-      const result = response.data as ParseReceiptResponse;
-
-      if (!result.success || !result.data) {
+      if (!result.success || !receiptData) {
         return {
           success: false,
           error: result.error || 'Failed to parse receipt',
         };
       }
 
-      // Transform response to Receipt type
-      const receipt = this.transformToReceipt(result.data, userId);
+      // Transform response to Receipt type - use receiptId from response
+      const receipt = this.transformToReceipt(receiptData, userId, result.receiptId);
 
       return {
         success: true,
@@ -69,6 +118,9 @@ class GeminiService {
       };
     } catch (error: any) {
       console.error('Gemini parse error:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       
       // Handle specific error types
       if (error.code === 'functions/resource-exhausted') {
@@ -84,10 +136,27 @@ class GeminiService {
           error: 'Veuillez vous connecter pour scanner.',
         };
       }
+      
+      if (error.code === 'functions/not-found') {
+        return {
+          success: false,
+          error: 'Service d\'analyse indisponible. Réessayez plus tard.',
+        };
+      }
+
+      // Get a proper error message
+      let errorMessage = 'Une erreur est survenue lors de l\'analyse';
+      if (error.message && typeof error.message === 'string') {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error.error) {
+        errorMessage = typeof error.error === 'string' ? error.error : JSON.stringify(error.error);
+      }
 
       return {
         success: false,
-        error: error.message || 'Une erreur est survenue lors de l\'analyse',
+        error: errorMessage,
       };
     }
   }
@@ -98,13 +167,15 @@ class GeminiService {
   private transformToReceipt(
     data: ParseReceiptResponse['data'],
     userId: string,
+    firestoreReceiptId?: string,
   ): Receipt {
     if (!data) {
       throw new Error('No data to transform');
     }
 
     const now = new Date();
-    const receiptId = generateUUID();
+    // Use the Firestore receipt ID if provided, otherwise generate a new one
+    const receiptId = firestoreReceiptId || generateUUID();
 
     // Transform items
     const items: ReceiptItem[] = data.items.map((item, index) => ({

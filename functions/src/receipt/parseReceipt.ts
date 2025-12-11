@@ -204,7 +204,11 @@ export const parseReceipt = functions
     }
     
     try {
-      // Check subscription/trial limits
+      // TESTING MODE: Skip subscription check for now
+      // TODO: Remove this bypass before production
+      const TESTING_MODE = true;
+      
+      // Check subscription/trial limits (bypassed in testing mode)
       const subscriptionRef = db.doc(collections.subscription(userId));
       const subscriptionDoc = await subscriptionRef.get();
       
@@ -225,8 +229,11 @@ export const parseReceipt = functions
         await subscriptionRef.set(subscription);
       }
       
-      // Check if user can scan
-      const canScan = subscription.isSubscribed || 
+      // Check if user can scan (skip in testing mode or if limit is -1 for unlimited)
+      const isUnlimited = config.app.trialScanLimit === -1 || subscription.trialScansLimit === -1;
+      const canScan = TESTING_MODE || 
+        subscription.isSubscribed || 
+        isUnlimited ||
         subscription.trialScansUsed < subscription.trialScansLimit;
       
       if (!canScan) {
@@ -267,14 +274,19 @@ export const parseReceipt = functions
       
     } catch (error) {
       console.error('Receipt parsing error:', error);
+      console.error('Error name:', (error as Error).name);
+      console.error('Error message:', (error as Error).message);
+      console.error('Error stack:', (error as Error).stack);
       
       if (error instanceof functions.https.HttpsError) {
         throw error;
       }
       
+      // Return more detailed error for debugging
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new functions.https.HttpsError(
         'internal',
-        'Failed to parse receipt. Please try again.'
+        `Failed to parse receipt: ${errorMessage}`
       );
     }
   });

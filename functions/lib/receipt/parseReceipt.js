@@ -210,7 +210,10 @@ exports.parseReceipt = functions
         throw new functions.https.HttpsError('invalid-argument', 'Image data is required');
     }
     try {
-        // Check subscription/trial limits
+        // TESTING MODE: Skip subscription check for now
+        // TODO: Remove this bypass before production
+        const TESTING_MODE = true;
+        // Check subscription/trial limits (bypassed in testing mode)
         const subscriptionRef = db.doc(config_1.collections.subscription(userId));
         const subscriptionDoc = await subscriptionRef.get();
         let subscription = subscriptionDoc.data();
@@ -228,8 +231,11 @@ exports.parseReceipt = functions
             };
             await subscriptionRef.set(subscription);
         }
-        // Check if user can scan
-        const canScan = subscription.isSubscribed ||
+        // Check if user can scan (skip in testing mode or if limit is -1 for unlimited)
+        const isUnlimited = config_1.config.app.trialScanLimit === -1 || subscription.trialScansLimit === -1;
+        const canScan = TESTING_MODE ||
+            subscription.isSubscribed ||
+            isUnlimited ||
             subscription.trialScansUsed < subscription.trialScansLimit;
         if (!canScan) {
             throw new functions.https.HttpsError('resource-exhausted', 'Trial limit reached. Please subscribe to continue.');
@@ -261,10 +267,15 @@ exports.parseReceipt = functions
     }
     catch (error) {
         console.error('Receipt parsing error:', error);
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
         if (error instanceof functions.https.HttpsError) {
             throw error;
         }
-        throw new functions.https.HttpsError('internal', 'Failed to parse receipt. Please try again.');
+        // Return more detailed error for debugging
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        throw new functions.https.HttpsError('internal', `Failed to parse receipt: ${errorMessage}`);
     }
 });
 /**

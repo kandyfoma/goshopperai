@@ -31,8 +31,11 @@ export function AuthProvider({children}: AuthProviderProps) {
 
   // Listen to auth state changes
   useEffect(() => {
+    console.log('🔌 Setting up auth state listener...');
     try {
       const unsubscribe = authService.onAuthStateChanged(user => {
+        console.log('📱 AuthContext received user:', user?.uid || 'null');
+        console.log('📱 Setting isAuthenticated to:', !!user);
         setState({
           user,
           isLoading: false,

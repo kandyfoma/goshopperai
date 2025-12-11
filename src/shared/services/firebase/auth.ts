@@ -180,39 +180,43 @@ class AuthService {
   }
 
   /**
+   * Send password reset email
+   */
+  async sendPasswordResetEmail(email: string): Promise<void> {
+    try {
+      await this.ensureInitialized();
+      await auth().sendPasswordResetEmail(email);
+    } catch (error) {
+      console.error('Password reset email failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Subscribe to auth state changes
    */
   onAuthStateChanged(
     callback: (user: User | null) => void,
   ): () => void {
-    // This is a sync method but needs to handle async initialization
-    // We'll set up the listener once Firebase is ready
-    this.initPromise?.then(initialized => {
-      if (initialized) {
-        auth().onAuthStateChanged(firebaseUser => {
-          const user = firebaseUser ? this.mapFirebaseUser(firebaseUser) : null;
-          callback(user);
-        });
-      } else {
-        // Firebase not initialized, call callback with null
-        callback(null);
-      }
-    }).catch(() => {
-      callback(null);
-    });
+    let unsubscribe: (() => void) | null = null;
     
     try {
+      // Try to set up the listener directly
       const authInstance = auth();
-      if (!authInstance) {
-        // Not ready yet, will be handled by promise above
-        return () => {};
-      }
-      return authInstance.onAuthStateChanged(firebaseUser => {
+      
+      unsubscribe = authInstance.onAuthStateChanged(firebaseUser => {
+        console.log('🔄 Auth state changed:', firebaseUser?.uid || 'null');
         const user = firebaseUser ? this.mapFirebaseUser(firebaseUser) : null;
         callback(user);
       });
+      
+      return () => {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      };
     } catch (error) {
-      console.warn('Auth state listener failed - returning no-op:', error);
+      console.warn('Auth state listener setup failed:', error);
       // Call callback immediately with null user to stop loading state
       callback(null);
       // Return a no-op unsubscribe function

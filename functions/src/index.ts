@@ -34,6 +34,7 @@ export {
   cancelSubscription,
   checkExpiredSubscriptions,
   extendTrial,
+  getUserStats,
 } from './subscription/subscriptionManager';
 
 // Price functions

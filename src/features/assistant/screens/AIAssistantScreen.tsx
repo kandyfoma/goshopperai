@@ -54,7 +54,7 @@ export function AIAssistantScreen() {
     setMessages(prev => [...prev, userMessage]);
     
     try {
-      const result = await naturalLanguageService.processQuery(user.uid, query);
+      const result = await naturalLanguageService.processQuery(user.uid, query, true);
       
       // Add assistant response
       const assistantMessage: ConversationMessage = {

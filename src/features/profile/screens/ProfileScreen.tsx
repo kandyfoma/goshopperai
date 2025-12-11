@@ -1,6 +1,6 @@
 // Profile Screen - User profile and settings access
 // Optimized for Congolese users with French + Lingala translations
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {useAuth, useSubscription} from '@/shared/contexts';
 import {RootStackParamList} from '@/shared/types';
 import {COLORS, SUBSCRIPTION_PLANS, TRIAL_SCAN_LIMIT} from '@/shared/utils/constants';
 import {formatCurrency, formatDate} from '@/shared/utils/helpers';
+import functions from '@react-native-firebase/functions';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -23,6 +24,13 @@ export function ProfileScreen() {
   const {user} = useAuth();
   const {subscription, trialScansUsed} = useSubscription();
 
+  const [userStats, setUserStats] = useState({
+    totalReceipts: 0,
+    totalSavings: 0,
+    loading: true,
+    error: null as string | null,
+  });
+
   const currentPlan = subscription?.planId 
     ? SUBSCRIPTION_PLANS[subscription.planId] 
     : SUBSCRIPTION_PLANS.free;
@@ -30,10 +38,47 @@ export function ProfileScreen() {
   const trialRemaining = Math.max(0, TRIAL_SCAN_LIMIT - trialScansUsed);
   const isFreeTier = !subscription || subscription.planId === 'free';
 
-  // Mock stats - in real app, fetch from Firestore
+  // Fetch user stats from Cloud Function
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      try {
+        setUserStats(prev => ({ ...prev, loading: true, error: null }));
+        
+        const getUserStatsCallable = functions().httpsCallable('getUserStats');
+        const result = await getUserStatsCallable();
+        const data = result.data as {
+          totalReceipts: number;
+          totalSavings: number;
+          totalSpent: number;
+          subscriptionStatus: string;
+          monthlyScansUsed: number;
+          monthlyScansLimit: number;
+        };
+        
+        setUserStats({
+          totalReceipts: data.totalReceipts || 0,
+          totalSavings: data.totalSavings || 0,
+          loading: false,
+          error: null,
+        });
+      } catch (error) {
+        console.error('Failed to fetch user stats:', error);
+        setUserStats(prev => ({
+          ...prev,
+          loading: false,
+          error: 'Failed to load stats',
+        }));
+      }
+    };
+
+    if (user) {
+      fetchUserStats();
+    }
+  }, [user]);
+
   const stats = {
-    totalReceipts: 15,
-    totalSavings: 45.80,
+    totalReceipts: userStats.totalReceipts,
+    totalSavings: userStats.totalSavings,
   };
 
   return (
@@ -62,7 +107,9 @@ export function ProfileScreen() {
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
               <Text style={styles.statEmoji}>📄</Text>
-              <Text style={styles.statValue}>{stats.totalReceipts}</Text>
+              <Text style={styles.statValue}>
+                {userStats.loading ? '...' : stats.totalReceipts}
+              </Text>
               <Text style={styles.statLabel}>Factures scannées</Text>
               <Text style={styles.statLabelLingala}>Bafacture</Text>
             </View>
@@ -70,12 +117,16 @@ export function ProfileScreen() {
             <View style={[styles.statCard, styles.statCardHighlight]}>
               <Text style={styles.statEmoji}>💰</Text>
               <Text style={[styles.statValue, styles.statValueHighlight]}>
-                {formatCurrency(stats.totalSavings)}
+                {userStats.loading ? '...' : formatCurrency(stats.totalSavings)}
               </Text>
               <Text style={[styles.statLabel, styles.statLabelHighlight]}>Économisés</Text>
               <Text style={[styles.statLabelLingala, styles.statLabelHighlight]}>Obombi!</Text>
             </View>
           </View>
+          
+          {userStats.error && (
+            <Text style={styles.errorText}>{userStats.error}</Text>
+          )}
         </View>
 
         {/* Subscription Card - Clear status */}
@@ -490,5 +541,11 @@ const styles = StyleSheet.create({
   appInfoSubtext: {
     fontSize: 12,
     color: COLORS.gray[500],
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#ef4444',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });

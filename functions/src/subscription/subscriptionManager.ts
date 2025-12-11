@@ -727,3 +727,81 @@ export const checkExpiredSubscriptions = functions
       return null;
     }
   });
+
+export const getUserStats = functions
+  .runWith({
+    enforceAppCheck: false,
+    timeoutSeconds: 60,
+  })
+  .https.onCall(async (data, context) => {
+    try {
+      // Check authentication
+      if (!context.auth) {
+        throw new functions.https.HttpsError(
+          'unauthenticated',
+          'User must be authenticated to get stats'
+        );
+      }
+
+      const userId = context.auth.uid;
+      const db = admin.firestore();
+
+      // Get user's receipts
+      const receiptsRef = db.collection('artifacts/goshopperai/users').doc(userId).collection('receipts');
+      const receiptsSnapshot = await receiptsRef.get();
+
+      let totalReceipts = 0;
+      let totalSavings = 0;
+      let totalSpent = 0;
+
+      receiptsSnapshot.forEach((doc) => {
+        const receipt = doc.data();
+        totalReceipts++;
+
+        // Calculate total spent from items
+        if (receipt.items && Array.isArray(receipt.items)) {
+          receipt.items.forEach((item: any) => {
+            if (item.price && typeof item.price === 'number') {
+              totalSpent += item.price;
+            }
+          });
+        }
+
+        // Add savings if available
+        if (receipt.savings && typeof receipt.savings === 'number') {
+          totalSavings += receipt.savings;
+        }
+      });
+
+      // Get subscription status for additional stats
+      const subscriptionRef = db.collection('artifacts/goshopperai/users').doc(userId).collection('subscriptions').doc('current');
+      const subscriptionDoc = await subscriptionRef.get();
+      let subscriptionStatus = 'free';
+      let monthlyScansUsed = 0;
+      let monthlyScansLimit = 5; // Default free tier
+
+      if (subscriptionDoc.exists) {
+        const subscription = subscriptionDoc.data();
+        subscriptionStatus = subscription?.status || 'free';
+        monthlyScansUsed = subscription?.monthlyScansUsed || 0;
+        monthlyScansLimit = subscription?.monthlyScansLimit || 5;
+      }
+
+      return {
+        totalReceipts,
+        totalSavings,
+        totalSpent,
+        subscriptionStatus,
+        monthlyScansUsed,
+        monthlyScansLimit,
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+      };
+
+    } catch (error) {
+      console.error('Get user stats error:', error);
+      throw new functions.https.HttpsError(
+        'internal',
+        'Failed to get user statistics'
+      );
+    }
+  });

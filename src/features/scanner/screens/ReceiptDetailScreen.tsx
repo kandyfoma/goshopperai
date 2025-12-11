@@ -7,9 +7,12 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import firestore from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth';
 import {RootStackParamList, Receipt, ReceiptItem} from '@/shared/types';
 import {COLORS} from '@/shared/utils/constants';
 import {formatCurrency, formatDate} from '@/shared/utils/helpers';
@@ -22,67 +25,105 @@ export function ReceiptDetailScreen() {
   const route = useRoute<ReceiptDetailRouteProp>();
   const {receiptId} = route.params;
 
-  // TODO: Fetch receipt from Firestore
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Mock data for now - will fetch from Firestore
-    setReceipt({
-      id: receiptId,
-      userId: 'user-1',
-      storeName: 'Shoprite Kinshasa',
-      storeNameNormalized: 'shoprite kinshasa',
-      date: new Date(),
-      currency: 'USD',
-      items: [
-        {
-          id: '1',
-          name: 'Riz Basmati 5kg',
-          nameNormalized: 'riz basmati 5kg',
-          quantity: 1,
-          unitPrice: 12.99,
-          totalPrice: 12.99,
-          category: 'Alimentation',
-          confidence: 0.95,
-        },
-        {
-          id: '2',
-          name: 'Huile de palme 1L',
-          nameNormalized: 'huile palme 1l',
-          quantity: 2,
-          unitPrice: 4.50,
-          totalPrice: 9.00,
-          category: 'Alimentation',
-          confidence: 0.92,
-        },
-        {
-          id: '3',
-          name: 'Coca-Cola 1.5L',
-          nameNormalized: 'coca cola 1.5l',
-          quantity: 3,
-          unitPrice: 2.00,
-          totalPrice: 6.00,
-          category: 'Boissons',
-          confidence: 0.98,
-        },
-      ],
-      total: 27.99,
-      processingStatus: 'completed',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      scannedAt: new Date(),
-    });
+    const fetchReceipt = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const userId = auth().currentUser?.uid;
+        if (!userId) {
+          setError('Utilisateur non connecté');
+          return;
+        }
+
+        const receiptDoc = await firestore()
+          .collection('artifacts')
+          .doc('goshopperai')
+          .collection('users')
+          .doc(userId)
+          .collection('receipts')
+          .doc(receiptId)
+          .get();
+
+        if (!receiptDoc.exists) {
+          setError('Reçu non trouvé');
+          return;
+        }
+
+        const data = receiptDoc.data();
+        if (data) {
+          setReceipt({
+            id: receiptDoc.id,
+            userId: data.userId,
+            storeName: data.storeName || 'Magasin inconnu',
+            storeNameNormalized: data.storeNameNormalized || '',
+            storeAddress: data.storeAddress,
+            storePhone: data.storePhone,
+            receiptNumber: data.receiptNumber,
+            date: data.date ? new Date(data.date) : (data.scannedAt?.toDate() || new Date()),
+            currency: data.currency || 'USD',
+            items: (data.items || []).map((item: any) => ({
+              id: item.id || Math.random().toString(36).substring(7),
+              name: item.name || 'Article inconnu',
+              nameNormalized: item.nameNormalized || '',
+              quantity: item.quantity || 1,
+              unitPrice: item.unitPrice || 0,
+              totalPrice: item.totalPrice || 0,
+              unit: item.unit,
+              category: item.category || 'Autres',
+              confidence: item.confidence || 0.85,
+            })),
+            subtotal: data.subtotal,
+            tax: data.tax,
+            total: data.total || 0,
+            processingStatus: data.processingStatus || 'completed',
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+            scannedAt: data.scannedAt?.toDate() || new Date(),
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching receipt:', err);
+        setError('Erreur lors du chargement du reçu');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReceipt();
   }, [receiptId]);
 
   const handleCompare = () => {
     navigation.navigate('PriceComparison', {receiptId});
   };
 
-  if (!receipt) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loading}>
-          <Text>Chargement...</Text>
+          <ActivityIndicator size="large" color={COLORS.primary[500]} />
+          <Text style={styles.loadingText}>Chargement du reçu...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !receipt) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loading}>
+          <Text style={styles.errorIcon}>❌</Text>
+          <Text style={styles.errorText}>{error || 'Reçu non trouvé'}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={() => navigation.goBack()}>
+            <Text style={styles.retryButtonText}>Retour</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -323,5 +364,31 @@ const styles = StyleSheet.create({
   compareArrow: {
     fontSize: 24,
     color: COLORS.primary[500],
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: COLORS.gray[600],
+  },
+  errorIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 16,
+    color: COLORS.gray[600],
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary[500],
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -7,7 +7,9 @@ import {
   ScrollView,
   SafeAreaView,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
+import firestore from '@react-native-firebase/firestore';
 import {COLORS} from '@/shared/utils/constants';
 import {formatCurrency} from '@/shared/utils/helpers';
 import {useAuth} from '@/shared/contexts';
@@ -34,29 +36,153 @@ export function StatsScreen() {
   const [totalSavings, setTotalSavings] = useState(0);
   const [categories, setCategories] = useState<SpendingCategory[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlySpending[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // TODO: Fetch real data from Firestore
-    // Mock data for demonstration
-    setTotalSpending(245.80);
-    setTotalSavings(32.50);
-    
-    setCategories([
-      {name: 'Alimentation', amount: 120.50, percentage: 49, color: COLORS.primary[500], icon: '🛒'},
-      {name: 'Boissons', amount: 45.30, percentage: 18, color: '#10b981', icon: '🥤'},
-      {name: 'Hygiène', amount: 38.00, percentage: 15, color: '#8b5cf6', icon: '🧴'},
-      {name: 'Ménage', amount: 28.00, percentage: 11, color: '#f59e0b', icon: '🏠'},
-      {name: 'Autre', amount: 14.00, percentage: 7, color: COLORS.gray[400], icon: '📦'},
-    ]);
-
-    setMonthlyData([
-      {month: 'Oct', amount: 180},
-      {month: 'Nov', amount: 220},
-      {month: 'Déc', amount: 245.80},
-    ]);
+    loadStatsData();
   }, [user]);
 
+  const loadStatsData = async () => {
+    if (!user?.uid) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      // Get current month receipts
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      
+      const receiptsSnapshot = await firestore()
+        .collection('artifacts')
+        .doc('goshopperai')
+        .collection('users')
+        .doc(user.uid)
+        .collection('receipts')
+        .where('scannedAt', '>=', startOfMonth)
+        .orderBy('scannedAt', 'desc')
+        .get();
+
+      // Calculate spending by category
+      const categoryTotals: Record<string, number> = {};
+      let totalSpent = 0;
+      let totalSavings = 0;
+      
+      receiptsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        totalSpent += data.total || 0;
+        
+        // Calculate real savings from receipt data
+        if (data.savings && typeof data.savings === 'number') {
+          totalSavings += data.savings;
+        }
+        
+        (data.items || []).forEach((item: any) => {
+          const category = item.category || 'Autre';
+          categoryTotals[category] = (categoryTotals[category] || 0) + (item.totalPrice || 0);
+        });
+      });
+
+      // Convert to category array with percentages
+      const categoryColors = {
+        'Alimentation': COLORS.primary[500],
+        'Boissons': '#10b981',
+        'Hygiène': '#8b5cf6',
+        'Ménage': '#f59e0b',
+        'Bébé': '#ec4899',
+        'Autre': COLORS.gray[400],
+      };
+
+      const categoryIcons = {
+        'Alimentation': '🛒',
+        'Boissons': '🥤',
+        'Hygiène': '🧴',
+        'Ménage': '🏠',
+        'Bébé': '👶',
+        'Autre': '📦',
+      };
+
+      const categoriesArray: SpendingCategory[] = Object.entries(categoryTotals)
+        .map(([name, amount]) => ({
+          name,
+          amount,
+          percentage: totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0,
+          color: categoryColors[name as keyof typeof categoryColors] || COLORS.gray[400],
+          icon: categoryIcons[name as keyof typeof categoryIcons] || '📦',
+        }))
+        .sort((a, b) => b.amount - a.amount);
+
+      setTotalSpending(totalSpent);
+      setTotalSavings(totalSavings);
+      setCategories(categoriesArray);
+
+      // Calculate monthly data (last 3 months)
+      const monthlyTotals: Record<string, number> = {};
+      const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+      
+      for (let i = 2; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+        monthlyTotals[monthKey] = 0;
+      }
+
+      // Get receipts for last 3 months
+      const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      const allReceiptsSnapshot = await firestore()
+        .collection('artifacts')
+        .doc('goshopperai')
+        .collection('users')
+        .doc(user.uid)
+        .collection('receipts')
+        .where('scannedAt', '>=', threeMonthsAgo)
+        .get();
+
+      allReceiptsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const date = data.scannedAt?.toDate() || new Date();
+        const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+        if (monthlyTotals[monthKey] !== undefined) {
+          monthlyTotals[monthKey] += data.total || 0;
+        }
+      });
+
+      const monthlyArray: MonthlySpending[] = Object.entries(monthlyTotals)
+        .map(([key, amount]) => {
+          const [, month] = key.split('-');
+          return {
+            month: monthNames[parseInt(month)],
+            amount,
+          };
+        });
+
+      setMonthlyData(monthlyArray);
+      
+    } catch (error) {
+      console.error('Error loading stats:', error);
+      // Set empty data on error
+      setTotalSpending(0);
+      setTotalSavings(0);
+      setCategories([]);
+      setMonthlyData([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const maxMonthlyAmount = Math.max(...monthlyData.map(d => d.amount));
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={COLORS.primary[500]} />
+          <Text style={styles.loadingText}>Chargement des statistiques...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -390,5 +516,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.gray[600],
     lineHeight: 18,
+  },
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: COLORS.gray[600],
   },
 });
