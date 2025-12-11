@@ -14,7 +14,7 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
-import {useAuth} from '@/shared/contexts';
+import {useAuth, useUser} from '@/shared/contexts';
 import {COLORS} from '@/shared/utils/constants';
 import firestore from '@react-native-firebase/firestore';
 import {analyticsService} from '@/shared/services/analytics';
@@ -136,7 +136,8 @@ const DRC_CITIES = [
 
 export function UpdateProfileScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const {user, userProfile} = useAuth();
+  const {user} = useAuth();
+  const {profile, updateProfile} = useUser();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -152,18 +153,18 @@ export function UpdateProfileScreen() {
   const [showCityPicker, setShowCityPicker] = useState(false);
 
   useEffect(() => {
-    if (userProfile) {
+    if (profile) {
       setFormData({
-        name: userProfile.name || '',
-        surname: userProfile.surname || '',
-        age: userProfile.age?.toString() || '',
-        sex: userProfile.sex || '',
-        phoneNumber: userProfile.phoneNumber || '',
-        monthlyBudget: userProfile.monthlyBudget?.toString() || '',
-        city: userProfile.defaultCity || '',
+        name: profile.name || '',
+        surname: profile.surname || '',
+        age: profile.age?.toString() || '',
+        sex: profile.sex || '',
+        phoneNumber: profile.phoneNumber || '',
+        monthlyBudget: profile.monthlyBudget?.toString() || '',
+        city: profile.defaultCity || '',
       });
     }
-  }, [userProfile]);
+  }, [profile]);
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -193,6 +194,17 @@ export function UpdateProfileScreen() {
         .collection('users')
         .doc(user.uid)
         .set(updateData, { merge: true });
+
+      // Track successful profile update
+      analyticsService.logCustomEvent('profile_updated', {
+        fields_updated: Object.keys(updateData).filter(key => key !== 'updatedAt'),
+        has_name: !!updateData.name,
+        has_age: !!updateData.age,
+        has_sex: !!updateData.sex,
+        has_phone: !!updateData.phoneNumber,
+        has_budget: !!updateData.monthlyBudget,
+        has_city: !!updateData.defaultCity
+      });
 
       Alert.alert('Succès', 'Votre profil a été mis à jour avec succès!');
       navigation.goBack();

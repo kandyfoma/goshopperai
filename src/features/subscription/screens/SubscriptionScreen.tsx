@@ -18,6 +18,7 @@ import {useSubscription, useAuth} from '@/shared/contexts';
 import {COLORS, SUBSCRIPTION_PLANS, TRIAL_DURATION_DAYS, calculateDiscountedPrice} from '@/shared/utils/constants';
 import {formatCurrency} from '@/shared/utils/helpers';
 import {SubscriptionDuration, SUBSCRIPTION_DURATIONS} from '@/shared/types';
+import {analyticsService} from '@/shared/services/analytics';
 
 type MobileMoneyProvider = 'mpesa' | 'orange' | 'airtel' | 'afrimoney';
 type PaymentMethodType = 'mobile_money' | 'card';
@@ -48,6 +49,11 @@ export function SubscriptionScreen() {
   const [selectedMobileMoney, setSelectedMobileMoney] = useState<MobileMoneyProvider | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
+
+  useEffect(() => {
+    // Track screen view
+    analyticsService.logScreenView('Subscription', 'SubscriptionScreen');
+  }, []);
   const [email, setEmail] = useState('');
   const [isInDRC, setIsInDRC] = useState<boolean | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
@@ -132,6 +138,16 @@ export function SubscriptionScreen() {
         {
           text: 'Confirmer',
           onPress: async () => {
+            // Track subscription attempt
+            analyticsService.logCustomEvent('subscription_attempted', {
+              plan_id: selectedPlan,
+              duration_months: selectedDuration,
+              payment_method: 'mobile_money',
+              provider: selectedMobileMoney,
+              amount: pricing.total,
+              currency: 'USD'
+            });
+
             setIsProcessing(true);
             try {
               const result = await functions().httpsCallable('initiateMokoPayment')({
@@ -143,12 +159,34 @@ export function SubscriptionScreen() {
                 durationMonths: selectedDuration,
               });
               const {status, message} = result.data as any;
+              
+              // Track subscription result
+              analyticsService.logCustomEvent('subscription_completed', {
+                plan_id: selectedPlan,
+                duration_months: selectedDuration,
+                payment_method: 'mobile_money',
+                provider: selectedMobileMoney,
+                amount: pricing.total,
+                currency: 'USD',
+                success: status === 'success',
+                status: status
+              });
+
               Alert.alert(
                 status === 'success' ? 'Activé!' : 'Initié', 
                 message || 'Vérifiez votre téléphone',
                 [{text: 'OK', onPress: () => navigation.goBack()}]
               );
             } catch (error: any) {
+              // Track subscription failure
+              analyticsService.logCustomEvent('subscription_failed', {
+                plan_id: selectedPlan,
+                duration_months: selectedDuration,
+                payment_method: 'mobile_money',
+                provider: selectedMobileMoney,
+                amount: pricing.total,
+                error: error.message
+              });
               Alert.alert('Erreur', error.message || 'Réessayez');
             } finally {
               setIsProcessing(false);
@@ -176,6 +214,15 @@ export function SubscriptionScreen() {
         {
           text: isInDRC ? 'Continuer' : 'Continue',
           onPress: async () => {
+            // Track subscription attempt
+            analyticsService.logCustomEvent('subscription_attempted', {
+              plan_id: selectedPlan,
+              duration_months: selectedDuration,
+              payment_method: 'card',
+              amount: pricing.total,
+              currency: 'USD'
+            });
+
             setIsProcessing(true);
             try {
               await functions().httpsCallable('createPaymentIntent')({
@@ -184,12 +231,32 @@ export function SubscriptionScreen() {
                 email,
                 durationMonths: selectedDuration,
               });
+              
+              // Track subscription result (card payment is more complex, so we track initiation)
+              analyticsService.logCustomEvent('subscription_completed', {
+                plan_id: selectedPlan,
+                duration_months: selectedDuration,
+                payment_method: 'card',
+                amount: pricing.total,
+                currency: 'USD',
+                success: true,
+                status: 'initiated'
+              });
+
               Alert.alert(
                 isInDRC ? 'Paiement carte' : 'Card Payment',
                 'Stripe SDK integration required', 
                 [{text: 'OK'}]
               );
             } catch (error: any) {
+              // Track subscription failure
+              analyticsService.logCustomEvent('subscription_failed', {
+                plan_id: selectedPlan,
+                duration_months: selectedDuration,
+                payment_method: 'card',
+                amount: pricing.total,
+                error: error.message
+              });
               Alert.alert('Error', error.message || 'Try again');
             } finally {
               setIsProcessing(false);

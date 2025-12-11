@@ -13,7 +13,7 @@ import {
 import firestore from '@react-native-firebase/firestore';
 import {COLORS} from '@/shared/utils/constants';
 import {formatCurrency} from '@/shared/utils/helpers';
-import {useAuth} from '@/shared/contexts';
+import {useAuth, useUser} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
 
 interface ItemData {
@@ -34,7 +34,8 @@ interface ItemData {
 }
 
 export function ItemsScreen() {
-  const {user, userProfile} = useAuth();
+  const {user} = useAuth();
+  const {profile: userProfile} = useUser();
   const [items, setItems] = useState<ItemData[]>([]);
   const [filteredItems, setFilteredItems] = useState<ItemData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');

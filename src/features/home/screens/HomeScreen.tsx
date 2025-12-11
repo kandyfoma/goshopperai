@@ -24,7 +24,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 export function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const {canScan, subscription, isTrialActive, trialDaysRemaining} = useSubscription();
-  const {userProfile} = useUser();
+  const {profile: userProfile} = useUser();
 
   useEffect(() => {
     // Track screen view
