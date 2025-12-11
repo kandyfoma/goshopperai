@@ -19,6 +19,7 @@ if (!admin.apps.length) {
 
 // Export functions
 export {parseReceipt, parseReceiptV2} from './receipt/parseReceipt';
+export {quickExtractReceipt} from './receipt/quickExtract';
 
 // Payment functions
 export {

@@ -77,3 +77,74 @@ GoogleService-Info.plist
 .env
 .env.local
 .env.*.local
+
+# Firebase functions
+functions/lib/
+functions/.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# React Native specific
+android/app/build/
+android/.gradle/
+android/.idea/
+android/app/.cxx/
+*.jks
+
+# Metro bundler
+.metro/
+
+# TypeScript
+*.tsbuildinfo
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+lib-cov
+
+# nyc test coverage
+.nyc_output
+
+# Build outputs
+dist/
+build/
+
+# Local development files
+local-dev-*
+dev-*
+
+# Test files
+test-results/
+playwright-report/
+
+# Android signing configs
+android/app/*.keystore
+android/app/*.properties
+
+# iOS provisioning profiles
+ios/*.mobileprovision
+ios/*.provisionprofile

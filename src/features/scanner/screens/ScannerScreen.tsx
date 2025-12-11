@@ -12,10 +12,11 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList, Receipt} from '@/shared/types';
-import {useSubscription} from '@/shared/contexts';
+import {useSubscription, useAuth} from '@/shared/contexts';
 import {cameraService} from '@/shared/services/camera';
 import {geminiService} from '@/shared/services/ai/gemini';
 import {analyticsService} from '@/shared/services/analytics';
+import {duplicateDetectionService} from '@/shared/services/duplicateDetection';
 import {COLORS} from '@/shared/utils/constants';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -26,6 +27,7 @@ const MAX_RETRY_ATTEMPTS = 3;
 
 export function ScannerScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const {user} = useAuth();
   const {
     canScan,
     recordScan,
@@ -139,13 +141,67 @@ export function ScannerScreen() {
     isRetry: boolean = false,
   ): Promise<void> => {
     setState('processing');
-    setProcessingProgress('Analyse en cours...');
+    setProcessingProgress('Vérification des doublons...');
 
     try {
-      // Parse receipt with Gemini AI using base64 directly (no compression needed)
+      // Step 1: Check for duplicates before full processing
+      if (!isRetry) {
+        const duplicateCheck = await duplicateDetectionService.checkForDuplicate(
+          base64Data,
+          user?.uid || 'unknown-user',
+        );
+
+        // Track duplicate detection result
+        analyticsService.logCustomEvent('duplicate_check_completed', {
+          is_duplicate: duplicateCheck.isDuplicate,
+          confidence: duplicateCheck.confidence,
+          has_existing_receipt: !!duplicateCheck.existingReceiptId,
+        });
+
+        if (duplicateCheck.isDuplicate && duplicateCheck.confidence > 0.8) {
+          // High confidence duplicate - ask user to confirm
+          const shouldProceed = await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              'Reçu potentiellement dupliqué',
+              `Un reçu similaire a été trouvé (${Math.round(
+                duplicateCheck.confidence * 100,
+              )}% de similarité). Voulez-vous quand même continuer ?`,
+              [
+                {
+                  text: 'Annuler',
+                  style: 'cancel',
+                  onPress: () => resolve(false),
+                },
+                {
+                  text: 'Continuer',
+                  onPress: () => resolve(true),
+                },
+              ],
+            );
+          });
+
+          if (!shouldProceed) {
+            setState('idle');
+            analyticsService.logCustomEvent('duplicate_scan_cancelled', {
+              confidence: duplicateCheck.confidence,
+            });
+            return;
+          }
+        } else if (duplicateCheck.isDuplicate && duplicateCheck.confidence > 0.6) {
+          // Medium confidence - show warning but continue
+          setProcessingProgress('Reçu similaire détecté, poursuite de l\'analyse...');
+          analyticsService.logCustomEvent('duplicate_warning_shown', {
+            confidence: duplicateCheck.confidence,
+          });
+        }
+      }
+
+      setProcessingProgress('Analyse en cours...');
+
+      // Step 2: Parse receipt with Gemini AI using base64 directly (no compression needed)
       const result = await geminiService.parseReceipt(
         base64Data,
-        'current-user',
+        user?.uid || 'unknown-user',
       );
 
       if (result.success && result.receipt) {
