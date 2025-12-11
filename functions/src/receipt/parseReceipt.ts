@@ -217,11 +217,7 @@ export const parseReceipt = functions
     }
 
     try {
-      // TESTING MODE: Skip subscription check for now
-      // TODO: Remove this bypass before production
-      const TESTING_MODE = true;
-
-      // Check subscription/trial limits (bypassed in testing mode)
+      // Check subscription/trial limits
       const subscriptionRef = db.doc(collections.subscription(userId));
       const subscriptionDoc = await subscriptionRef.get();
 
@@ -242,11 +238,10 @@ export const parseReceipt = functions
         await subscriptionRef.set(subscription);
       }
 
-      // Check if user can scan (skip in testing mode or if limit is -1 for unlimited)
+      // Check if user can scan (skip if limit is -1 for unlimited)
       const isUnlimited =
         config.app.trialScanLimit === -1 || subscription.trialScansLimit === -1;
       const canScan =
-        TESTING_MODE ||
         subscription.isSubscribed ||
         isUnlimited ||
         subscription.trialScansUsed < subscription.trialScansLimit;
@@ -437,6 +432,90 @@ export const parseReceiptV2 = functions
   });
 
 /**
+ * Calculate actual savings for a receipt by comparing prices against best available prices
+ */
+async function calculateReceiptSavings(
+  userId: string,
+  receipt: ParsedReceipt,
+): Promise<number> {
+  if (!receipt.items || receipt.items.length === 0) {
+    return 0;
+  }
+
+  try {
+    // Normalize product names for matching
+    const normalizeProductName = (name: string): string => {
+      return name
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+
+    // Collect all normalized product names
+    const normalizedNames = receipt.items.map(
+      item => item.nameNormalized || normalizeProductName(item.name),
+    );
+
+    // Remove duplicates to avoid unnecessary queries
+    const uniqueNormalizedNames = [...new Set(normalizedNames)];
+
+    // Query all price data for these products in batches (Firestore 'in' limit is 10)
+    const batchSize = 10;
+    const priceDataMap = new Map<string, any[]>();
+
+    for (let i = 0; i < uniqueNormalizedNames.length; i += batchSize) {
+      const batch = uniqueNormalizedNames.slice(i, i + batchSize);
+
+      const priceQuery = await db
+        .collection(collections.prices)
+        .where('productNameNormalized', 'in', batch)
+        .orderBy('recordedAt', 'desc')
+        .get();
+
+      // Group prices by normalized name
+      priceQuery.docs.forEach(doc => {
+        const pricePoint = doc.data();
+        const key = pricePoint.productNameNormalized;
+
+        if (!priceDataMap.has(key)) {
+          priceDataMap.set(key, []);
+        }
+        priceDataMap.get(key)!.push(pricePoint);
+      });
+    }
+
+    let totalSavings = 0;
+
+    // Calculate savings for each item
+    for (const item of receipt.items) {
+      const normalizedName =
+        item.nameNormalized || normalizeProductName(item.name);
+      const prices = priceDataMap.get(normalizedName) || [];
+
+      if (prices.length > 0) {
+        // Find the best price for this item
+        const priceValues = prices.map(p => p.price);
+        const bestPrice = Math.min(...priceValues);
+
+        // Calculate savings if user paid more than the best price
+        if (item.unitPrice > bestPrice) {
+          const itemSavings = (item.unitPrice - bestPrice) * item.quantity;
+          totalSavings += itemSavings;
+        }
+      }
+    }
+
+    return Math.round(totalSavings * 100) / 100; // Round to 2 decimal places
+  } catch (error) {
+    console.error('Error calculating receipt savings:', error);
+    return 0; // Return 0 on error to avoid breaking the flow
+  }
+}
+
+/**
  * Update user stats for achievements
  */
 async function updateUserStats(
@@ -472,7 +551,11 @@ async function updateUserStats(
     // Update stats
     stats.totalScans = (stats.totalScans || 0) + 1;
     stats.totalSpent = (stats.totalSpent || 0) + (receipt.total || 0);
-    stats.totalSavings = (stats.totalSavings || 0) + 0; // TODO: Calculate actual savings from price comparisons
+
+    // Calculate actual savings from price comparisons
+    const actualSavings = await calculateReceiptSavings(userId, receipt);
+    stats.totalSavings = (stats.totalSavings || 0) + actualSavings;
+
     stats.itemsScanned =
       (stats.itemsScanned || 0) + (receipt.items?.length || 0);
 

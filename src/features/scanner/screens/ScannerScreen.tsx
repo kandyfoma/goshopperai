@@ -17,6 +17,7 @@ import {cameraService} from '@/shared/services/camera';
 import {geminiService} from '@/shared/services/ai/gemini';
 import {analyticsService} from '@/shared/services/analytics';
 import {duplicateDetectionService} from '@/shared/services/duplicateDetection';
+import {offlineQueueService} from '@/shared/services/firebase';
 import {COLORS} from '@/shared/utils/constants';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -40,6 +41,8 @@ export function ScannerScreen() {
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [processingProgress, setProcessingProgress] = useState<string>('');
+  const [isOffline, setIsOffline] = useState(false);
+  const [queueCount, setQueueCount] = useState(0);
 
   const retryCountRef = useRef(0);
   const currentImageRef = useRef<string | null>(null);
@@ -47,6 +50,22 @@ export function ScannerScreen() {
   useEffect(() => {
     // Track screen view
     analyticsService.logScreenView('Scanner', 'ScannerScreen');
+
+    // Initialize offline queue
+    offlineQueueService.init();
+
+    // Subscribe to queue updates
+    const unsubscribe = offlineQueueService.subscribe((queue) => {
+      setQueueCount(queue.length);
+    });
+
+    // Check initial queue count
+    offlineQueueService.getQueueCount().then(setQueueCount);
+
+    return () => {
+      offlineQueueService.cleanup();
+      unsubscribe();
+    };
   }, []);
 
   const processImage = useCallback(
@@ -178,8 +197,31 @@ export function ScannerScreen() {
           err.message?.includes('network') ||
           err.message?.includes('offline')
         ) {
-          userMessage =
-            'Pas de connexion internet. Veuillez vérifier votre connexion et réessayer.';
+          // Queue for offline processing
+          if (currentImageRef.current && user?.uid) {
+            try {
+              await offlineQueueService.queueReceipt(
+                {
+                  // Partial receipt data - will be processed when online
+                  processingStatus: 'pending',
+                  createdAt: new Date(),
+                },
+                [currentImageRef.current],
+                user.uid,
+              );
+
+              userMessage =
+                'Pas de connexion internet. Votre reçu a été mis en file d\'attente et sera traité automatiquement quand vous serez en ligne.';
+              setState('success'); // Show success state for queued items
+            } catch (queueError) {
+              console.error('Failed to queue receipt:', queueError);
+              userMessage =
+                'Pas de connexion internet. Veuillez vérifier votre connexion et réessayer.';
+            }
+          } else {
+            userMessage =
+              'Pas de connexion internet. Veuillez vérifier votre connexion et réessayer.';
+          }
         } else if (err.message?.includes('rate limit')) {
           userMessage =
             'Trop de requêtes. Veuillez patienter quelques secondes et réessayer.';
@@ -249,8 +291,8 @@ export function ScannerScreen() {
       return;
     }
 
-    // Don't store image URI to avoid keeping file on device
-    currentImageRef.current = null;
+    // Store image URI temporarily for potential offline queuing
+    currentImageRef.current = result.uri || null;
     await processImage(result.base64);
   }, [canScan, navigation, isTrialActive, processImage]);
 
@@ -292,8 +334,8 @@ export function ScannerScreen() {
       return;
     }
 
-    // Don't store image URI to avoid keeping file on device
-    currentImageRef.current = null;
+    // Store image URI temporarily for potential offline queuing
+    currentImageRef.current = result.uri || null;
     await processImage(result.base64);
   }, [canScan, navigation, isTrialActive, processImage]);
 
@@ -349,6 +391,25 @@ export function ScannerScreen() {
       {state === 'idle' && (
         <View style={styles.scansBadge}>
           <Text style={styles.scansBadgeText}>{getScansText()}</Text>
+        </View>
+      )}
+
+      {/* Offline banner */}
+      {(isOffline || queueCount > 0) && state === 'idle' && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineIcon}>
+            {isOffline ? '📶' : '⏳'}
+          </Text>
+          <View style={styles.offlineTextContainer}>
+            <Text style={styles.offlineTitle}>
+              {isOffline ? 'Mode hors ligne' : 'File d\'attente active'}
+            </Text>
+            <Text style={styles.offlineDesc}>
+              {isOffline
+                ? `${queueCount} scans en attente`
+                : `${queueCount} scans seront traités automatiquement`}
+            </Text>
+          </View>
         </View>
       )}
 
@@ -714,5 +775,34 @@ const styles = StyleSheet.create({
     color: COLORS.primary[700],
     fontSize: 13,
     fontWeight: '600',
+  },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.warning[50],
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.warning[400],
+  },
+  offlineIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  offlineTextContainer: {
+    flex: 1,
+  },
+  offlineTitle: {
+    color: COLORS.warning[800],
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  offlineDesc: {
+    color: COLORS.warning[700],
+    fontSize: 12,
   },
 });

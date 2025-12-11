@@ -267,21 +267,9 @@ export function SettingsScreen() {
           <SettingItem
             icon="📊"
             title="Alertes de prix"
-            subtitle="Recevez des alertes quand les prix baissent"
-            showArrow={false}
-            rightElement={
-              <Switch
-                value={priceAlertsEnabled}
-                onValueChange={handleTogglePriceAlerts}
-                trackColor={{
-                  false: COLORS.gray[200],
-                  true: COLORS.primary[300],
-                }}
-                thumbColor={
-                  priceAlertsEnabled ? COLORS.primary[500] : '#ffffff'
-                }
-              />
-            }
+            subtitle="Gérer vos alertes de prix"
+            showArrow={true}
+            onPress={() => navigation.navigate('PriceAlerts')}
           />
         </SettingSection>
 
