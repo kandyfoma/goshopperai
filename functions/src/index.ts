@@ -18,16 +18,24 @@ if (!admin.apps.length) {
 }
 
 // Export functions
-export { parseReceipt, parseReceiptV2 } from './receipt/parseReceipt';
+export {parseReceipt, parseReceiptV2} from './receipt/parseReceipt';
 
 // Payment functions
-export { initiateMokoPayment, verifyMokoPayment, mokoPaymentWebhook } from './payments/mokoAfrika';
-export { createCardPaymentIntent, confirmCardPayment, stripeWebhook } from './payments/stripe';
+export {
+  initiateMokoPayment,
+  verifyMokoPayment,
+  mokoPaymentWebhook,
+} from './payments/mokoAfrika';
+export {
+  createCardPaymentIntent,
+  confirmCardPayment,
+  stripeWebhook,
+} from './payments/stripe';
 
 // Subscription functions
-export { 
-  getSubscriptionStatus, 
-  recordScanUsage, 
+export {
+  getSubscriptionStatus,
+  recordScanUsage,
   upgradeSubscription,
   renewSubscription,
   getSubscriptionPricing,
@@ -38,7 +46,11 @@ export {
 } from './subscription/subscriptionManager';
 
 // Price functions
-export { savePriceData, getPriceComparison, getPriceHistory } from './prices/priceService';
+export {
+  savePriceData,
+  getPriceComparison,
+  getPriceHistory,
+} from './prices/priceService';
 
 // Authentication & Verification functions
 export {

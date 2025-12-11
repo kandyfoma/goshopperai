@@ -4,50 +4,50 @@
       "collectionGroup": "receipts",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
       ]
     },
     {
       "collectionGroup": "receipts",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "storeNameNormalized", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "storeNameNormalized", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
       ]
     },
     {
       "collectionGroup": "prices",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "productNameNormalized", "order": "ASCENDING" },
-        { "fieldPath": "recordedAt", "order": "DESCENDING" }
+        {"fieldPath": "productNameNormalized", "order": "ASCENDING"},
+        {"fieldPath": "recordedAt", "order": "DESCENDING"}
       ]
     },
     {
       "collectionGroup": "prices",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "storeNameNormalized", "order": "ASCENDING" },
-        { "fieldPath": "productNameNormalized", "order": "ASCENDING" },
-        { "fieldPath": "recordedAt", "order": "DESCENDING" }
+        {"fieldPath": "storeNameNormalized", "order": "ASCENDING"},
+        {"fieldPath": "productNameNormalized", "order": "ASCENDING"},
+        {"fieldPath": "recordedAt", "order": "DESCENDING"}
       ]
     },
     {
       "collectionGroup": "subscription",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
-        { "fieldPath": "isSubscribed", "order": "ASCENDING" },
-        { "fieldPath": "subscriptionEndDate", "order": "ASCENDING" }
+        {"fieldPath": "isSubscribed", "order": "ASCENDING"},
+        {"fieldPath": "subscriptionEndDate", "order": "ASCENDING"}
       ]
     },
     {
       "collectionGroup": "payments",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
       ]
     }
   ],

@@ -32,11 +32,14 @@ class AnalyticsService {
       const properties: {[key: string]: string} = {};
 
       if (profile.defaultCity) properties.city = profile.defaultCity;
-      if (profile.preferredLanguage) properties.language = profile.preferredLanguage;
-      if (profile.preferredCurrency) properties.currency = profile.preferredCurrency;
+      if (profile.preferredLanguage)
+        properties.language = profile.preferredLanguage;
+      if (profile.preferredCurrency)
+        properties.currency = profile.preferredCurrency;
       if (profile.age) properties.age_group = this.getAgeGroup(profile.age);
       if (profile.sex) properties.gender = profile.sex;
-      if (profile.monthlyBudget) properties.budget_tier = this.getBudgetTier(profile.monthlyBudget);
+      if (profile.monthlyBudget)
+        properties.budget_tier = this.getBudgetTier(profile.monthlyBudget);
 
       await analytics().setUserProperties(properties);
     } catch (error) {
@@ -75,7 +78,7 @@ class AnalyticsService {
   // Authentication Events
   async logLogin(method: 'email' | 'google' | 'anonymous' = 'email') {
     try {
-      await analytics().logLogin({ method });
+      await analytics().logLogin({method});
     } catch (error) {
       console.error('Failed to log login:', error);
     }
@@ -83,14 +86,19 @@ class AnalyticsService {
 
   async logSignUp(method: 'email' | 'google' = 'email') {
     try {
-      await analytics().logSignUp({ method });
+      await analytics().logSignUp({method});
     } catch (error) {
       console.error('Failed to log sign up:', error);
     }
   }
 
   // Receipt Scanning Events
-  async logReceiptScan(scanType: 'single' | 'multi', itemCount: number, currency: string, storeName?: string) {
+  async logReceiptScan(
+    scanType: 'single' | 'multi',
+    itemCount: number,
+    currency: string,
+    storeName?: string,
+  ) {
     try {
       await analytics().logEvent('receipt_scan', {
         scan_type: scanType,
@@ -103,7 +111,12 @@ class AnalyticsService {
     }
   }
 
-  async logReceiptScanSuccess(receiptId: string, totalAmount: number, currency: string, processingTime: number) {
+  async logReceiptScanSuccess(
+    receiptId: string,
+    totalAmount: number,
+    currency: string,
+    processingTime: number,
+  ) {
     try {
       await analytics().logEvent('receipt_scan_success', {
         receipt_id: receiptId,
@@ -133,28 +146,37 @@ class AnalyticsService {
       await analytics().logEvent('begin_checkout', {
         currency: currency,
         value: price,
-        items: [{
-          item_id: planId,
-          item_name: planId,
-          quantity: 1,
-        }],
+        items: [
+          {
+            item_id: planId,
+            item_name: planId,
+            quantity: 1,
+          },
+        ],
       });
     } catch (error) {
       console.error('Failed to log subscription start:', error);
     }
   }
 
-  async logSubscriptionComplete(planId: string, price: number, currency: string, transactionId: string) {
+  async logSubscriptionComplete(
+    planId: string,
+    price: number,
+    currency: string,
+    transactionId: string,
+  ) {
     try {
       await analytics().logPurchase({
         currency: currency,
         value: price,
         transaction_id: transactionId,
-        items: [{
-          item_id: planId,
-          item_name: planId,
-          quantity: 1,
-        }],
+        items: [
+          {
+            item_id: planId,
+            item_name: planId,
+            quantity: 1,
+          },
+        ],
       });
     } catch (error) {
       console.error('Failed to log subscription complete:', error);
@@ -173,7 +195,12 @@ class AnalyticsService {
     }
   }
 
-  async logItemView(itemName: string, storeName: string, price: number, currency: string) {
+  async logItemView(
+    itemName: string,
+    storeName: string,
+    price: number,
+    currency: string,
+  ) {
     try {
       await analytics().logEvent('view_item', {
         item_name: itemName,
@@ -223,7 +250,11 @@ class AnalyticsService {
   }
 
   // Performance Tracking
-  async logPerformanceMetric(metricName: string, value: number, unit: string = 'ms') {
+  async logPerformanceMetric(
+    metricName: string,
+    value: number,
+    unit: string = 'ms',
+  ) {
     try {
       await analytics().logEvent('performance_metric', {
         metric_name: metricName,
@@ -236,7 +267,10 @@ class AnalyticsService {
   }
 
   // Custom Events
-  async logCustomEvent(eventName: string, parameters: {[key: string]: any} = {}) {
+  async logCustomEvent(
+    eventName: string,
+    parameters: {[key: string]: any} = {},
+  ) {
     try {
       await analytics().logEvent(eventName, parameters);
     } catch (error) {

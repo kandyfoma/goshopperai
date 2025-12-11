@@ -167,7 +167,7 @@ export function UpdateProfileScreen() {
   }, [profile]);
 
   const handleInputChange = (field: keyof typeof formData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => ({...prev, [field]: value}));
   };
 
   const handleSave = async () => {
@@ -182,8 +182,10 @@ export function UpdateProfileScreen() {
       if (formData.surname.trim()) updateData.surname = formData.surname.trim();
       if (formData.age.trim()) updateData.age = parseInt(formData.age.trim());
       if (formData.sex) updateData.sex = formData.sex;
-      if (formData.phoneNumber.trim()) updateData.phoneNumber = formData.phoneNumber.trim();
-      if (formData.monthlyBudget.trim()) updateData.monthlyBudget = parseFloat(formData.monthlyBudget.trim());
+      if (formData.phoneNumber.trim())
+        updateData.phoneNumber = formData.phoneNumber.trim();
+      if (formData.monthlyBudget.trim())
+        updateData.monthlyBudget = parseFloat(formData.monthlyBudget.trim());
       if (formData.city.trim()) updateData.defaultCity = formData.city.trim();
 
       updateData.updatedAt = firestore.FieldValue.serverTimestamp();
@@ -193,24 +195,29 @@ export function UpdateProfileScreen() {
         .doc('goshopperai')
         .collection('users')
         .doc(user.uid)
-        .set(updateData, { merge: true });
+        .set(updateData, {merge: true});
 
       // Track successful profile update
       analyticsService.logCustomEvent('profile_updated', {
-        fields_updated: Object.keys(updateData).filter(key => key !== 'updatedAt'),
+        fields_updated: Object.keys(updateData).filter(
+          key => key !== 'updatedAt',
+        ),
         has_name: !!updateData.name,
         has_age: !!updateData.age,
         has_sex: !!updateData.sex,
         has_phone: !!updateData.phoneNumber,
         has_budget: !!updateData.monthlyBudget,
-        has_city: !!updateData.defaultCity
+        has_city: !!updateData.defaultCity,
       });
 
       Alert.alert('Succès', 'Votre profil a été mis à jour avec succès!');
       navigation.goBack();
     } catch (error) {
       console.error('Error updating profile:', error);
-      Alert.alert('Erreur', 'Une erreur s\'est produite lors de la mise à jour du profil.');
+      Alert.alert(
+        'Erreur',
+        "Une erreur s'est produite lors de la mise à jour du profil.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -221,14 +228,14 @@ export function UpdateProfileScreen() {
     field: keyof typeof formData,
     placeholder: string,
     keyboardType: 'default' | 'numeric' | 'phone-pad' = 'default',
-    multiline = false
+    multiline = false,
   ) => (
     <View style={styles.inputGroup}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
         style={[styles.input, multiline && styles.multilineInput]}
         value={formData[field]}
-        onChangeText={(value) => handleInputChange(field, value)}
+        onChangeText={value => handleInputChange(field, value)}
         placeholder={placeholder}
         placeholderTextColor={COLORS.gray[400]}
         keyboardType={keyboardType}
@@ -241,24 +248,25 @@ export function UpdateProfileScreen() {
   const renderSelect = (
     label: string,
     field: keyof typeof formData,
-    options: {value: string, label: string}[]
+    options: {value: string; label: string}[],
   ) => (
     <View style={styles.inputGroup}>
       <Text style={styles.label}>{label}</Text>
       <View style={styles.selectContainer}>
-        {options.map((option) => (
+        {options.map(option => (
           <TouchableOpacity
             key={option.value}
             style={[
               styles.selectOption,
               formData[field] === option.value && styles.selectOptionSelected,
             ]}
-            onPress={() => handleInputChange(field, option.value)}
-          >
-            <Text style={[
-              styles.selectOptionText,
-              formData[field] === option.value && styles.selectOptionTextSelected,
-            ]}>
+            onPress={() => handleInputChange(field, option.value)}>
+            <Text
+              style={[
+                styles.selectOptionText,
+                formData[field] === option.value &&
+                  styles.selectOptionTextSelected,
+              ]}>
               {option.label}
             </Text>
           </TouchableOpacity>
@@ -273,15 +281,14 @@ export function UpdateProfileScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => setShowCityPicker(false)}
-          >
+            onPress={() => setShowCityPicker(false)}>
             <Text style={styles.backButtonText}>← Retour</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Sélectionner une ville</Text>
         </View>
 
         <ScrollView style={styles.cityPickerContainer}>
-          {DRC_CITIES.map((city) => (
+          {DRC_CITIES.map(city => (
             <TouchableOpacity
               key={city}
               style={[
@@ -291,12 +298,12 @@ export function UpdateProfileScreen() {
               onPress={() => {
                 handleInputChange('city', city);
                 setShowCityPicker(false);
-              }}
-            >
-              <Text style={[
-                styles.cityOptionText,
-                formData.city === city && styles.cityOptionTextSelected,
-              ]}>
+              }}>
+              <Text
+                style={[
+                  styles.cityOptionText,
+                  formData.city === city && styles.cityOptionTextSelected,
+                ]}>
                 {city}
               </Text>
             </TouchableOpacity>
@@ -311,19 +318,30 @@ export function UpdateProfileScreen() {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+          onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>← Retour</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Modifier le profil</Text>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}>
         {renderInput('Prénom', 'name', 'Votre prénom')}
         {renderInput('Nom', 'surname', 'Votre nom de famille')}
         {renderInput('Âge', 'age', 'Votre âge', 'numeric')}
-        {renderInput('Numéro de téléphone', 'phoneNumber', 'Votre numéro', 'phone-pad')}
-        {renderInput('Budget mensuel (FC)', 'monthlyBudget', 'Votre budget mensuel', 'numeric')}
+        {renderInput(
+          'Numéro de téléphone',
+          'phoneNumber',
+          'Votre numéro',
+          'phone-pad',
+        )}
+        {renderInput(
+          'Budget mensuel (FC)',
+          'monthlyBudget',
+          'Votre budget mensuel',
+          'numeric',
+        )}
 
         {renderSelect('Sexe', 'sex', [
           {value: '', label: 'Non spécifié'},
@@ -336,9 +354,13 @@ export function UpdateProfileScreen() {
           <Text style={styles.label}>Ville</Text>
           <TouchableOpacity
             style={styles.citySelector}
-            onPress={() => setShowCityPicker(true)}
-          >
-            <Text style={formData.city ? styles.citySelectorText : styles.citySelectorPlaceholder}>
+            onPress={() => setShowCityPicker(true)}>
+            <Text
+              style={
+                formData.city
+                  ? styles.citySelectorText
+                  : styles.citySelectorPlaceholder
+              }>
               {formData.city || 'Sélectionner une ville'}
             </Text>
             <Text style={styles.citySelectorArrow}>▼</Text>
@@ -348,8 +370,7 @@ export function UpdateProfileScreen() {
         <TouchableOpacity
           style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
           onPress={handleSave}
-          disabled={isLoading}
-        >
+          disabled={isLoading}>
           {isLoading ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (

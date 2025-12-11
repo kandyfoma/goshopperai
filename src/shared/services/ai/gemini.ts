@@ -56,9 +56,9 @@ class GeminiService {
           error: 'Veuillez vous connecter pour scanner.',
         };
       }
-      
+
       const idToken = await currentUser.getIdToken();
-      
+
       // Call Cloud Function via HTTP with Firebase Auth
       // This is needed because the function is deployed in europe-west1
       const response = await fetch(
@@ -67,7 +67,7 @@ class GeminiService {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`,
+            Authorization: `Bearer ${idToken}`,
           },
           body: JSON.stringify({
             data: {
@@ -75,30 +75,35 @@ class GeminiService {
               mimeType: 'image/jpeg',
             },
           }),
-        }
+        },
       );
-      
+
       // Check if HTTP response is OK
       if (!response.ok) {
         const errorText = await response.text();
         console.error('HTTP error response:', response.status, errorText);
         throw new Error(`Erreur serveur (${response.status}): ${errorText}`);
       }
-      
+
       const responseData = await response.json();
-      console.log('Cloud Function response:', JSON.stringify(responseData).substring(0, 500));
-      
+      console.log(
+        'Cloud Function response:',
+        JSON.stringify(responseData).substring(0, 500),
+      );
+
       // Handle error in response
       if (responseData.error) {
-        const errorMsg = typeof responseData.error === 'object' 
-          ? responseData.error.message || JSON.stringify(responseData.error)
-          : responseData.error;
+        const errorMsg =
+          typeof responseData.error === 'object'
+            ? responseData.error.message || JSON.stringify(responseData.error)
+            : responseData.error;
         throw new Error(errorMsg);
       }
-      
+
       // Handle callable function response format
-      const result = (responseData.result || responseData) as ParseReceiptResponse;
-      
+      const result = (responseData.result ||
+        responseData) as ParseReceiptResponse;
+
       // Get receipt data from either 'receipt' or 'data' field
       const receiptData = result.receipt || result.data;
 
@@ -110,7 +115,11 @@ class GeminiService {
       }
 
       // Transform response to Receipt type - use receiptId from response
-      const receipt = this.transformToReceipt(receiptData, userId, result.receiptId);
+      const receipt = this.transformToReceipt(
+        receiptData,
+        userId,
+        result.receiptId,
+      );
 
       return {
         success: true,
@@ -121,7 +130,7 @@ class GeminiService {
       console.error('Error code:', error.code);
       console.error('Error message:', error.message);
       console.error('Error details:', JSON.stringify(error, null, 2));
-      
+
       // Handle specific error types
       if (error.code === 'functions/resource-exhausted') {
         return {
@@ -129,29 +138,32 @@ class GeminiService {
           error: 'Limite de scans atteinte. Veuillez réessayer plus tard.',
         };
       }
-      
+
       if (error.code === 'functions/unauthenticated') {
         return {
           success: false,
           error: 'Veuillez vous connecter pour scanner.',
         };
       }
-      
+
       if (error.code === 'functions/not-found') {
         return {
           success: false,
-          error: 'Service d\'analyse indisponible. Réessayez plus tard.',
+          error: "Service d'analyse indisponible. Réessayez plus tard.",
         };
       }
 
       // Get a proper error message
-      let errorMessage = 'Une erreur est survenue lors de l\'analyse';
+      let errorMessage = "Une erreur est survenue lors de l'analyse";
       if (error.message && typeof error.message === 'string') {
         errorMessage = error.message;
       } else if (typeof error === 'string') {
         errorMessage = error;
       } else if (error.error) {
-        errorMessage = typeof error.error === 'string' ? error.error : JSON.stringify(error.error);
+        errorMessage =
+          typeof error.error === 'string'
+            ? error.error
+            : JSON.stringify(error.error);
       }
 
       return {

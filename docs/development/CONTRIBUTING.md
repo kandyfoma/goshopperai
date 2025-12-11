@@ -32,14 +32,14 @@ chore/update-dependencies
 
 ### Branch Types
 
-| Type | Purpose |
-|------|---------|
-| `feature/` | New features |
-| `fix/` | Bug fixes |
-| `refactor/` | Code refactoring |
-| `docs/` | Documentation updates |
-| `chore/` | Maintenance tasks |
-| `test/` | Test additions/updates |
+| Type        | Purpose                |
+| ----------- | ---------------------- |
+| `feature/`  | New features           |
+| `fix/`      | Bug fixes              |
+| `refactor/` | Code refactoring       |
+| `docs/`     | Documentation updates  |
+| `chore/`    | Maintenance tasks      |
+| `test/`     | Test additions/updates |
 
 ---
 
@@ -81,32 +81,32 @@ BREAKING CHANGE: Payment API has changed. Update all payment integrations.
 
 ### Commit Types
 
-| Type | Description |
-|------|-------------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation only |
-| `style` | Code style (formatting, semicolons, etc.) |
-| `refactor` | Code change that neither fixes nor adds |
-| `perf` | Performance improvement |
-| `test` | Adding or updating tests |
-| `chore` | Build process or auxiliary tool changes |
-| `revert` | Reverts a previous commit |
+| Type       | Description                               |
+| ---------- | ----------------------------------------- |
+| `feat`     | New feature                               |
+| `fix`      | Bug fix                                   |
+| `docs`     | Documentation only                        |
+| `style`    | Code style (formatting, semicolons, etc.) |
+| `refactor` | Code change that neither fixes nor adds   |
+| `perf`     | Performance improvement                   |
+| `test`     | Adding or updating tests                  |
+| `chore`    | Build process or auxiliary tool changes   |
+| `revert`   | Reverts a previous commit                 |
 
 ### Scopes
 
-| Scope | Description |
-|-------|-------------|
-| `scanner` | Invoice scanning feature |
+| Scope        | Description              |
+| ------------ | ------------------------ |
+| `scanner`    | Invoice scanning feature |
 | `comparison` | Price comparison feature |
-| `reports` | Dashboard/reporting |
-| `auth` | Authentication |
-| `payment` | Subscription/payments |
-| `firestore` | Database operations |
-| `gemini` | AI integration |
-| `ui` | UI components |
-| `nav` | Navigation |
-| `config` | Configuration |
+| `reports`    | Dashboard/reporting      |
+| `auth`       | Authentication           |
+| `payment`    | Subscription/payments    |
+| `firestore`  | Database operations      |
+| `gemini`     | AI integration           |
+| `ui`         | UI components            |
+| `nav`        | Navigation               |
+| `config`     | Configuration            |
 
 ---
 
@@ -153,9 +153,16 @@ interface PriceCardProps {
   onPress: () => void;
 }
 
-export function PriceCard({ itemName, price, storeName, onPress }: PriceCardProps) {
+export function PriceCard({
+  itemName,
+  price,
+  storeName,
+  onPress,
+}: PriceCardProps) {
   return (
-    <TouchableOpacity onPress={onPress} className="bg-white rounded-lg p-4 mb-2">
+    <TouchableOpacity
+      onPress={onPress}
+      className="bg-white rounded-lg p-4 mb-2">
       <Text className="font-semibold text-lg">{itemName}</Text>
       <Text className="text-primary-500">${price.toFixed(2)}</Text>
       <Text className="text-gray-500 text-sm">{storeName}</Text>
@@ -164,7 +171,7 @@ export function PriceCard({ itemName, price, storeName, onPress }: PriceCardProp
 }
 
 // ❌ Bad - Too many responsibilities
-export function PriceCard({ item }) {
+export function PriceCard({item}) {
   const [loading, setLoading] = useState(false);
   const [prices, setPrices] = useState([]);
   // ... lots of logic that should be in a hook
@@ -210,10 +217,10 @@ describe('ScannerService', () => {
     it('should return parsed invoice data on success', async () => {
       // Arrange
       const mockImage = 'base64_image_data';
-      
+
       // Act
       const result = await scannerService.parseInvoice(mockImage);
-      
+
       // Assert
       expect(result.success).toBe(true);
       expect(result.data).toHaveProperty('shopName');
@@ -243,16 +250,16 @@ describe('ScannerService', () => {
 describe('CaptureButton', () => {
   it('should call onCapture when pressed', () => {
     const onCapture = jest.fn();
-    const { getByTestId } = render(<CaptureButton onCapture={onCapture} />);
-    
+    const {getByTestId} = render(<CaptureButton onCapture={onCapture} />);
+
     fireEvent.press(getByTestId('capture-button'));
-    
+
     expect(onCapture).toHaveBeenCalledTimes(1);
   });
 
   it('should show loading state when capturing', () => {
-    const { getByTestId } = render(<CaptureButton isCapturing={true} />);
-    
+    const {getByTestId} = render(<CaptureButton isCapturing={true} />);
+
     expect(getByTestId('loading-indicator')).toBeTruthy();
   });
 });
@@ -274,27 +281,33 @@ describe('CaptureButton', () => {
 
 ```markdown
 ## Description
+
 Brief description of the changes.
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
 
 ## Related Issue
+
 Fixes #(issue number)
 
 ## Testing
+
 - [ ] Unit tests added/updated
 - [ ] Tested on iOS
 - [ ] Tested on Android
 - [ ] Tested offline scenario (if applicable)
 
 ## Screenshots (if applicable)
+
 Add screenshots for UI changes.
 
 ## Checklist
+
 - [ ] My code follows the project's style guidelines
 - [ ] I have performed a self-review
 - [ ] I have commented my code where necessary
@@ -353,10 +366,12 @@ Add screenshots for UI changes.
 
 ```markdown
 # Good feedback
+
 The async/await pattern here could cause a race condition if the user
 taps rapidly. Consider adding a loading state check before proceeding.
 
 # With suggestion
+
 nit: Consider renaming `data` to `invoiceData` for clarity.
 ```
 
@@ -397,4 +412,4 @@ MAJOR.MINOR.PATCH
 
 ---
 
-*Happy contributing! 🎉*
+_Happy contributing! 🎉_

@@ -13,6 +13,7 @@ A React Native mobile app for receipt scanning and price comparison, designed sp
 ## Tech Stack
 
 ### Mobile App
+
 - React Native 0.73.6
 - TypeScript
 - React Navigation 6
@@ -20,6 +21,7 @@ A React Native mobile app for receipt scanning and price comparison, designed sp
 - Firebase SDK
 
 ### Backend (Firebase)
+
 - Cloud Functions (Node.js 20)
 - Firestore Database
 - Firebase Auth (Anonymous)
@@ -68,12 +70,14 @@ goshopperai/
 ### Installation
 
 1. **Clone and install dependencies**
+
    ```bash
    cd goshopperai
    npm install
    ```
 
 2. **Install Cloud Functions dependencies**
+
    ```bash
    cd functions
    npm install
@@ -81,6 +85,7 @@ goshopperai/
    ```
 
 3. **Configure Firebase**
+
    - Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
    - Enable Authentication (Anonymous sign-in)
    - Enable Firestore (europe-west1 region)
@@ -89,6 +94,7 @@ goshopperai/
    - Download `GoogleService-Info.plist` (iOS) to `ios/`
 
 4. **Set environment variables for Cloud Functions**
+
    ```bash
    firebase functions:secrets:set GEMINI_API_KEY
    firebase functions:secrets:set MOKO_AFRIKA_API_KEY
@@ -97,18 +103,20 @@ goshopperai/
    ```
 
 5. **Deploy Cloud Functions**
+
    ```bash
    firebase deploy --only functions
    ```
 
 6. **Run the app**
+
    ```bash
    # Start Metro
    npm start
-   
+
    # Run on Android
    npm run android
-   
+
    # Run on iOS (macOS only)
    cd ios && pod install && cd ..
    npm run ios
@@ -116,24 +124,24 @@ goshopperai/
 
 ## Cloud Functions
 
-| Function | Type | Description |
-|----------|------|-------------|
-| `parseReceipt` | Callable | Parse single receipt image |
-| `parseReceiptV2` | Callable | Parse multi-page receipt |
-| `initiateMokoPayment` | Callable | Start Mobile Money payment |
-| `verifyMokoPayment` | Callable | Check payment status |
-| `mokoPaymentWebhook` | HTTP | Moko Afrika callback |
-| `getSubscriptionStatus` | Callable | Get user subscription |
-| `recordScanUsage` | Callable | Track trial usage |
-| `savePriceData` | Trigger | Auto-save prices from receipts |
-| `getPriceComparison` | Callable | Get price comparison |
+| Function                | Type     | Description                    |
+| ----------------------- | -------- | ------------------------------ |
+| `parseReceipt`          | Callable | Parse single receipt image     |
+| `parseReceiptV2`        | Callable | Parse multi-page receipt       |
+| `initiateMokoPayment`   | Callable | Start Mobile Money payment     |
+| `verifyMokoPayment`     | Callable | Check payment status           |
+| `mokoPaymentWebhook`    | HTTP     | Moko Afrika callback           |
+| `getSubscriptionStatus` | Callable | Get user subscription          |
+| `recordScanUsage`       | Callable | Track trial usage              |
+| `savePriceData`         | Trigger  | Auto-save prices from receipts |
+| `getPriceComparison`    | Callable | Get price comparison           |
 
 ## Subscription Plans
 
-| Plan | Price | Features |
-|------|-------|----------|
-| Free | $0 | 5 trial scans |
-| Basic | $1.99/mo | 30 scans/month |
+| Plan    | Price    | Features        |
+| ------- | -------- | --------------- |
+| Free    | $0       | 5 trial scans   |
+| Basic   | $1.99/mo | 30 scans/month  |
 | Premium | $2.99/mo | Unlimited scans |
 
 ## Contributing

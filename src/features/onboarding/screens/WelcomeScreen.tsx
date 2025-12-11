@@ -36,7 +36,8 @@ const SLIDES: OnboardingSlide[] = [
     title: 'Bienvenue !',
     titleLingala: 'Boyei malamu!',
     description: 'GoShopperAI vous aide à faire des économies sur vos achats',
-    descriptionLingala: 'GoShopperAI ekosalisa yo okoba mbongo na bisombi na yo',
+    descriptionLingala:
+      'GoShopperAI ekosalisa yo okoba mbongo na bisombi na yo',
     backgroundColor: COLORS.primary[500],
   },
   {
@@ -51,9 +52,10 @@ const SLIDES: OnboardingSlide[] = [
   {
     id: '3',
     icon: '🤖',
-    title: 'L\'IA analyse tout',
+    title: "L'IA analyse tout",
     titleLingala: 'IA etaleli nyonso',
-    description: 'Notre intelligence artificielle lit automatiquement tous les prix',
+    description:
+      'Notre intelligence artificielle lit automatiquement tous les prix',
     descriptionLingala: 'Intelligence artificielle etangi ntalo nyonso',
     backgroundColor: '#6366f1',
   },
@@ -118,10 +120,7 @@ export function WelcomeScreen() {
       {SLIDES.map((_, index) => (
         <View
           key={index}
-          style={[
-            styles.dot,
-            currentIndex === index && styles.dotActive,
-          ]}
+          style={[styles.dot, currentIndex === index && styles.dotActive]}
         />
       ))}
     </View>
@@ -141,7 +140,7 @@ export function WelcomeScreen() {
         showsHorizontalScrollIndicator={false}
         onScroll={Animated.event(
           [{nativeEvent: {contentOffset: {x: scrollX}}}],
-          {useNativeDriver: false}
+          {useNativeDriver: false},
         )}
         onMomentumScrollEnd={event => {
           const index = Math.round(event.nativeEvent.contentOffset.x / width);
@@ -164,10 +163,7 @@ export function WelcomeScreen() {
           )}
 
           <TouchableOpacity
-            style={[
-              styles.nextButton,
-              isLastSlide && styles.startButton,
-            ]}
+            style={[styles.nextButton, isLastSlide && styles.startButton]}
             onPress={handleNext}
             activeOpacity={0.8}>
             <Text style={styles.nextButtonText}>

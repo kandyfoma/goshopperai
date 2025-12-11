@@ -40,7 +40,10 @@ export function RegisterScreen() {
     }
 
     if (password.length < 6) {
-      Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 6 caractères');
+      Alert.alert(
+        'Erreur',
+        'Le mot de passe doit contenir au moins 6 caractères',
+      );
       return;
     }
 
@@ -56,11 +59,17 @@ export function RegisterScreen() {
   };
 
   const handleGoogleSignIn = async () => {
-    Alert.alert('Bientôt disponible', 'La connexion Google sera disponible prochainement');
+    Alert.alert(
+      'Bientôt disponible',
+      'La connexion Google sera disponible prochainement',
+    );
   };
 
   const handleAppleSignIn = async () => {
-    Alert.alert('Bientôt disponible', 'La connexion Apple sera disponible prochainement');
+    Alert.alert(
+      'Bientôt disponible',
+      'La connexion Apple sera disponible prochainement',
+    );
   };
 
   return (
@@ -73,7 +82,9 @@ export function RegisterScreen() {
           <View style={styles.header}>
             <Text style={styles.logo}>🛒</Text>
             <Text style={styles.title}>Créer un compte</Text>
-            <Text style={styles.subtitle}>Commencez à économiser aujourd'hui</Text>
+            <Text style={styles.subtitle}>
+              Commencez à économiser aujourd'hui
+            </Text>
           </View>
 
           {/* Form */}
@@ -141,7 +152,9 @@ export function RegisterScreen() {
               style={[styles.button, styles.socialButton]}
               onPress={handleGoogleSignIn}
               disabled={loading}>
-              <Text style={styles.socialButtonText}>🔍 Continuer avec Google</Text>
+              <Text style={styles.socialButtonText}>
+                🔍 Continuer avec Google
+              </Text>
             </TouchableOpacity>
 
             {Platform.OS === 'ios' && (
@@ -150,7 +163,7 @@ export function RegisterScreen() {
                 onPress={handleAppleSignIn}
                 disabled={loading}>
                 <Text style={[styles.socialButtonText, styles.appleButtonText]}>
-                   Continuer avec Apple
+                  Continuer avec Apple
                 </Text>
               </TouchableOpacity>
             )}

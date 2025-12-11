@@ -27,9 +27,12 @@ export function formatCurrency(
 /**
  * Format date for display (French locale)
  */
-export function formatDate(date: Date | string, format: 'short' | 'long' = 'short'): string {
+export function formatDate(
+  date: Date | string,
+  format: 'short' | 'long' = 'short',
+): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  
+
   if (format === 'long') {
     return d.toLocaleDateString('fr-FR', {
       weekday: 'long',
@@ -38,7 +41,7 @@ export function formatDate(date: Date | string, format: 'short' | 'long' = 'shor
       day: 'numeric',
     });
   }
-  
+
   return d.toLocaleDateString('fr-FR', {
     day: '2-digit',
     month: '2-digit',
@@ -57,11 +60,11 @@ export function formatRelativeTime(date: Date | string): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return 'À l\'instant';
+  if (diffMins < 1) return "À l'instant";
   if (diffMins < 60) return `Il y a ${diffMins} min`;
   if (diffHours < 24) return `Il y a ${diffHours}h`;
   if (diffDays < 7) return `Il y a ${diffDays}j`;
-  
+
   return formatDate(d);
 }
 
@@ -100,7 +103,7 @@ export function debounce<T extends (...args: any[]) => any>(
   wait: number,
 ): (...args: Parameters<T>) => void {
   let timeout: ReturnType<typeof setTimeout> | null = null;
-  
+
   return (...args: Parameters<T>) => {
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);

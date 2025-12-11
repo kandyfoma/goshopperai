@@ -5,8 +5,8 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { config, collections } from '../config';
+import {GoogleGenerativeAI} from '@google/generative-ai';
+import {config, collections} from '../config';
 
 const db = admin.firestore();
 const messaging = admin.messaging();
@@ -22,13 +22,17 @@ export const sendWeeklySavingsTips = functions
   .region(config.app.region)
   .pubsub.schedule('0 10 * * 6')
   .timeZone('Africa/Kinshasa')
-  .onRun(async (context) => {
+  .onRun(async context => {
     console.log('Sending weekly savings tips...');
 
     try {
       // Get all users with FCM tokens
       const usersSnapshot = await db.collectionGroup('users').get();
-      const usersWithTokens: Array<{ userId: string; fcmToken: string; language: string }> = [];
+      const usersWithTokens: Array<{
+        userId: string;
+        fcmToken: string;
+        language: string;
+      }> = [];
 
       for (const userDoc of usersSnapshot.docs) {
         const userData = userDoc.data();
@@ -56,7 +60,6 @@ export const sendWeeklySavingsTips = functions
 
       console.log('Weekly savings tips sent successfully');
       return null;
-
     } catch (error) {
       console.error('Weekly savings tips error:', error);
       return null;
@@ -70,15 +73,18 @@ export const sendAchievementNotification = functions
   .region(config.app.region)
   .https.onCall(async (data, context) => {
     if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Authentication required',
+      );
     }
 
-    const { achievementId, achievementTitle, language = 'fr' } = data;
+    const {achievementId, achievementTitle, language = 'fr'} = data;
 
     if (!achievementId || !achievementTitle) {
       throw new functions.https.HttpsError(
         'invalid-argument',
-        'Achievement ID and title are required'
+        'Achievement ID and title are required',
       );
     }
 
@@ -86,21 +92,29 @@ export const sendAchievementNotification = functions
 
     try {
       // Get user's FCM token
-      const userDoc = await db.doc(`artifacts/${config.app.id}/users/${userId}`).get();
+      const userDoc = await db
+        .doc(`artifacts/${config.app.id}/users/${userId}`)
+        .get();
       const fcmToken = userDoc.data()?.fcmToken;
 
       if (!fcmToken) {
         console.log(`No FCM token for user ${userId}`);
-        return { success: false, message: 'No FCM token available' };
+        return {success: false, message: 'No FCM token available'};
       }
 
-      await sendAchievementNotificationToUser(fcmToken, achievementTitle, language);
+      await sendAchievementNotificationToUser(
+        fcmToken,
+        achievementTitle,
+        language,
+      );
 
-      return { success: true, message: 'Achievement notification sent' };
-
+      return {success: true, message: 'Achievement notification sent'};
     } catch (error) {
       console.error('Send achievement notification error:', error);
-      throw new functions.https.HttpsError('internal', 'Failed to send achievement notification');
+      throw new functions.https.HttpsError(
+        'internal',
+        'Failed to send achievement notification',
+      );
     }
   });
 
@@ -111,29 +125,36 @@ export const sendSyncCompleteNotification = functions
   .region(config.app.region)
   .https.onCall(async (data, context) => {
     if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Authentication required',
+      );
     }
 
-    const { syncedCount, language = 'fr' } = data;
+    const {syncedCount, language = 'fr'} = data;
     const userId = context.auth.uid;
 
     try {
       // Get user's FCM token
-      const userDoc = await db.doc(`artifacts/${config.app.id}/users/${userId}`).get();
+      const userDoc = await db
+        .doc(`artifacts/${config.app.id}/users/${userId}`)
+        .get();
       const fcmToken = userDoc.data()?.fcmToken;
 
       if (!fcmToken) {
         console.log(`No FCM token for user ${userId}`);
-        return { success: false, message: 'No FCM token available' };
+        return {success: false, message: 'No FCM token available'};
       }
 
       await sendSyncCompleteNotificationToUser(fcmToken, syncedCount, language);
 
-      return { success: true, message: 'Sync complete notification sent' };
-
+      return {success: true, message: 'Sync complete notification sent'};
     } catch (error) {
       console.error('Send sync notification error:', error);
-      throw new functions.https.HttpsError('internal', 'Failed to send sync notification');
+      throw new functions.https.HttpsError(
+        'internal',
+        'Failed to send sync notification',
+      );
     }
   });
 
@@ -146,12 +167,12 @@ export const sendAdminBroadcast = functions
     // TODO: Add admin authentication check
     // For now, this is a placeholder - in production you'd verify admin privileges
 
-    const { title, body, data: notificationData, targetUsers } = data;
+    const {title, body, data: notificationData, targetUsers} = data;
 
     if (!title || !body) {
       throw new functions.https.HttpsError(
         'invalid-argument',
-        'Title and body are required'
+        'Title and body are required',
       );
     }
 
@@ -164,7 +185,9 @@ export const sendAdminBroadcast = functions
         const notifications = [];
 
         for (const userId of targetUsers) {
-          const userDoc = await db.doc(`artifacts/${config.app.id}/users/${userId}`).get();
+          const userDoc = await db
+            .doc(`artifacts/${config.app.id}/users/${userId}`)
+            .get();
           const fcmToken = userDoc.data()?.fcmToken;
 
           if (fcmToken) {
@@ -203,7 +226,7 @@ export const sendAdminBroadcast = functions
         return {
           success: true,
           sentCount: notifications.length,
-          message: `Broadcast sent to ${notifications.length} users`
+          message: `Broadcast sent to ${notifications.length} users`,
         };
       }
 
@@ -245,7 +268,7 @@ export const sendAdminBroadcast = functions
       }
 
       if (notifications.length === 0) {
-        return { success: false, message: 'No users with FCM tokens found' };
+        return {success: false, message: 'No users with FCM tokens found'};
       }
 
       // Send in batches of 500 (FCM limit)
@@ -256,58 +279,66 @@ export const sendAdminBroadcast = functions
         const batch = notifications.slice(i, i + batchSize);
         const response = await messaging.sendAll(batch);
         totalSent += response.successCount;
-        console.log(`Batch ${Math.floor(i/batchSize) + 1}: ${response.successCount} sent, ${response.failureCount} failed`);
+        console.log(
+          `Batch ${Math.floor(i / batchSize) + 1}: ${
+            response.successCount
+          } sent, ${response.failureCount} failed`,
+        );
       }
 
       return {
         success: true,
         sentCount: totalSent,
         totalUsers: notifications.length,
-        message: `Broadcast sent to ${totalSent} out of ${notifications.length} users`
+        message: `Broadcast sent to ${totalSent} out of ${notifications.length} users`,
       };
-
     } catch (error) {
       console.error('Admin broadcast error:', error);
-      throw new functions.https.HttpsError('internal', 'Failed to send admin broadcast');
+      throw new functions.https.HttpsError(
+        'internal',
+        'Failed to send admin broadcast',
+      );
     }
   });
 
 /**
  * Generate personalized savings tip using AI
  */
-async function generateSavingsTip(userId: string, language: string = 'fr'): Promise<string> {
+async function generateSavingsTip(
+  userId: string,
+  language: string = 'fr',
+): Promise<string> {
   try {
     // Get user's spending data
     const spendingData = await getUserSpendingContext(userId);
 
-    const prompt = language === 'fr' ?
-      `Génère un conseil d'économie personnalisé basé sur ces données de dépenses. Le conseil doit être concis, actionable et en français.
+    const prompt =
+      language === 'fr'
+        ? `Génère un conseil d'économie personnalisé basé sur ces données de dépenses. Le conseil doit être concis, actionable et en français.
 
 Données utilisateur:
 ${spendingData}
 
-Format: Une phrase courte avec un conseil spécifique.` :
-
-      `Generate a personalized savings tip based on this spending data. The tip should be concise, actionable, and in English.
+Format: Une phrase courte avec un conseil spécifique.`
+        : `Generate a personalized savings tip based on this spending data. The tip should be concise, actionable, and in English.
 
 User data:
 ${spendingData}
 
 Format: One short sentence with a specific tip.`;
 
-    const model = genAI.getGenerativeModel({ model: config.gemini.model });
+    const model = genAI.getGenerativeModel({model: config.gemini.model});
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const tip = response.text().trim();
 
     return tip;
-
   } catch (error) {
     console.error('Generate savings tip error:', error);
     // Fallback tips
-    return language === 'fr' ?
-      'Comparez les prix entre différents magasins avant d\'acheter.' :
-      'Compare prices between different stores before buying.';
+    return language === 'fr'
+      ? "Comparez les prix entre différents magasins avant d'acheter."
+      : 'Compare prices between different stores before buying.';
   }
 }
 
@@ -325,8 +356,8 @@ async function getUserSpendingContext(userId: string): Promise<string> {
     .get();
 
   let totalSpent = 0;
-  const categories: { [key: string]: number } = {};
-  const stores: { [key: string]: number } = {};
+  const categories: {[key: string]: number} = {};
+  const stores: {[key: string]: number} = {};
 
   receipts.docs.forEach(doc => {
     const data = doc.data();
@@ -334,18 +365,25 @@ async function getUserSpendingContext(userId: string): Promise<string> {
 
     (data.items || []).forEach((item: any) => {
       const cat = item.category || 'Other';
-      categories[cat] = (categories[cat] || 0) + ((item.unitPrice || 0) * (item.quantity || 1));
-      stores[data.storeName] = (stores[data.storeName] || 0) + ((item.unitPrice || 0) * (item.quantity || 1));
+      categories[cat] =
+        (categories[cat] || 0) + (item.unitPrice || 0) * (item.quantity || 1);
+      stores[data.storeName] =
+        (stores[data.storeName] || 0) +
+        (item.unitPrice || 0) * (item.quantity || 1);
     });
   });
 
-  const topCategory = Object.entries(categories).sort(([,a], [,b]) => b - a)[0];
-  const topStore = Object.entries(stores).sort(([,a], [,b]) => b - a)[0];
+  const topCategory = Object.entries(categories).sort(
+    ([, a], [, b]) => b - a,
+  )[0];
+  const topStore = Object.entries(stores).sort(([, a], [, b]) => b - a)[0];
 
   return `
 Total spent this month: $${totalSpent.toFixed(2)}
 Receipts: ${receipts.size}
-Top category: ${topCategory ? `${topCategory[0]} ($${topCategory[1].toFixed(2)})` : 'None'}
+Top category: ${
+    topCategory ? `${topCategory[0]} ($${topCategory[1].toFixed(2)})` : 'None'
+  }
 Top store: ${topStore ? `${topStore[0]} ($${topStore[1].toFixed(2)})` : 'None'}
   `.trim();
 }
@@ -353,8 +391,12 @@ Top store: ${topStore ? `${topStore[0]} ($${topStore[1].toFixed(2)})` : 'None'}
 /**
  * Send savings tip notification
  */
-async function sendSavingsTipNotification(fcmToken: string, tip: string, language: string): Promise<void> {
-  const title = language === 'fr' ? '💡 Conseil d\'Économie' : '💡 Savings Tip';
+async function sendSavingsTipNotification(
+  fcmToken: string,
+  tip: string,
+  language: string,
+): Promise<void> {
+  const title = language === 'fr' ? "💡 Conseil d'Économie" : '💡 Savings Tip';
 
   await messaging.send({
     token: fcmToken,
@@ -387,11 +429,17 @@ async function sendSavingsTipNotification(fcmToken: string, tip: string, languag
 /**
  * Send achievement notification
  */
-async function sendAchievementNotificationToUser(fcmToken: string, achievementTitle: string, language: string): Promise<void> {
-  const title = language === 'fr' ? '🏆 Achievement Débloqué!' : '🏆 Achievement Unlocked!';
-  const body = language === 'fr' ?
-    `Félicitations! Vous avez débloqué: ${achievementTitle}` :
-    `Congratulations! You unlocked: ${achievementTitle}`;
+async function sendAchievementNotificationToUser(
+  fcmToken: string,
+  achievementTitle: string,
+  language: string,
+): Promise<void> {
+  const title =
+    language === 'fr' ? '🏆 Achievement Débloqué!' : '🏆 Achievement Unlocked!';
+  const body =
+    language === 'fr'
+      ? `Félicitations! Vous avez débloqué: ${achievementTitle}`
+      : `Congratulations! You unlocked: ${achievementTitle}`;
 
   await messaging.send({
     token: fcmToken,
@@ -425,11 +473,17 @@ async function sendAchievementNotificationToUser(fcmToken: string, achievementTi
 /**
  * Send sync complete notification
  */
-async function sendSyncCompleteNotificationToUser(fcmToken: string, syncedCount: number, language: string): Promise<void> {
-  const title = language === 'fr' ? '🔄 Synchronisation Terminée' : '🔄 Sync Complete';
-  const body = language === 'fr' ?
-    `${syncedCount} facture(s) synchronisée(s) avec succès!` :
-    `${syncedCount} receipt(s) synced successfully!`;
+async function sendSyncCompleteNotificationToUser(
+  fcmToken: string,
+  syncedCount: number,
+  language: string,
+): Promise<void> {
+  const title =
+    language === 'fr' ? '🔄 Synchronisation Terminée' : '🔄 Sync Complete';
+  const body =
+    language === 'fr'
+      ? `${syncedCount} facture(s) synchronisée(s) avec succès!`
+      : `${syncedCount} receipt(s) synced successfully!`;
 
   await messaging.send({
     token: fcmToken,
@@ -474,10 +528,10 @@ export const checkSubscriptionExpiration = functions
       const now = new Date();
       const sevenDaysFromNow = new Date(now);
       sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-      
+
       const threeDaysFromNow = new Date(now);
       threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
-      
+
       const oneDayFromNow = new Date(now);
       oneDayFromNow.setDate(oneDayFromNow.getDate() + 1);
 
@@ -486,96 +540,127 @@ export const checkSubscriptionExpiration = functions
         .collectionGroup('subscription')
         .where('isSubscribed', '==', true)
         .where('status', '==', 'active')
-        .where('subscriptionEndDate', '<=', admin.firestore.Timestamp.fromDate(sevenDaysFromNow))
+        .where(
+          'subscriptionEndDate',
+          '<=',
+          admin.firestore.Timestamp.fromDate(sevenDaysFromNow),
+        )
         .where('subscriptionEndDate', '>', admin.firestore.Timestamp.now())
         .get();
 
-      console.log(`Found ${expiringQuery.docs.length} subscriptions expiring soon`);
+      console.log(
+        `Found ${expiringQuery.docs.length} subscriptions expiring soon`,
+      );
 
       for (const doc of expiringQuery.docs) {
         const subscription = doc.data();
         const userId = subscription.userId;
-        
+
         // Get user data for FCM token and language
-        const userDoc = await db.doc(`artifacts/${config.app.id}/users/${userId}`).get();
+        const userDoc = await db
+          .doc(`artifacts/${config.app.id}/users/${userId}`)
+          .get();
         const userData = userDoc.data();
         const fcmToken = userData?.fcmToken;
         const language = userData?.language || 'fr';
-        
+
         if (!fcmToken) {
           console.log(`No FCM token for user ${userId}`);
           continue;
         }
 
         // Calculate days until expiration
-        const endDate = subscription.subscriptionEndDate instanceof admin.firestore.Timestamp
-          ? subscription.subscriptionEndDate.toDate()
-          : new Date(subscription.subscriptionEndDate);
-        
-        const daysUntilExpiration = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const endDate =
+          subscription.subscriptionEndDate instanceof admin.firestore.Timestamp
+            ? subscription.subscriptionEndDate.toDate()
+            : new Date(subscription.subscriptionEndDate);
+
+        const daysUntilExpiration = Math.ceil(
+          (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+        );
 
         // Send appropriate notification based on days remaining
         await sendSubscriptionExpirationNotification(
           fcmToken,
           daysUntilExpiration,
           subscription.planId || 'standard',
-          language
+          language,
         );
 
         // Update subscription status
         await doc.ref.update({
           expirationNotificationSent: true,
-          expirationNotificationDate: admin.firestore.FieldValue.serverTimestamp(),
+          expirationNotificationDate:
+            admin.firestore.FieldValue.serverTimestamp(),
           daysUntilExpiration,
           status: daysUntilExpiration <= 3 ? 'expiring_soon' : 'active',
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        console.log(`Sent expiration notification to user ${userId} - ${daysUntilExpiration} days remaining`);
+        console.log(
+          `Sent expiration notification to user ${userId} - ${daysUntilExpiration} days remaining`,
+        );
       }
 
       // Also check trials expiring soon
       const expiringTrialsQuery = await db
         .collectionGroup('subscription')
         .where('status', '==', 'trial')
-        .where('trialEndDate', '<=', admin.firestore.Timestamp.fromDate(sevenDaysFromNow))
+        .where(
+          'trialEndDate',
+          '<=',
+          admin.firestore.Timestamp.fromDate(sevenDaysFromNow),
+        )
         .where('trialEndDate', '>', admin.firestore.Timestamp.now())
         .get();
 
-      console.log(`Found ${expiringTrialsQuery.docs.length} trials expiring soon`);
+      console.log(
+        `Found ${expiringTrialsQuery.docs.length} trials expiring soon`,
+      );
 
       for (const doc of expiringTrialsQuery.docs) {
         const subscription = doc.data();
         const userId = subscription.userId;
-        
-        const userDoc = await db.doc(`artifacts/${config.app.id}/users/${userId}`).get();
+
+        const userDoc = await db
+          .doc(`artifacts/${config.app.id}/users/${userId}`)
+          .get();
         const userData = userDoc.data();
         const fcmToken = userData?.fcmToken;
         const language = userData?.language || 'fr';
-        
+
         if (!fcmToken) continue;
 
-        const endDate = subscription.trialEndDate instanceof admin.firestore.Timestamp
-          ? subscription.trialEndDate.toDate()
-          : new Date(subscription.trialEndDate);
-        
-        const daysUntilExpiration = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const endDate =
+          subscription.trialEndDate instanceof admin.firestore.Timestamp
+            ? subscription.trialEndDate.toDate()
+            : new Date(subscription.trialEndDate);
 
-        await sendTrialExpirationNotification(fcmToken, daysUntilExpiration, language);
+        const daysUntilExpiration = Math.ceil(
+          (endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+        );
+
+        await sendTrialExpirationNotification(
+          fcmToken,
+          daysUntilExpiration,
+          language,
+        );
 
         await doc.ref.update({
           expirationNotificationSent: true,
-          expirationNotificationDate: admin.firestore.FieldValue.serverTimestamp(),
+          expirationNotificationDate:
+            admin.firestore.FieldValue.serverTimestamp(),
           daysUntilExpiration,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        console.log(`Sent trial expiration notification to user ${userId} - ${daysUntilExpiration} days remaining`);
+        console.log(
+          `Sent trial expiration notification to user ${userId} - ${daysUntilExpiration} days remaining`,
+        );
       }
 
       console.log('Subscription expiration check completed');
       return null;
-
     } catch (error) {
       console.error('Subscription expiration check error:', error);
       return null;
@@ -589,7 +674,7 @@ async function sendSubscriptionExpirationNotification(
   fcmToken: string,
   daysRemaining: number,
   planId: string,
-  language: string
+  language: string,
 ): Promise<void> {
   let title: string;
   let body: string;
@@ -597,27 +682,31 @@ async function sendSubscriptionExpirationNotification(
 
   if (daysRemaining <= 1) {
     urgency = 'high';
-    title = language === 'fr' 
-      ? '⚠️ Abonnement Expire Demain!' 
-      : '⚠️ Subscription Expires Tomorrow!';
-    body = language === 'fr'
-      ? 'Renouvelez maintenant pour ne pas perdre vos fonctionnalités premium. Profitez de -30% sur l\'abonnement annuel!'
-      : 'Renew now to keep your premium features. Get 30% off on annual subscription!';
+    title =
+      language === 'fr'
+        ? '⚠️ Abonnement Expire Demain!'
+        : '⚠️ Subscription Expires Tomorrow!';
+    body =
+      language === 'fr'
+        ? "Renouvelez maintenant pour ne pas perdre vos fonctionnalités premium. Profitez de -30% sur l'abonnement annuel!"
+        : 'Renew now to keep your premium features. Get 30% off on annual subscription!';
   } else if (daysRemaining <= 3) {
     urgency = 'high';
-    title = language === 'fr' 
-      ? `⏰ ${daysRemaining} Jours Restants!` 
-      : `⏰ ${daysRemaining} Days Left!`;
-    body = language === 'fr'
-      ? 'Votre abonnement expire bientôt. Renouvelez maintenant pour profiter de nos offres exclusives!'
-      : 'Your subscription expires soon. Renew now for exclusive offers!';
+    title =
+      language === 'fr'
+        ? `⏰ ${daysRemaining} Jours Restants!`
+        : `⏰ ${daysRemaining} Days Left!`;
+    body =
+      language === 'fr'
+        ? 'Votre abonnement expire bientôt. Renouvelez maintenant pour profiter de nos offres exclusives!'
+        : 'Your subscription expires soon. Renew now for exclusive offers!';
   } else {
-    title = language === 'fr' 
-      ? '📅 Rappel d\'Abonnement' 
-      : '📅 Subscription Reminder';
-    body = language === 'fr'
-      ? `Votre abonnement expire dans ${daysRemaining} jours. Économisez jusqu'à 30% avec nos offres longue durée!`
-      : `Your subscription expires in ${daysRemaining} days. Save up to 30% with long-term plans!`;
+    title =
+      language === 'fr' ? "📅 Rappel d'Abonnement" : '📅 Subscription Reminder';
+    body =
+      language === 'fr'
+        ? `Votre abonnement expire dans ${daysRemaining} jours. Économisez jusqu'à 30% avec nos offres longue durée!`
+        : `Your subscription expires in ${daysRemaining} days. Save up to 30% with long-term plans!`;
   }
 
   await messaging.send({
@@ -657,32 +746,35 @@ async function sendSubscriptionExpirationNotification(
 async function sendTrialExpirationNotification(
   fcmToken: string,
   daysRemaining: number,
-  language: string
+  language: string,
 ): Promise<void> {
   let title: string;
   let body: string;
 
   if (daysRemaining <= 1) {
-    title = language === 'fr' 
-      ? '⚠️ Essai Gratuit Termine Demain!' 
-      : '⚠️ Free Trial Ends Tomorrow!';
-    body = language === 'fr'
-      ? 'Passez à un abonnement premium pour continuer à profiter de toutes les fonctionnalités. -30% sur l\'annuel!'
-      : 'Upgrade to premium to keep all features. Get 30% off annual plans!';
+    title =
+      language === 'fr'
+        ? '⚠️ Essai Gratuit Termine Demain!'
+        : '⚠️ Free Trial Ends Tomorrow!';
+    body =
+      language === 'fr'
+        ? "Passez à un abonnement premium pour continuer à profiter de toutes les fonctionnalités. -30% sur l'annuel!"
+        : 'Upgrade to premium to keep all features. Get 30% off annual plans!';
   } else if (daysRemaining <= 3) {
-    title = language === 'fr' 
-      ? `⏰ ${daysRemaining} Jours d'Essai Restants` 
-      : `⏰ ${daysRemaining} Trial Days Left`;
-    body = language === 'fr'
-      ? 'Votre essai gratuit se termine bientôt. Choisissez un plan qui vous convient!'
-      : 'Your free trial ends soon. Choose a plan that works for you!';
+    title =
+      language === 'fr'
+        ? `⏰ ${daysRemaining} Jours d'Essai Restants`
+        : `⏰ ${daysRemaining} Trial Days Left`;
+    body =
+      language === 'fr'
+        ? 'Votre essai gratuit se termine bientôt. Choisissez un plan qui vous convient!'
+        : 'Your free trial ends soon. Choose a plan that works for you!';
   } else {
-    title = language === 'fr' 
-      ? '📅 Rappel Essai Gratuit' 
-      : '📅 Trial Reminder';
-    body = language === 'fr'
-      ? `Plus que ${daysRemaining} jours d'essai gratuit. Explorez toutes nos fonctionnalités!`
-      : `${daysRemaining} days left in your free trial. Explore all our features!`;
+    title = language === 'fr' ? '📅 Rappel Essai Gratuit' : '📅 Trial Reminder';
+    body =
+      language === 'fr'
+        ? `Plus que ${daysRemaining} jours d'essai gratuit. Explorez toutes nos fonctionnalités!`
+        : `${daysRemaining} days left in your free trial. Explore all our features!`;
   }
 
   await messaging.send({

@@ -6,13 +6,13 @@ The React Native application is organized into a modular component structure, op
 
 ## Key Optimizations
 
-| Optimization | Technology | Benefit |
-|--------------|------------|---------|
-| **JS Engine** | Hermes | 53% faster startup, 33% smaller bundle |
-| **Offline Database** | WatermelonDB | Complex queries work offline |
-| **Image Compression** | react-native-image-resizer | 90% smaller uploads |
-| **Fallback OCR** | ML Kit | Basic scanning without internet |
-| **State Management** | Zustand | Lightweight, fast |
+| Optimization          | Technology                 | Benefit                                |
+| --------------------- | -------------------------- | -------------------------------------- |
+| **JS Engine**         | Hermes                     | 53% faster startup, 33% smaller bundle |
+| **Offline Database**  | WatermelonDB               | Complex queries work offline           |
+| **Image Compression** | react-native-image-resizer | 90% smaller uploads                    |
+| **Fallback OCR**      | ML Kit                     | Basic scanning without internet        |
+| **State Management**  | Zustand                    | Lightweight, fast                      |
 
 ## Project Structure
 
@@ -234,6 +234,7 @@ App
 ### 1. Scanner Feature (Updated)
 
 #### Hybrid Scanner Hook
+
 ```typescript
 // src/features/scanner/hooks/useHybridScanner.ts
 
@@ -246,12 +247,13 @@ interface ScanResult {
 
 export function useHybridScanner() {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [compressionStats, setCompressionStats] = useState<CompressionStats | null>(null);
+  const [compressionStats, setCompressionStats] =
+    useState<CompressionStats | null>(null);
   const isOnline = useNetworkStatus();
-  
+
   const scanReceipt = async (imageUri: string): Promise<ScanResult> => {
     setIsProcessing(true);
-    
+
     try {
       // Step 1: Always compress first
       const compressed = await compressReceiptImage(imageUri);
@@ -260,12 +262,12 @@ export function useHybridScanner() {
         compressedSize: compressed.compressedSize,
         savingsPercent: compressed.savingsPercent,
       });
-      
+
       if (isOnline) {
         // Online: Use Gemini via Cloud Function
         const base64 = await imageToBase64(compressed.uri);
         const result = await geminiProxy.parseReceipt(base64);
-        
+
         if (result.success) {
           return {
             method: 'gemini',
@@ -275,10 +277,10 @@ export function useHybridScanner() {
           };
         }
       }
-      
+
       // Offline or Gemini failed: Use ML Kit
       const ocrResult = await performOnDeviceOcr(compressed.uri);
-      
+
       if (ocrResult.success) {
         const parsed = parseReceiptTextBasic(ocrResult.lines);
         return {
@@ -288,7 +290,7 @@ export function useHybridScanner() {
           needsReview: true,
         };
       }
-      
+
       // Last resort: Manual entry
       return {
         method: 'manual',
@@ -300,12 +302,13 @@ export function useHybridScanner() {
       setIsProcessing(false);
     }
   };
-  
-  return { scanReceipt, isProcessing, compressionStats, isOnline };
+
+  return {scanReceipt, isProcessing, compressionStats, isOnline};
 }
 ```
 
 #### CameraScreen (Updated)
+
 ```typescript
 interface CameraScreenProps {
   // No props - entry point
@@ -325,6 +328,7 @@ interface CameraScreenProps {
 ```
 
 #### ValidationScreen (Updated)
+
 ```typescript
 interface ValidationScreenProps {
   imageUri: string;
@@ -350,6 +354,7 @@ interface ValidationScreenProps {
 ### 2. Comparison Feature
 
 #### ComparisonListScreen
+
 ```typescript
 interface ComparisonListScreenProps {
   // No props - entry point
@@ -368,6 +373,7 @@ interface ComparisonListScreenProps {
 ```
 
 #### PriceCard Component
+
 ```typescript
 interface PriceCardProps {
   itemName: string;
@@ -381,6 +387,7 @@ interface PriceCardProps {
 ### 3. Reports Feature
 
 #### DashboardScreen
+
 ```typescript
 interface DashboardScreenProps {
   // No props - entry point
@@ -402,6 +409,7 @@ interface DashboardScreenProps {
 ### 4. Subscription Feature
 
 #### PaywallScreen
+
 ```typescript
 interface PaywallScreenProps {
   onDismiss: () => void;
@@ -429,7 +437,7 @@ interface AuthState {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  
+
   // Actions
   signInAnonymously: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -441,7 +449,7 @@ interface InvoiceState {
   invoices: Invoice[];
   currentInvoice: Invoice | null;
   isLoading: boolean;
-  
+
   // Actions
   fetchInvoices: () => Promise<void>;
   saveInvoice: (invoice: Invoice) => Promise<void>;
@@ -453,7 +461,7 @@ interface PriceState {
   publicPrices: PriceItem[];
   searchResults: PriceItem[];
   isLoading: boolean;
-  
+
   // Actions
   fetchPublicPrices: () => Promise<void>;
   searchPrices: (query: string) => Promise<void>;
@@ -464,7 +472,7 @@ interface SubscriptionState {
   trialScansRemaining: number;
   isSubscribed: boolean;
   subscriptionEndDate: Date | null;
-  
+
   // Actions
   decrementTrialScan: () => void;
   updateSubscription: (status: SubscriptionStatus) => void;
@@ -495,19 +503,20 @@ type MainTabParamList = {
 
 type ScanStackParamList = {
   Camera: undefined;
-  Validation: { imageUri: string };
-  Success: { invoiceId: string };
+  Validation: {imageUri: string};
+  Success: {invoiceId: string};
 };
 
 type CompareStackParamList = {
   List: undefined;
-  ItemDetail: { itemId: string };
+  ItemDetail: {itemId: string};
 };
 ```
 
 ## Styling Approach (NativeWind/Tailwind)
 
 ### Theme Configuration
+
 ```typescript
 // tailwind.config.js
 module.exports = {
@@ -538,14 +547,11 @@ module.exports = {
 ```
 
 ### Component Styling Example
+
 ```tsx
 // Consistent button styling
-<TouchableOpacity 
-  className="bg-primary-500 px-6 py-3 rounded-xl active:bg-primary-600"
->
-  <Text className="text-white font-semibold text-center">
-    Scan Invoice
-  </Text>
+<TouchableOpacity className="bg-primary-500 px-6 py-3 rounded-xl active:bg-primary-600">
+  <Text className="text-white font-semibold text-center">Scan Invoice</Text>
 </TouchableOpacity>
 ```
 
@@ -554,12 +560,12 @@ module.exports = {
 ```typescript
 // Global error boundary
 class ErrorBoundary extends Component {
-  state = { hasError: false, error: null };
-  
+  state = {hasError: false, error: null};
+
   static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+    return {hasError: true, error};
   }
-  
+
   componentDidCatch(error, errorInfo) {
     // Log to analytics/crash reporting
     logError(error, errorInfo);
@@ -580,4 +586,4 @@ const handleApiError = (error: Error) => {
 
 ---
 
-*Next: [Infrastructure Setup](./INFRASTRUCTURE.md)*
+_Next: [Infrastructure Setup](./INFRASTRUCTURE.md)_

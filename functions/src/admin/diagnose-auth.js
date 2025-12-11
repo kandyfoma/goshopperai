@@ -3,20 +3,24 @@ const path = require('path');
 const fs = require('fs');
 
 // Initialize with service account
-const serviceAccountPath = path.resolve(__dirname, '../../serviceAccountKey.json');
+const serviceAccountPath = path.resolve(
+  __dirname,
+  '../../serviceAccountKey.json',
+);
 console.log('Loading service account from:', serviceAccountPath);
 
 try {
-  const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+  const serviceAccount = JSON.parse(
+    fs.readFileSync(serviceAccountPath, 'utf8'),
+  );
   console.log('Service account loaded for project:', serviceAccount.project_id);
   console.log('Client Email:', serviceAccount.client_email);
 
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    projectId: serviceAccount.project_id
+    projectId: serviceAccount.project_id,
   });
   console.log('Firebase Admin initialized');
-
 } catch (error) {
   console.error('Error initializing Firebase:', error);
   process.exit(1);
@@ -24,7 +28,7 @@ try {
 
 async function diagnose() {
   console.log('\n--- Starting Diagnosis ---');
-  
+
   // 1. Check Auth
   console.log('\n1. Testing Authentication (listUsers)...');
   try {
@@ -44,12 +48,15 @@ async function diagnose() {
   try {
     const db = admin.firestore();
     const collections = await db.listCollections();
-    console.log('✅ Firestore Success! Collections:', collections.map(c => c.id).join(', '));
+    console.log(
+      '✅ Firestore Success! Collections:',
+      collections.map(c => c.id).join(', '),
+    );
   } catch (error) {
     console.error('❌ Firestore Failed!');
     console.error('Error Message:', error.message);
   }
-  
+
   console.log('\n--- Diagnosis Complete ---');
 }
 

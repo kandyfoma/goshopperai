@@ -31,13 +31,13 @@ export function AchievementsScreen() {
 
   const loadData = async () => {
     if (!user?.uid) return;
-    
+
     try {
       const [userStats, userAchievements] = await Promise.all([
         savingsTrackerService.getStats(user.uid),
         savingsTrackerService.getAchievements(user.uid),
       ]);
-      
+
       setStats(userStats);
       setAchievements(userAchievements);
     } catch (error) {
@@ -58,7 +58,9 @@ export function AchievementsScreen() {
     );
   }
 
-  const levelInfo = stats ? savingsTrackerService.getLevelInfo(stats.level) : null;
+  const levelInfo = stats
+    ? savingsTrackerService.getLevelInfo(stats.level)
+    : null;
   const xpProgress = stats ? (stats.xp / stats.xpToNextLevel) * 100 : 0;
   const unlockedCount = achievements.filter(a => a.isUnlocked).length;
 
@@ -73,10 +75,9 @@ export function AchievementsScreen() {
         <View style={{width: 60}} />
       </View>
 
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        
         {/* Level Card */}
         {stats && levelInfo && (
           <View style={[styles.levelCard, {borderColor: levelInfo.color}]}>
@@ -84,7 +85,9 @@ export function AchievementsScreen() {
               <Text style={styles.levelIcon}>{levelInfo.icon}</Text>
               <View style={styles.levelInfo}>
                 <Text style={styles.levelTitle}>{levelInfo.title}</Text>
-                <Text style={styles.levelTitleLingala}>{levelInfo.titleLingala}</Text>
+                <Text style={styles.levelTitleLingala}>
+                  {levelInfo.titleLingala}
+                </Text>
               </View>
               <View style={styles.levelBadge}>
                 <Text style={[styles.levelNumber, {color: levelInfo.color}]}>
@@ -92,15 +95,15 @@ export function AchievementsScreen() {
                 </Text>
               </View>
             </View>
-            
+
             {/* XP Progress Bar */}
             <View style={styles.xpContainer}>
               <View style={styles.xpBar}>
-                <View 
+                <View
                   style={[
-                    styles.xpProgress, 
-                    {width: `${xpProgress}%`, backgroundColor: levelInfo.color}
-                  ]} 
+                    styles.xpProgress,
+                    {width: `${xpProgress}%`, backgroundColor: levelInfo.color},
+                  ]}
                 />
               </View>
               <Text style={styles.xpText}>
@@ -118,19 +121,21 @@ export function AchievementsScreen() {
               <Text style={styles.statValue}>{stats.totalScans}</Text>
               <Text style={styles.statLabel}>Scans</Text>
             </View>
-            
+
             <View style={styles.statCard}>
               <Text style={styles.statIcon}>💰</Text>
-              <Text style={styles.statValue}>${stats.totalSavings.toFixed(0)}</Text>
+              <Text style={styles.statValue}>
+                ${stats.totalSavings.toFixed(0)}
+              </Text>
               <Text style={styles.statLabel}>Économisé</Text>
             </View>
-            
+
             <View style={styles.statCard}>
               <Text style={styles.statIcon}>🔥</Text>
               <Text style={styles.statValue}>{stats.currentStreak}</Text>
               <Text style={styles.statLabel}>Série</Text>
             </View>
-            
+
             <View style={styles.statCard}>
               <Text style={styles.statIcon}>🏪</Text>
               <Text style={styles.statValue}>{stats.shopsVisited}</Text>
@@ -147,7 +152,7 @@ export function AchievementsScreen() {
               {unlockedCount} / {achievements.length}
             </Text>
           </View>
-          
+
           {/* Unlocked Achievements */}
           <View style={styles.achievementGroup}>
             <Text style={styles.groupTitle}>Débloqués</Text>
@@ -156,60 +161,98 @@ export function AchievementsScreen() {
                 Continuez à scanner pour débloquer des succès !
               </Text>
             ) : (
-              achievements.filter(a => a.isUnlocked).map(achievement => (
-                <View key={achievement.id} style={styles.achievementCard}>
-                  <View style={styles.achievementIcon}>
-                    <Text style={styles.achievementIconText}>{achievement.icon}</Text>
+              achievements
+                .filter(a => a.isUnlocked)
+                .map(achievement => (
+                  <View key={achievement.id} style={styles.achievementCard}>
+                    <View style={styles.achievementIcon}>
+                      <Text style={styles.achievementIconText}>
+                        {achievement.icon}
+                      </Text>
+                    </View>
+                    <View style={styles.achievementInfo}>
+                      <Text style={styles.achievementTitle}>
+                        {achievement.title}
+                      </Text>
+                      <Text style={styles.achievementTitleLingala}>
+                        {achievement.titleLingala}
+                      </Text>
+                      <Text style={styles.achievementDesc}>
+                        {achievement.description}
+                      </Text>
+                    </View>
+                    <View style={styles.achievementXP}>
+                      <Text style={styles.achievementXPText}>
+                        +{achievement.xpReward} XP
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.achievementInfo}>
-                    <Text style={styles.achievementTitle}>{achievement.title}</Text>
-                    <Text style={styles.achievementTitleLingala}>{achievement.titleLingala}</Text>
-                    <Text style={styles.achievementDesc}>{achievement.description}</Text>
-                  </View>
-                  <View style={styles.achievementXP}>
-                    <Text style={styles.achievementXPText}>+{achievement.xpReward} XP</Text>
-                  </View>
-                </View>
-              ))
+                ))
             )}
           </View>
 
           {/* Locked Achievements */}
           <View style={styles.achievementGroup}>
             <Text style={styles.groupTitle}>À débloquer</Text>
-            {achievements.filter(a => !a.isUnlocked).map(achievement => (
-              <View key={achievement.id} style={[styles.achievementCard, styles.achievementCardLocked]}>
-                <View style={[styles.achievementIcon, styles.achievementIconLocked]}>
-                  <Text style={styles.achievementIconText}>🔒</Text>
-                </View>
-                <View style={styles.achievementInfo}>
-                  <Text style={[styles.achievementTitle, styles.achievementTitleLocked]}>
-                    {achievement.title}
-                  </Text>
-                  <Text style={styles.achievementDesc}>{achievement.description}</Text>
-                  
-                  {/* Progress Bar */}
-                  <View style={styles.progressContainer}>
-                    <View style={styles.progressBar}>
-                      <View 
-                        style={[
-                          styles.progressFill,
-                          {width: `${(achievement.progress / achievement.target) * 100}%`}
-                        ]}
-                      />
+            {achievements
+              .filter(a => !a.isUnlocked)
+              .map(achievement => (
+                <View
+                  key={achievement.id}
+                  style={[
+                    styles.achievementCard,
+                    styles.achievementCardLocked,
+                  ]}>
+                  <View
+                    style={[
+                      styles.achievementIcon,
+                      styles.achievementIconLocked,
+                    ]}>
+                    <Text style={styles.achievementIconText}>🔒</Text>
+                  </View>
+                  <View style={styles.achievementInfo}>
+                    <Text
+                      style={[
+                        styles.achievementTitle,
+                        styles.achievementTitleLocked,
+                      ]}>
+                      {achievement.title}
+                    </Text>
+                    <Text style={styles.achievementDesc}>
+                      {achievement.description}
+                    </Text>
+
+                    {/* Progress Bar */}
+                    <View style={styles.progressContainer}>
+                      <View style={styles.progressBar}>
+                        <View
+                          style={[
+                            styles.progressFill,
+                            {
+                              width: `${
+                                (achievement.progress / achievement.target) *
+                                100
+                              }%`,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <Text style={styles.progressText}>
+                        {achievement.progress} / {achievement.target}
+                      </Text>
                     </View>
-                    <Text style={styles.progressText}>
-                      {achievement.progress} / {achievement.target}
+                  </View>
+                  <View style={styles.achievementXP}>
+                    <Text
+                      style={[
+                        styles.achievementXPText,
+                        styles.achievementXPLocked,
+                      ]}>
+                      +{achievement.xpReward} XP
                     </Text>
                   </View>
                 </View>
-                <View style={styles.achievementXP}>
-                  <Text style={[styles.achievementXPText, styles.achievementXPLocked]}>
-                    +{achievement.xpReward} XP
-                  </Text>
-                </View>
-              </View>
-            ))}
+              ))}
           </View>
         </View>
 
@@ -219,11 +262,12 @@ export function AchievementsScreen() {
             <Text style={styles.streakIcon}>🔥</Text>
             <View style={styles.streakInfo}>
               <Text style={styles.streakTitle}>Plus longue série</Text>
-              <Text style={styles.streakValue}>{stats.longestStreak} jours</Text>
+              <Text style={styles.streakValue}>
+                {stats.longestStreak} jours
+              </Text>
             </View>
           </View>
         )}
-
       </ScrollView>
     </SafeAreaView>
   );

@@ -34,12 +34,12 @@ function App(): React.JSX.Element {
         console.log('Initializing Firebase...');
         await initializeFirebase();
         console.log('Firebase initialized successfully');
-        
+
         // Initialize Analytics
         console.log('Initializing Analytics...');
         await analyticsService.initialize();
         console.log('Analytics initialized successfully');
-        
+
         setLoading(false);
       } catch (err) {
         console.error('App initialization error:', err);
@@ -47,7 +47,7 @@ function App(): React.JSX.Element {
         setLoading(false);
       }
     };
-    
+
     init();
   }, []);
 

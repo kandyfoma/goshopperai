@@ -5,8 +5,8 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { config, collections } from '../config';
+import {GoogleGenerativeAI} from '@google/generative-ai';
+import {config, collections} from '../config';
 
 const db = admin.firestore();
 
@@ -28,44 +28,53 @@ export const processNLQuery = functions
   .region(config.app.region)
   .https.onCall(async (data, context) => {
     if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Authentication required',
+      );
     }
-    
-    const { query, conversationHistory } = data;
-    
+
+    const {query, conversationHistory} = data;
+
     if (!query) {
       throw new functions.https.HttpsError(
         'invalid-argument',
-        'Query is required'
+        'Query is required',
       );
     }
-    
+
     const userId = context.auth.uid;
-    
+
     try {
       // Gather user's spending context
       const spendingContext = await gatherSpendingContext(userId);
-      
+
       // Build prompt for Gemini
-      const prompt = buildPrompt(query, spendingContext, conversationHistory || []);
-      
+      const prompt = buildPrompt(
+        query,
+        spendingContext,
+        conversationHistory || [],
+      );
+
       // Call Gemini
-      const model = genAI.getGenerativeModel({ model: config.gemini.model });
+      const model = genAI.getGenerativeModel({model: config.gemini.model});
       const result = await model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
-      
+
       // Parse structured response
       const parsedResult = parseAIResponse(text);
-      
+
       return {
         success: true,
         ...parsedResult,
       };
-      
     } catch (error) {
       console.error('NL Query error:', error);
-      throw new functions.https.HttpsError('internal', 'Failed to process query');
+      throw new functions.https.HttpsError(
+        'internal',
+        'Failed to process query',
+      );
     }
   });
 
@@ -76,13 +85,13 @@ async function gatherSpendingContext(userId: string): Promise<string> {
   const now = new Date();
   const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  
+
   // Get receipts from the last 2 months to avoid complex queries
   let recentReceipts;
   try {
     const twoMonthsAgo = new Date(now);
     twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-    
+
     recentReceipts = await db
       .collection(collections.receipts(userId))
       .where('scannedAt', '>=', twoMonthsAgo)
@@ -90,35 +99,37 @@ async function gatherSpendingContext(userId: string): Promise<string> {
       .get();
   } catch (error) {
     console.warn('Failed to query recent receipts:', error);
-    recentReceipts = { docs: [] };
+    recentReceipts = {docs: []};
   }
-  
+
   // Filter receipts by date ranges in memory
   const thisMonthReceipts = recentReceipts.docs.filter(doc => {
     const scannedAt = doc.data().scannedAt?.toDate();
     return scannedAt && scannedAt >= thisMonth;
   });
-  
+
   const lastMonthReceipts = recentReceipts.docs.filter(doc => {
     const scannedAt = doc.data().scannedAt?.toDate();
     return scannedAt && scannedAt >= lastMonth && scannedAt < thisMonth;
   });
-  
+
   // Calculate statistics
   let thisMonthTotal = 0;
   let lastMonthTotal = 0;
-  const categoryTotals: { [key: string]: number } = {};
-  const storeTotals: { [key: string]: number } = {};
-  const items: { name: string; price: number; store: string }[] = [];
-  
+  const categoryTotals: {[key: string]: number} = {};
+  const storeTotals: {[key: string]: number} = {};
+  const items: {name: string; price: number; store: string}[] = [];
+
   thisMonthReceipts.forEach(doc => {
     const data = doc.data();
     thisMonthTotal += data.total || 0;
-    storeTotals[data.storeName] = (storeTotals[data.storeName] || 0) + data.total;
-    
+    storeTotals[data.storeName] =
+      (storeTotals[data.storeName] || 0) + data.total;
+
     (data.items || []).forEach((item: any) => {
       const cat = item.category || 'Autres';
-      categoryTotals[cat] = (categoryTotals[cat] || 0) + (item.unitPrice * item.quantity);
+      categoryTotals[cat] =
+        (categoryTotals[cat] || 0) + item.unitPrice * item.quantity;
       items.push({
         name: item.name,
         price: item.unitPrice,
@@ -126,25 +137,32 @@ async function gatherSpendingContext(userId: string): Promise<string> {
       });
     });
   });
-  
+
   lastMonthReceipts.forEach(doc => {
     lastMonthTotal += doc.data().total || 0;
   });
-  
+
   // Build context string
   const context = `
 CONTEXTE DES DÉPENSES DE L'UTILISATEUR:
 
-Période: ${thisMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+Période: ${thisMonth.toLocaleDateString('fr-FR', {
+    month: 'long',
+    year: 'numeric',
+  })}
 
 RÉSUMÉ CE MOIS:
 - Total dépensé: $${thisMonthTotal.toFixed(2)}
 - Nombre de factures: ${thisMonthReceipts.length}
-- Moyenne par facture: $${(thisMonthTotal / Math.max(thisMonthReceipts.length, 1)).toFixed(2)}
+- Moyenne par facture: $${(
+    thisMonthTotal / Math.max(thisMonthReceipts.length, 1)
+  ).toFixed(2)}
 
 COMPARAISON:
 - Mois dernier: $${lastMonthTotal.toFixed(2)}
-- Différence: ${thisMonthTotal >= lastMonthTotal ? '+' : ''}$${(thisMonthTotal - lastMonthTotal).toFixed(2)}
+- Différence: ${thisMonthTotal >= lastMonthTotal ? '+' : ''}$${(
+    thisMonthTotal - lastMonthTotal
+  ).toFixed(2)}
 
 DÉPENSES PAR CATÉGORIE:
 ${Object.entries(categoryTotals)
@@ -160,9 +178,12 @@ ${Object.entries(storeTotals)
   .join('\n')}
 
 ARTICLES RÉCENTS (échantillon):
-${items.slice(0, 10).map(item => `- ${item.name}: $${item.price.toFixed(2)} (${item.store})`).join('\n')}
+${items
+  .slice(0, 10)
+  .map(item => `- ${item.name}: $${item.price.toFixed(2)} (${item.store})`)
+  .join('\n')}
   `.trim();
-  
+
   return context;
 }
 
@@ -172,12 +193,15 @@ ${items.slice(0, 10).map(item => `- ${item.name}: $${item.price.toFixed(2)} (${i
 function buildPrompt(
   query: string,
   spendingContext: string,
-  history: Array<{ role: string; content: string }>
+  history: Array<{role: string; content: string}>,
 ): string {
-  const historyText = history.length > 0
-    ? `\nHISTORIQUE DE CONVERSATION:\n${history.map(m => `${m.role}: ${m.content}`).join('\n')}\n`
-    : '';
-  
+  const historyText =
+    history.length > 0
+      ? `\nHISTORIQUE DE CONVERSATION:\n${history
+          .map(m => `${m.role}: ${m.content}`)
+          .join('\n')}\n`
+      : '';
+
   return `
 Tu es un assistant financier personnel pour une application de suivi des dépenses utilisée principalement par des femmes au Congo (RDC). Tu dois répondre de manière amicale, claire et utile.
 
@@ -224,23 +248,22 @@ function parseAIResponse(text: string): QueryResult {
       cleanText = cleanText.slice(0, -3);
     }
     cleanText = cleanText.trim();
-    
+
     const parsed = JSON.parse(cleanText);
-    
+
     return {
-      answer: parsed.answer || 'Désolé, je n\'ai pas pu traiter votre demande.',
+      answer: parsed.answer || "Désolé, je n'ai pas pu traiter votre demande.",
       answerLingala: parsed.answerLingala,
       type: parsed.type || 'general',
       suggestions: parsed.suggestions || [],
       data: parsed.data,
     };
-    
   } catch (error) {
     console.error('Parse AI response error:', error);
-    
+
     // Return the raw text as answer if parsing fails
     return {
-      answer: text || 'Désolé, une erreur s\'est produite.',
+      answer: text || "Désolé, une erreur s'est produite.",
       type: 'general',
       suggestions: [],
     };
@@ -254,18 +277,21 @@ export const getSpendingSuggestions = functions
   .region(config.app.region)
   .https.onCall(async (data, context) => {
     if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Authentication required',
+      );
     }
-    
+
     const userId = context.auth.uid;
-    
+
     try {
       // Gather context
       const context = await gatherSpendingContext(userId);
-      
+
       // Generate suggestions with AI
-      const model = genAI.getGenerativeModel({ model: config.gemini.model });
-      
+      const model = genAI.getGenerativeModel({model: config.gemini.model});
+
       const prompt = `
 Basé sur ce contexte de dépenses, génère 3 suggestions personnalisées pour économiser de l'argent.
 
@@ -282,25 +308,30 @@ FORMAT (JSON array):
 
 Réponds UNIQUEMENT avec le JSON.
       `.trim();
-      
+
       const result = await model.generateContent(prompt);
       const response = await result.response;
       let text = response.text().trim();
-      
+
       // Clean markdown
       if (text.startsWith('```')) {
-        text = text.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+        text = text
+          .replace(/```json?\n?/g, '')
+          .replace(/```/g, '')
+          .trim();
       }
-      
+
       const suggestions = JSON.parse(text);
-      
+
       return {
         success: true,
         suggestions,
       };
-      
     } catch (error) {
       console.error('Get suggestions error:', error);
-      throw new functions.https.HttpsError('internal', 'Failed to get suggestions');
+      throw new functions.https.HttpsError(
+        'internal',
+        'Failed to get suggestions',
+      );
     }
   });

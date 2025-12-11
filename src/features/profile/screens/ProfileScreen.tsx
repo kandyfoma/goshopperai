@@ -13,7 +13,11 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useAuth, useSubscription} from '@/shared/contexts';
 import {RootStackParamList} from '@/shared/types';
-import {COLORS, SUBSCRIPTION_PLANS, TRIAL_SCAN_LIMIT} from '@/shared/utils/constants';
+import {
+  COLORS,
+  SUBSCRIPTION_PLANS,
+  TRIAL_SCAN_LIMIT,
+} from '@/shared/utils/constants';
 import {formatCurrency, formatDate} from '@/shared/utils/helpers';
 import functions from '@react-native-firebase/functions';
 import {analyticsService} from '@/shared/services/analytics';
@@ -32,8 +36,8 @@ export function ProfileScreen() {
     error: null as string | null,
   });
 
-  const currentPlan = subscription?.planId 
-    ? SUBSCRIPTION_PLANS[subscription.planId] 
+  const currentPlan = subscription?.planId
+    ? SUBSCRIPTION_PLANS[subscription.planId]
     : SUBSCRIPTION_PLANS.free;
 
   const trialRemaining = Math.max(0, TRIAL_SCAN_LIMIT - trialScansUsed);
@@ -48,8 +52,8 @@ export function ProfileScreen() {
   useEffect(() => {
     const fetchUserStats = async () => {
       try {
-        setUserStats(prev => ({ ...prev, loading: true, error: null }));
-        
+        setUserStats(prev => ({...prev, loading: true, error: null}));
+
         const getUserStatsCallable = functions().httpsCallable('getUserStats');
         const result = await getUserStatsCallable();
         const data = result.data as {
@@ -60,7 +64,7 @@ export function ProfileScreen() {
           monthlyScansUsed: number;
           monthlyScansLimit: number;
         };
-        
+
         setUserStats({
           totalReceipts: data.totalReceipts || 0,
           totalSavings: data.totalSavings || 0,
@@ -89,11 +93,10 @@ export function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-
         {/* Profile Header - Simple and friendly */}
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
@@ -109,7 +112,7 @@ export function ProfileScreen() {
         <View style={styles.statsSection}>
           <Text style={styles.sectionTitle}>Votre Activité</Text>
           <Text style={styles.sectionSubtitle}>Misala na yo</Text>
-          
+
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
               <Text style={styles.statEmoji}>📄</Text>
@@ -119,17 +122,22 @@ export function ProfileScreen() {
               <Text style={styles.statLabel}>Factures scannées</Text>
               <Text style={styles.statLabelLingala}>Bafacture</Text>
             </View>
-            
+
             <View style={[styles.statCard, styles.statCardHighlight]}>
               <Text style={styles.statEmoji}>💰</Text>
               <Text style={[styles.statValue, styles.statValueHighlight]}>
                 {userStats.loading ? '...' : formatCurrency(stats.totalSavings)}
               </Text>
-              <Text style={[styles.statLabel, styles.statLabelHighlight]}>Économisés</Text>
-              <Text style={[styles.statLabelLingala, styles.statLabelHighlight]}>Obombi!</Text>
+              <Text style={[styles.statLabel, styles.statLabelHighlight]}>
+                Économisés
+              </Text>
+              <Text
+                style={[styles.statLabelLingala, styles.statLabelHighlight]}>
+                Obombi!
+              </Text>
             </View>
           </View>
-          
+
           {userStats.error && (
             <Text style={styles.errorText}>{userStats.error}</Text>
           )}
@@ -159,7 +167,8 @@ export function ProfileScreen() {
                 </>
               ) : (
                 <Text style={styles.subscriptionStatus}>
-                  Expire: {subscription?.expiryDate 
+                  Expire:{' '}
+                  {subscription?.expiryDate
                     ? formatDate(subscription.expiryDate)
                     : 'Jamais'}
                 </Text>
@@ -167,7 +176,7 @@ export function ProfileScreen() {
             </View>
             <Text style={styles.subscriptionArrow}>→</Text>
           </View>
-          
+
           {isFreeTier && trialRemaining < 3 && (
             <View style={styles.upgradePrompt}>
               <Text style={styles.upgradeText}>
@@ -182,7 +191,7 @@ export function ProfileScreen() {
         <View style={styles.actionsSection}>
           <Text style={styles.sectionTitle}>Actions Rapides</Text>
           <Text style={styles.sectionSubtitle}>Misala ya noki</Text>
-          
+
           <View style={styles.actionsGrid}>
             <TouchableOpacity
               style={[styles.actionCard, styles.actionCardPrimary]}
@@ -192,7 +201,7 @@ export function ProfileScreen() {
               <Text style={styles.actionLabel}>Scanner</Text>
               <Text style={styles.actionLabelLingala}>Zwa foto</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.actionCard}
               onPress={() => navigation.navigate('Subscription')}
@@ -201,7 +210,7 @@ export function ProfileScreen() {
               <Text style={styles.actionLabel}>Premium</Text>
               <Text style={styles.actionLabelLingala}>Mingi koleka</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.actionCard}
               onPress={() => navigation.navigate('Settings')}
@@ -210,10 +219,12 @@ export function ProfileScreen() {
               <Text style={styles.actionLabel}>Paramètres</Text>
               <Text style={styles.actionLabelLingala}>Kobongisa</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.actionCard}
-              onPress={() => {/* Navigate to help */}}
+              onPress={() => {
+                /* Navigate to help */
+              }}
               activeOpacity={0.8}>
               <Text style={styles.actionEmoji}>❓</Text>
               <Text style={styles.actionLabel}>Aide</Text>
@@ -238,20 +249,20 @@ export function ProfileScreen() {
         <View style={styles.badgesSection}>
           <Text style={styles.sectionTitle}>Vos Badges</Text>
           <Text style={styles.sectionSubtitle}>Medailles na yo</Text>
-          
+
           <View style={styles.badgesRow}>
             <View style={styles.badgeItem}>
               <Text style={styles.badgeEmoji}>🎯</Text>
               <Text style={styles.badgeLabel}>Premier scan</Text>
               <Text style={styles.badgeStatus}>✓</Text>
             </View>
-            
+
             <View style={styles.badgeItem}>
               <Text style={styles.badgeEmoji}>💰</Text>
               <Text style={styles.badgeLabel}>10$ économisés</Text>
               <Text style={styles.badgeStatus}>✓</Text>
             </View>
-            
+
             <View style={[styles.badgeItem, styles.badgeLocked]}>
               <Text style={styles.badgeEmoji}>🏆</Text>
               <Text style={styles.badgeLabelLocked}>100 factures</Text>
@@ -282,7 +293,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
-  
+
   // Profile Header
   profileHeader: {
     alignItems: 'center',
@@ -318,7 +329,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: COLORS.primary[600],
   },
-  
+
   // Section Titles
   sectionTitle: {
     fontSize: 20,
@@ -332,7 +343,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontStyle: 'italic',
   },
-  
+
   // Stats Section
   statsSection: {
     marginBottom: 24,
@@ -383,7 +394,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 2,
   },
-  
+
   // Subscription Card
   subscriptionCard: {
     backgroundColor: '#ffffff',
@@ -457,7 +468,7 @@ const styles = StyleSheet.create({
     color: COLORS.primary[600],
     fontWeight: 'bold',
   },
-  
+
   // Actions Section
   actionsSection: {
     marginBottom: 24,
@@ -498,7 +509,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 4,
   },
-  
+
   // Badges Section
   badgesSection: {
     marginBottom: 24,
@@ -545,7 +556,7 @@ const styles = StyleSheet.create({
   badgeStatusLocked: {
     fontSize: 14,
   },
-  
+
   // App Info
   appInfo: {
     alignItems: 'center',

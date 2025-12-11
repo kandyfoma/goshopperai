@@ -34,7 +34,7 @@ export function ReceiptDetailScreen() {
       try {
         setLoading(true);
         setError(null);
-        
+
         const userId = auth().currentUser?.uid;
         if (!userId) {
           setError('Utilisateur non connecté');
@@ -65,7 +65,9 @@ export function ReceiptDetailScreen() {
             storeAddress: data.storeAddress,
             storePhone: data.storePhone,
             receiptNumber: data.receiptNumber,
-            date: data.date ? new Date(data.date) : (data.scannedAt?.toDate() || new Date()),
+            date: data.date
+              ? new Date(data.date)
+              : data.scannedAt?.toDate() || new Date(),
             currency: data.currency || 'USD',
             items: (data.items || []).map((item: any) => ({
               id: item.id || Math.random().toString(36).substring(7),
@@ -119,7 +121,7 @@ export function ReceiptDetailScreen() {
         <View style={styles.loading}>
           <Text style={styles.errorIcon}>❌</Text>
           <Text style={styles.errorText}>{error || 'Reçu non trouvé'}</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.retryButton}
             onPress={() => navigation.goBack()}>
             <Text style={styles.retryButtonText}>Retour</Text>
@@ -131,7 +133,7 @@ export function ReceiptDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}>
         {/* Store Header */}
@@ -155,7 +157,8 @@ export function ReceiptDetailScreen() {
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>{item.name}</Text>
                   <Text style={styles.itemMeta}>
-                    {item.quantity} × {formatCurrency(item.unitPrice, receipt.currency)}
+                    {item.quantity} ×{' '}
+                    {formatCurrency(item.unitPrice, receipt.currency)}
                   </Text>
                   {item.category && (
                     <View style={styles.categoryBadge}>
@@ -167,14 +170,14 @@ export function ReceiptDetailScreen() {
                   {formatCurrency(item.totalPrice, receipt.currency)}
                 </Text>
               </View>
-              
+
               {/* Confidence indicator */}
               <View style={styles.confidenceBar}>
-                <View 
+                <View
                   style={[
-                    styles.confidenceFill, 
-                    {width: `${item.confidence * 100}%`}
-                  ]} 
+                    styles.confidenceFill,
+                    {width: `${item.confidence * 100}%`},
+                  ]}
                 />
               </View>
             </View>

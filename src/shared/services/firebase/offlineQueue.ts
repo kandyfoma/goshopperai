@@ -40,7 +40,9 @@ class OfflineQueueService {
    */
   init(): void {
     // Listen for network changes
-    this.networkUnsubscribe = NetInfo.addEventListener(this.handleNetworkChange);
+    this.networkUnsubscribe = NetInfo.addEventListener(
+      this.handleNetworkChange,
+    );
   }
 
   /**
@@ -80,7 +82,7 @@ class OfflineQueueService {
     userId: string,
   ): Promise<QueuedReceipt> {
     const queue = await this.getQueue();
-    
+
     const queuedReceipt: QueuedReceipt = {
       id: receipt.id || `queued_${Date.now()}`,
       receipt,
@@ -89,16 +91,16 @@ class OfflineQueueService {
       queuedAt: new Date(),
       attempts: 0,
     };
-    
+
     queue.push(queuedReceipt);
     await this.saveQueue(queue);
     this.notifyListeners(queue);
-    
+
     // Try to process immediately if online
     if (await this.isOnline()) {
       this.processQueue();
     }
-    
+
     return queuedReceipt;
   }
 
@@ -107,7 +109,7 @@ class OfflineQueueService {
    */
   async queueImage(localUri: string, userId: string): Promise<QueuedImage> {
     const images = await this.getPendingImages();
-    
+
     const queuedImage: QueuedImage = {
       id: `img_${Date.now()}`,
       localUri,
@@ -115,10 +117,10 @@ class OfflineQueueService {
       queuedAt: new Date(),
       processed: false,
     };
-    
+
     images.push(queuedImage);
     await this.savePendingImages(images);
-    
+
     return queuedImage;
   }
 
@@ -129,12 +131,14 @@ class OfflineQueueService {
     try {
       const data = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
       if (!data) return [];
-      
+
       const queue = JSON.parse(data) as QueuedReceipt[];
       return queue.map(item => ({
         ...item,
         queuedAt: new Date(item.queuedAt),
-        lastAttemptAt: item.lastAttemptAt ? new Date(item.lastAttemptAt) : undefined,
+        lastAttemptAt: item.lastAttemptAt
+          ? new Date(item.lastAttemptAt)
+          : undefined,
       }));
     } catch (error) {
       console.error('[OfflineQueue] Error reading queue:', error);
@@ -149,7 +153,7 @@ class OfflineQueueService {
     try {
       const data = await AsyncStorage.getItem(PENDING_IMAGES_KEY);
       if (!data) return [];
-      
+
       return JSON.parse(data).map((item: QueuedImage) => ({
         ...item,
         queuedAt: new Date(item.queuedAt),
@@ -198,26 +202,26 @@ class OfflineQueueService {
       console.log('[OfflineQueue] Already processing...');
       return {processed: 0, failed: 0};
     }
-    
+
     if (!(await this.isOnline())) {
       console.log('[OfflineQueue] Offline, skipping queue processing');
       return {processed: 0, failed: 0};
     }
-    
+
     this.isProcessing = true;
     let processed = 0;
     let failed = 0;
-    
+
     try {
       const queue = await this.getQueue();
-      
+
       if (queue.length === 0) {
         console.log('[OfflineQueue] Queue is empty');
         return {processed: 0, failed: 0};
       }
-      
+
       console.log(`[OfflineQueue] Processing ${queue.length} items...`);
-      
+
       for (const item of queue) {
         try {
           // Upload images first if any
@@ -229,7 +233,7 @@ class OfflineQueueService {
               item.imageUris,
             );
           }
-          
+
           // Update receipt with image URLs
           const receiptWithImages: Receipt = {
             ...(item.receipt as Receipt),
@@ -237,28 +241,30 @@ class OfflineQueueService {
             imageUrl: imageUrls[0],
             processingStatus: 'completed',
           };
-          
+
           // Save to Firestore
-          await receiptStorageService.saveReceipt(receiptWithImages, item.userId);
-          
+          await receiptStorageService.saveReceipt(
+            receiptWithImages,
+            item.userId,
+          );
+
           // Remove from queue
           await this.removeFromQueue(item.id);
           processed++;
-          
+
           console.log(`[OfflineQueue] Processed: ${item.id}`);
-          
         } catch (error: any) {
           console.error(`[OfflineQueue] Failed to process ${item.id}:`, error);
-          
+
           // Update attempt count
           await this.updateQueueItem(item.id, {
             attempts: item.attempts + 1,
             lastAttemptAt: new Date(),
             error: error.message,
           });
-          
+
           failed++;
-          
+
           // Remove if too many attempts
           if (item.attempts >= 3) {
             await this.moveToFailedQueue(item);
@@ -266,23 +272,22 @@ class OfflineQueueService {
           }
         }
       }
-      
+
       // Notify listeners
       const updatedQueue = await this.getQueue();
       this.notifyListeners(updatedQueue);
-      
+
       // Send sync complete notification if items were processed
       if (processed > 0) {
         await pushNotificationService.triggerSyncCompleteNotification(
           processed,
-          'fr' // Default to French, could be made configurable
+          'fr', // Default to French, could be made configurable
         );
       }
-      
     } finally {
       this.isProcessing = false;
     }
-    
+
     return {processed, failed};
   }
 
@@ -305,7 +310,7 @@ class OfflineQueueService {
   ): Promise<void> {
     const queue = await this.getQueue();
     const index = queue.findIndex(item => item.id === id);
-    
+
     if (index !== -1) {
       queue[index] = {...queue[index], ...updates};
       await this.saveQueue(queue);
@@ -322,7 +327,7 @@ class OfflineQueueService {
       const failed = data ? JSON.parse(data) : [];
       failed.push({...item, failedAt: new Date()});
       await AsyncStorage.setItem(failedKey, JSON.stringify(failed));
-      
+
       console.log(`[OfflineQueue] Moved to failed queue: ${item.id}`);
     } catch (error) {
       console.error('[OfflineQueue] Error moving to failed queue:', error);
@@ -342,10 +347,10 @@ class OfflineQueueService {
    */
   subscribe(callback: QueueCallback): () => void {
     this.listeners.push(callback);
-    
+
     // Send current state immediately
     this.getQueue().then(callback);
-    
+
     return () => {
       this.listeners = this.listeners.filter(l => l !== callback);
     };
@@ -364,20 +369,20 @@ class OfflineQueueService {
   async retryItem(id: string): Promise<boolean> {
     const queue = await this.getQueue();
     const item = queue.find(i => i.id === id);
-    
+
     if (!item) return false;
-    
+
     // Reset attempts
     await this.updateQueueItem(id, {
       attempts: 0,
       error: undefined,
     });
-    
+
     // Try to process
     if (await this.isOnline()) {
       await this.processQueue();
     }
-    
+
     return true;
   }
 }

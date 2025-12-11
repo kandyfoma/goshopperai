@@ -39,7 +39,7 @@ interface CurrencyStats {
 
 export function StatsScreen() {
   const {user} = useAuth();
-  
+
   const [totalSpending, setTotalSpending] = useState(0);
   const [totalSavings, setTotalSavings] = useState(0);
   const [categories, setCategories] = useState<SpendingCategory[]>([]);
@@ -60,11 +60,11 @@ export function StatsScreen() {
 
     try {
       setIsLoading(true);
-      
+
       // Get current month receipts
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      
+
       const receiptsSnapshot = await firestore()
         .collection('artifacts')
         .doc('goshopperai')
@@ -82,60 +82,66 @@ export function StatsScreen() {
         const currency = data.currency || 'USD';
         currencyCount[currency] = (currencyCount[currency] || 0) + 1;
       });
-      
+
       // Set primary currency (most common)
-      const primaryCurrency = Object.entries(currencyCount)
-        .sort(([,a], [,b]) => b - a)[0]?.[0] as 'USD' | 'CDF' || 'USD';
+      const primaryCurrency =
+        (Object.entries(currencyCount).sort(([, a], [, b]) => b - a)[0]?.[0] as
+          | 'USD'
+          | 'CDF') || 'USD';
       setPrimaryCurrency(primaryCurrency);
 
       // Calculate spending by category
       const categoryTotals: Record<string, number> = {};
       let totalSpent = 0;
       let totalSavings = 0;
-      
+
       receiptsSnapshot.docs.forEach(doc => {
         const data = doc.data();
         // Only include receipts with the primary currency
         if ((data.currency || 'USD') === primaryCurrency) {
           totalSpent += data.total || 0;
-          
+
           // Calculate real savings from receipt data
           if (data.savings && typeof data.savings === 'number') {
             totalSavings += data.savings;
           }
-          
+
           (data.items || []).forEach((item: any) => {
             const category = item.category || 'Autre';
-            categoryTotals[category] = (categoryTotals[category] || 0) + (item.totalPrice || 0);
+            categoryTotals[category] =
+              (categoryTotals[category] || 0) + (item.totalPrice || 0);
           });
         }
       });
 
       // Convert to category array with percentages
       const categoryColors = {
-        'Alimentation': COLORS.primary[500],
-        'Boissons': '#10b981',
-        'Hygiène': '#8b5cf6',
-        'Ménage': '#f59e0b',
-        'Bébé': '#ec4899',
-        'Autre': COLORS.gray[400],
+        Alimentation: COLORS.primary[500],
+        Boissons: '#10b981',
+        Hygiène: '#8b5cf6',
+        Ménage: '#f59e0b',
+        Bébé: '#ec4899',
+        Autre: COLORS.gray[400],
       };
 
       const categoryIcons = {
-        'Alimentation': '🛒',
-        'Boissons': '🥤',
-        'Hygiène': '🧴',
-        'Ménage': '🏠',
-        'Bébé': '👶',
-        'Autre': '📦',
+        Alimentation: '🛒',
+        Boissons: '🥤',
+        Hygiène: '🧴',
+        Ménage: '🏠',
+        Bébé: '👶',
+        Autre: '📦',
       };
 
       const categoriesArray: SpendingCategory[] = Object.entries(categoryTotals)
         .map(([name, amount]) => ({
           name,
           amount,
-          percentage: totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0,
-          color: categoryColors[name as keyof typeof categoryColors] || COLORS.gray[400],
+          percentage:
+            totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0,
+          color:
+            categoryColors[name as keyof typeof categoryColors] ||
+            COLORS.gray[400],
           icon: categoryIcons[name as keyof typeof categoryIcons] || '📦',
         }))
         .sort((a, b) => b.amount - a.amount);
@@ -146,8 +152,21 @@ export function StatsScreen() {
 
       // Calculate monthly data (last 3 months)
       const monthlyTotals: Record<string, number> = {};
-      const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-      
+      const monthNames = [
+        'Jan',
+        'Fév',
+        'Mar',
+        'Avr',
+        'Mai',
+        'Jun',
+        'Jul',
+        'Aoû',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Déc',
+      ];
+
       for (let i = 2; i >= 0; i--) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
@@ -174,17 +193,17 @@ export function StatsScreen() {
         }
       });
 
-      const monthlyArray: MonthlySpending[] = Object.entries(monthlyTotals)
-        .map(([key, amount]) => {
+      const monthlyArray: MonthlySpending[] = Object.entries(monthlyTotals).map(
+        ([key, amount]) => {
           const [, month] = key.split('-');
           return {
             month: monthNames[parseInt(month)],
             amount,
           };
-        });
+        },
+      );
 
       setMonthlyData(monthlyArray);
-      
     } catch (error) {
       console.error('Error loading stats:', error);
       // Set empty data on error
@@ -212,11 +231,10 @@ export function StatsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Statistiques</Text>
@@ -232,7 +250,7 @@ export function StatsScreen() {
               {formatCurrency(totalSpending, primaryCurrency)}
             </Text>
           </View>
-          
+
           <View style={[styles.summaryCard, styles.savingsCard]}>
             <Text style={styles.summaryIcon}>🎉</Text>
             <Text style={styles.summaryLabelWhite}>Économies</Text>
@@ -255,9 +273,9 @@ export function StatsScreen() {
                         styles.bar,
                         {
                           height: `${(data.amount / maxMonthlyAmount) * 100}%`,
-                          backgroundColor: 
-                            index === monthlyData.length - 1 
-                              ? COLORS.primary[500] 
+                          backgroundColor:
+                            index === monthlyData.length - 1
+                              ? COLORS.primary[500]
                               : COLORS.primary[200],
                         },
                       ]}
@@ -280,7 +298,11 @@ export function StatsScreen() {
             {categories.map((category, index) => (
               <View key={index} style={styles.categoryRow}>
                 <View style={styles.categoryLeft}>
-                  <View style={[styles.categoryIcon, {backgroundColor: category.color + '20'}]}>
+                  <View
+                    style={[
+                      styles.categoryIcon,
+                      {backgroundColor: category.color + '20'},
+                    ]}>
                     <Text style={styles.categoryEmoji}>{category.icon}</Text>
                   </View>
                   <View>
@@ -314,7 +336,7 @@ export function StatsScreen() {
         {/* Insights */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Conseils</Text>
-          
+
           <View style={styles.insightCard}>
             <Text style={styles.insightIcon}>💡</Text>
             <View style={styles.insightContent}>
@@ -322,8 +344,8 @@ export function StatsScreen() {
                 Économisez sur l'alimentation
               </Text>
               <Text style={styles.insightDesc}>
-                Vous pourriez économiser {formatCurrency(15.50, primaryCurrency)} en achetant 
-                certains produits à Carrefour plutôt qu'à Shoprite.
+                Vous pourriez économiser {formatCurrency(15.5, primaryCurrency)}{' '}
+                en achetant certains produits à Carrefour plutôt qu'à Shoprite.
               </Text>
             </View>
           </View>
@@ -331,12 +353,10 @@ export function StatsScreen() {
           <View style={styles.insightCard}>
             <Text style={styles.insightIcon}>📈</Text>
             <View style={styles.insightContent}>
-              <Text style={styles.insightTitle}>
-                Tendance en hausse
-              </Text>
+              <Text style={styles.insightTitle}>Tendance en hausse</Text>
               <Text style={styles.insightDesc}>
-                Vos dépenses ont augmenté de 12% ce mois-ci par rapport 
-                au mois dernier.
+                Vos dépenses ont augmenté de 12% ce mois-ci par rapport au mois
+                dernier.
               </Text>
             </View>
           </View>

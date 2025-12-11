@@ -52,14 +52,14 @@ class PriceAlertsService {
     input: PriceAlertInput,
   ): Promise<PriceAlert> {
     const normalized = this.normalizeProductName(input.productName);
-    
+
     // Check for existing alert on same product
     const existing = await firestore()
       .collection(ALERTS_COLLECTION(userId))
       .where('productNameNormalized', '==', normalized)
       .where('isActive', '==', true)
       .get();
-    
+
     if (!existing.empty) {
       // Update existing alert
       const existingDoc = existing.docs[0];
@@ -69,17 +69,15 @@ class PriceAlertsService {
         notificationSent: false,
         updatedAt: firestore.FieldValue.serverTimestamp(),
       });
-      
+
       return this.getAlert(userId, existingDoc.id) as Promise<PriceAlert>;
     }
-    
+
     // Get current lowest price for this product
     const currentPrice = await this.getCurrentLowestPrice(normalized);
-    
-    const alertRef = firestore()
-      .collection(ALERTS_COLLECTION(userId))
-      .doc();
-    
+
+    const alertRef = firestore().collection(ALERTS_COLLECTION(userId)).doc();
+
     const alert: Omit<PriceAlert, 'createdAt' | 'updatedAt' | 'id'> = {
       userId,
       productName: input.productName,
@@ -89,17 +87,19 @@ class PriceAlertsService {
       currentLowestStore: currentPrice?.storeName,
       currency: input.currency || 'USD',
       isActive: true,
-      isTriggered: currentPrice ? currentPrice.price <= input.targetPrice : false,
+      isTriggered: currentPrice
+        ? currentPrice.price <= input.targetPrice
+        : false,
       notificationSent: false,
     };
-    
+
     await alertRef.set({
       ...alert,
       id: alertRef.id,
       createdAt: firestore.FieldValue.serverTimestamp(),
       updatedAt: firestore.FieldValue.serverTimestamp(),
     });
-    
+
     return {
       ...alert,
       id: alertRef.id,
@@ -120,9 +120,9 @@ class PriceAlertsService {
       .orderBy('price', 'asc')
       .limit(1)
       .get();
-    
+
     if (pricesSnapshot.empty) return null;
-    
+
     const doc = pricesSnapshot.docs[0].data();
     return {
       price: doc.price,
@@ -135,13 +135,13 @@ class PriceAlertsService {
    */
   async getAlerts(userId: string, activeOnly = true): Promise<PriceAlert[]> {
     let query = firestore().collection(ALERTS_COLLECTION(userId)) as any;
-    
+
     if (activeOnly) {
       query = query.where('isActive', '==', true);
     }
-    
+
     const snapshot = await query.orderBy('createdAt', 'desc').get();
-    
+
     return snapshot.docs.map((doc: any) => ({
       ...doc.data(),
       id: doc.id,
@@ -159,9 +159,9 @@ class PriceAlertsService {
       .collection(ALERTS_COLLECTION(userId))
       .doc(alertId)
       .get();
-    
+
     if (!doc.exists) return null;
-    
+
     const data = doc.data()!;
     return {
       ...data,
@@ -180,13 +180,13 @@ class PriceAlertsService {
     productName: string,
   ): Promise<PriceAlert[]> {
     const normalized = this.normalizeProductName(productName);
-    
+
     const snapshot = await firestore()
       .collection(ALERTS_COLLECTION(userId))
       .where('productNameNormalized', '==', normalized)
       .where('isActive', '==', true)
       .get();
-    
+
     return snapshot.docs.map(doc => ({
       ...doc.data(),
       id: doc.id,
@@ -263,7 +263,7 @@ class PriceAlertsService {
           updatedAt: doc.data().updatedAt?.toDate() || new Date(),
           triggeredAt: doc.data().triggeredAt?.toDate(),
         })) as PriceAlert[];
-        
+
         callback(alerts);
       });
   }
@@ -277,7 +277,7 @@ class PriceAlertsService {
       .where('isTriggered', '==', true)
       .where('notificationSent', '==', false)
       .get();
-    
+
     return snapshot.docs.map(doc => ({
       ...doc.data(),
       id: doc.id,

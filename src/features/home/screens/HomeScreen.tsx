@@ -23,7 +23,8 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const {canScan, subscription, isTrialActive, trialDaysRemaining} = useSubscription();
+  const {canScan, subscription, isTrialActive, trialDaysRemaining} =
+    useSubscription();
   const {profile: userProfile} = useUser();
 
   useEffect(() => {
@@ -64,10 +65,9 @@ export function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        
         {/* Greeting Header */}
         <View style={styles.header}>
           <View style={styles.greetingContainer}>
@@ -88,7 +88,7 @@ export function HomeScreen() {
             <View style={styles.statusTextContainer}>
               <Text style={styles.statusTitle}>Essai gratuit actif</Text>
               <Text style={styles.statusSubtitle}>
-                {trialDaysRemaining > 0 
+                {trialDaysRemaining > 0
                   ? `${trialDaysRemaining} jours restants • Scans illimités`
                   : 'Dernière journée !'}
               </Text>
@@ -118,17 +118,13 @@ export function HomeScreen() {
           activeOpacity={0.8}>
           <View style={styles.scanButtonContent}>
             <Text style={styles.scanButtonIcon}>📸</Text>
-            <Text style={styles.scanButtonTitle}>
-              SCANNER
-            </Text>
-            <Text style={styles.scanButtonTitleLingala}>
-              Zwa foto
-            </Text>
+            <Text style={styles.scanButtonTitle}>SCANNER</Text>
+            <Text style={styles.scanButtonTitleLingala}>Zwa foto</Text>
             <Text style={styles.scanButtonSubtitle}>
               Appuyez ici pour prendre une photo
             </Text>
           </View>
-          
+
           {/* Pulse animation hint */}
           <View style={styles.pulseRing} />
         </TouchableOpacity>
@@ -136,7 +132,7 @@ export function HomeScreen() {
         {/* Simple 3-step guide */}
         <View style={styles.guideSection}>
           <Text style={styles.guideSectionTitle}>Comment utiliser ?</Text>
-          
+
           <View style={styles.stepsContainer}>
             <View style={styles.stepCard}>
               <View style={[styles.stepNumber, {backgroundColor: '#10b981'}]}>
@@ -188,7 +184,9 @@ export function HomeScreen() {
 
           <TouchableOpacity
             style={styles.quickActionCard}
-            onPress={() => navigation.navigate('Main', {screen: 'History'} as any)}
+            onPress={() =>
+              navigation.navigate('Main', {screen: 'History'} as any)
+            }
             activeOpacity={0.7}>
             <Text style={styles.quickActionIcon}>📋</Text>
             <Text style={styles.quickActionTitle}>Mes factures</Text>
@@ -200,7 +198,9 @@ export function HomeScreen() {
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={styles.quickActionCard}
-            onPress={() => navigation.navigate('Main', {screen: 'Stats'} as any)}
+            onPress={() =>
+              navigation.navigate('Main', {screen: 'Stats'} as any)
+            }
             activeOpacity={0.7}>
             <Text style={styles.quickActionIcon}>📊</Text>
             <Text style={styles.quickActionTitle}>Mes dépenses</Text>
@@ -264,11 +264,12 @@ export function HomeScreen() {
           <Text style={styles.helpIcon}>❓</Text>
           <View style={styles.helpTextContainer}>
             <Text style={styles.helpTitle}>Besoin d'aide ?</Text>
-            <Text style={styles.helpSubtitle}>Appuyez ici pour voir le guide</Text>
+            <Text style={styles.helpSubtitle}>
+              Appuyez ici pour voir le guide
+            </Text>
           </View>
           <Text style={styles.helpArrow}>→</Text>
         </TouchableOpacity>
-
       </ScrollView>
     </SafeAreaView>
   );

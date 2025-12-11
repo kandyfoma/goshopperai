@@ -15,7 +15,10 @@ import {RootStackParamList, PriceComparison} from '@/shared/types';
 import {COLORS} from '@/shared/utils/constants';
 import {formatCurrency} from '@/shared/utils/helpers';
 
-type PriceComparisonRouteProp = RouteProp<RootStackParamList, 'PriceComparison'>;
+type PriceComparisonRouteProp = RouteProp<
+  RootStackParamList,
+  'PriceComparison'
+>;
 
 export function PriceComparisonScreen() {
   const route = useRoute<PriceComparisonRouteProp>();
@@ -37,23 +40,24 @@ export function PriceComparisonScreen() {
 
       // Call Cloud Function to get price comparisons
       const functionsInstance = functions();
-      
+
       // Only use emulator in development
       if (__DEV__) {
         functionsInstance.useFunctionsEmulator('http://localhost:5001');
       }
-      
-type PriceComparisonResponse = {
-  success: boolean;
-  comparisons?: PriceComparison[];
-  totalPotentialSavings?: number;
-  error?: string;
-};
 
-      const result = await functionsInstance
-        .httpsCallable('getPriceComparison')({
-          receiptId,
-        });
+      type PriceComparisonResponse = {
+        success: boolean;
+        comparisons?: PriceComparison[];
+        totalPotentialSavings?: number;
+        error?: string;
+      };
+
+      const result = await functionsInstance.httpsCallable(
+        'getPriceComparison',
+      )({
+        receiptId,
+      });
 
       const data = result.data as PriceComparisonResponse;
 
@@ -67,19 +71,21 @@ type PriceComparisonResponse = {
       }
     } catch (err: any) {
       console.error('Error loading price comparisons:', err);
-      
+
       let errorMessage = 'Erreur lors du chargement des comparaisons';
-      
+
       if (err.code === 'functions/deadline-exceeded') {
-        errorMessage = 'La comparaison prend trop de temps. Réessayez plus tard.';
+        errorMessage =
+          'La comparaison prend trop de temps. Réessayez plus tard.';
       } else if (err.code === 'functions/cancelled') {
         errorMessage = 'Comparaison annulée. Veuillez réessayer.';
       } else if (err.code === 'functions/failed-precondition') {
-        errorMessage = 'Service temporairement indisponible. Réessayez plus tard.';
+        errorMessage =
+          'Service temporairement indisponible. Réessayez plus tard.';
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       setError(errorMessage);
       setComparisons([]);
       setTotalSavings(0);
@@ -122,10 +128,9 @@ type PriceComparisonResponse = {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}>
-        
         {/* Savings Summary */}
         <View style={styles.summaryCard}>
           <Text style={styles.summaryIcon}>
@@ -133,9 +138,7 @@ type PriceComparisonResponse = {
           </Text>
           {totalSavings > 0 ? (
             <>
-              <Text style={styles.summaryTitle}>
-                Économie potentielle
-              </Text>
+              <Text style={styles.summaryTitle}>Économie potentielle</Text>
               <Text style={styles.savingsAmount}>
                 {formatCurrency(totalSavings)}
               </Text>
@@ -145,9 +148,7 @@ type PriceComparisonResponse = {
             </>
           ) : (
             <>
-              <Text style={styles.summaryTitle}>
-                Excellent choix !
-              </Text>
+              <Text style={styles.summaryTitle}>Excellent choix !</Text>
               <Text style={styles.summaryDesc}>
                 Vous avez payé les meilleurs prix disponibles
               </Text>
@@ -156,23 +157,20 @@ type PriceComparisonResponse = {
         </View>
 
         {/* Comparisons List */}
-        <Text style={styles.sectionTitle}>
-          Détail par article
-        </Text>
+        <Text style={styles.sectionTitle}>Détail par article</Text>
 
         {comparisons.map((comparison, index) => {
           const status = getPriceStatus(comparison);
-          
+
           return (
             <View key={index} style={styles.comparisonCard}>
               <View style={styles.comparisonHeader}>
-                <Text style={styles.productName}>
-                  {comparison.productName}
-                </Text>
-                <View style={[
-                  styles.statusBadge, 
-                  {backgroundColor: status.color + '15'}
-                ]}>
+                <Text style={styles.productName}>{comparison.productName}</Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    {backgroundColor: status.color + '15'},
+                  ]}>
                   <Text style={[styles.statusText, {color: status.color}]}>
                     {status.label}
                   </Text>
@@ -194,10 +192,11 @@ type PriceComparisonResponse = {
 
                 <View style={styles.priceColumn}>
                   <Text style={styles.priceLabel}>Meilleur prix</Text>
-                  <Text style={[
-                    styles.bestPrice,
-                    comparison.potentialSavings > 0 && styles.betterPrice
-                  ]}>
+                  <Text
+                    style={[
+                      styles.bestPrice,
+                      comparison.potentialSavings > 0 && styles.betterPrice,
+                    ]}>
                     {formatCurrency(comparison.bestPrice)}
                   </Text>
                   <Text style={styles.storeLabel}>
@@ -209,16 +208,17 @@ type PriceComparisonResponse = {
               {comparison.potentialSavings > 0 && (
                 <View style={styles.savingsRow}>
                   <Text style={styles.savingsText}>
-                    💰 Économie possible: {formatCurrency(comparison.potentialSavings)}
-                    {' '}(-{comparison.savingsPercentage.toFixed(0)}%)
+                    💰 Économie possible:{' '}
+                    {formatCurrency(comparison.potentialSavings)} (-
+                    {comparison.savingsPercentage.toFixed(0)}%)
                   </Text>
                 </View>
               )}
 
               <View style={styles.statsRow}>
                 <Text style={styles.statsText}>
-                  📊 Prix moyen: {formatCurrency(comparison.averagePrice)}
-                  {' '} • {comparison.priceCount} relevés
+                  📊 Prix moyen: {formatCurrency(comparison.averagePrice)} •{' '}
+                  {comparison.priceCount} relevés
                 </Text>
               </View>
             </View>

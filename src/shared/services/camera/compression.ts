@@ -49,12 +49,12 @@ class ImageCompressionService {
     options: CompressionOptions = {},
   ): Promise<string> {
     const compressedPath = await this.compressForAI(imagePath, options);
-    
+
     // Read compressed image as base64 using fetch
     try {
       const response = await fetch(compressedPath);
       const blob = await response.blob();
-      
+
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => {

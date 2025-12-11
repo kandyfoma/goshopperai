@@ -48,11 +48,11 @@ This document outlines the cloud infrastructure required to run Invoice Intellig
 
 ### Regional Configuration
 
-| Service | Region | Reason |
-|---------|--------|--------|
-| Firestore | `europe-west1` (Belgium) | Closest to DRC with low latency |
-| Cloud Functions | `europe-west1` | Co-located with Firestore |
-| Cloud Storage | `europe-west1` | Co-located for performance |
+| Service         | Region                   | Reason                          |
+| --------------- | ------------------------ | ------------------------------- |
+| Firestore       | `europe-west1` (Belgium) | Closest to DRC with low latency |
+| Cloud Functions | `europe-west1`           | Co-located with Firestore       |
+| Cloud Storage   | `europe-west1`           | Co-located for performance      |
 
 ## Service Setup
 
@@ -74,6 +74,7 @@ Configuration:
 ```
 
 **Why Anonymous Auth?**
+
 - Reduces friction for new users in DRC market
 - No phone verification needed (costly/unreliable)
 - Can upgrade to full account later
@@ -96,6 +97,7 @@ Database Configuration:
 ```
 
 **Collections Structure:**
+
 ```
 /artifacts/{appId}/
 ├── public/
@@ -156,7 +158,7 @@ This is the most critical function - proxies all AI calls with security and rate
 // functions/src/parseReceipt.ts
 
 import * as functions from 'firebase-functions';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import {GoogleGenerativeAI} from '@google/generative-ai';
 import * as admin from 'firebase-admin';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
@@ -164,13 +166,13 @@ const db = admin.firestore();
 
 // Rate limits
 const LIMITS = {
-  FREE: { perMinute: 10, perDay: 50 },
-  PREMIUM: { perMinute: 20, perDay: 500 },
+  FREE: {perMinute: 10, perDay: 50},
+  PREMIUM: {perMinute: 20, perDay: 500},
 };
 
 export const parseReceipt = functions
   .region('europe-west1')
-  .runWith({ 
+  .runWith({
     memory: '1GB',
     timeoutSeconds: 60,
     secrets: ['GEMINI_API_KEY'],
@@ -180,28 +182,28 @@ export const parseReceipt = functions
     if (!context.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'Login required');
     }
-    
+
     const userId = context.auth.uid;
-    
+
     // 2. Rate limit check
     const isPremium = await checkPremiumStatus(userId);
     await enforceRateLimit(userId, isPremium);
-    
+
     // 3. Call Gemini
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    
+    const model = genAI.getGenerativeModel({model: 'gemini-2.5-flash'});
+
     const result = await model.generateContent([
       RECEIPT_PARSE_PROMPT,
-      { inlineData: { mimeType: 'image/jpeg', data: data.imageBase64 } },
+      {inlineData: {mimeType: 'image/jpeg', data: data.imageBase64}},
     ]);
-    
+
     // 4. Parse and return
     const parsed = extractJSON(result.response.text());
-    
+
     // 5. Log for analytics
     await logUsage(userId, isPremium);
-    
-    return { success: true, data: parsed };
+
+    return {success: true, data: parsed};
   });
 ```
 
@@ -242,12 +244,12 @@ PAYMENT_MODE=live
 
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_API_KEY,
-  authDomain: "invoice-intelligence-drc.firebaseapp.com",
-  projectId: "invoice-intelligence-drc",
-  storageBucket: "invoice-intelligence-drc.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef",
-  measurementId: "G-XXXXXXXXXX"
+  authDomain: 'invoice-intelligence-drc.firebaseapp.com',
+  projectId: 'invoice-intelligence-drc',
+  storageBucket: 'invoice-intelligence-drc.appspot.com',
+  messagingSenderId: '123456789',
+  appId: '1:123456789:web:abcdef',
+  measurementId: 'G-XXXXXXXXXX',
 };
 
 export default firebaseConfig;
@@ -279,6 +281,7 @@ Gemini Configuration:
 Moko Afrika is a DRC-based fintech company with direct integration to local Mobile Money operators.
 
 **Why Moko Afrika:**
+
 - DRC-based company with local support (+243 898 900 066)
 - 47M+ connected mobile money wallets
 - 50M+ processed transactions
@@ -390,26 +393,26 @@ Distribution Channels:
 // Key events to track
 const analyticsEvents = {
   // User journey
-  'app_open': {},
-  'sign_up_complete': {},
-  
+  app_open: {},
+  sign_up_complete: {},
+
   // Core features
-  'scan_started': {},
-  'scan_completed': { item_count: number },
-  'scan_failed': { error_type: string },
-  
+  scan_started: {},
+  scan_completed: {item_count: number},
+  scan_failed: {error_type: string},
+
   // Comparison
-  'price_comparison_viewed': { item_id: string },
-  'best_price_clicked': { store_id: string },
-  
+  price_comparison_viewed: {item_id: string},
+  best_price_clicked: {store_id: string},
+
   // Monetization
-  'paywall_shown': { trigger: string },
-  'subscription_started': { plan: string },
-  'payment_completed': { amount: number, method: string },
-  'payment_failed': { error: string },
-  
+  paywall_shown: {trigger: string},
+  subscription_started: {plan: string},
+  payment_completed: {amount: number, method: string},
+  payment_failed: {error: string},
+
   // Engagement
-  'report_viewed': { report_type: string },
+  report_viewed: {report_type: string},
 };
 ```
 
@@ -438,25 +441,25 @@ Performance Traces:
 
 ## Cost Estimation (Monthly)
 
-| Service | Free Tier | Estimated Usage | Cost |
-|---------|-----------|-----------------|------|
-| Firebase Auth | 10K/month | 5K users | $0 |
-| Firestore | 1GB storage, 50K reads/day | 2GB, 100K reads | ~$5 |
-| Cloud Storage | 5GB | 10GB (compressed images) | ~$2 |
-| Cloud Functions | 2M invocations | 500K | $0 |
-| Gemini API | 60 req/min | 30K scans | ~$15 |
-| **Total** | | | **~$22/month** |
+| Service         | Free Tier                  | Estimated Usage          | Cost           |
+| --------------- | -------------------------- | ------------------------ | -------------- |
+| Firebase Auth   | 10K/month                  | 5K users                 | $0             |
+| Firestore       | 1GB storage, 50K reads/day | 2GB, 100K reads          | ~$5            |
+| Cloud Storage   | 5GB                        | 10GB (compressed images) | ~$2            |
+| Cloud Functions | 2M invocations             | 500K                     | $0             |
+| Gemini API      | 60 req/min                 | 30K scans                | ~$15           |
+| **Total**       |                            |                          | **~$22/month** |
 
-*Costs scale with user growth. Image compression saves significant bandwidth costs for users.*
+_Costs scale with user growth. Image compression saves significant bandwidth costs for users._
 
 ### Cost Optimization Notes
 
-| Optimization | Savings |
-|--------------|---------|
-| Image compression (90%) | Reduces storage costs by 90% |
-| Gemini proxy caching | Reduces API calls by ~20% for common items |
-| WatermelonDB local queries | Reduces Firestore reads by ~50% |
-| Rate limiting | Prevents abuse, controls API costs |
+| Optimization               | Savings                                    |
+| -------------------------- | ------------------------------------------ |
+| Image compression (90%)    | Reduces storage costs by 90%               |
+| Gemini proxy caching       | Reduces API calls by ~20% for common items |
+| WatermelonDB local queries | Reduces Firestore reads by ~50%            |
+| Rate limiting              | Prevents abuse, controls API costs         |
 
 ## Backup & Recovery
 
@@ -478,12 +481,12 @@ Recovery Process:
 
 ### Disaster Recovery Plan
 
-| Scenario | RTO | RPO | Action |
-|----------|-----|-----|--------|
-| Data corruption | 4 hours | 24 hours | Restore from backup |
-| Region outage | 24 hours | 24 hours | Deploy to new region |
-| Service compromise | 2 hours | 0 | Rotate credentials, audit |
+| Scenario           | RTO      | RPO      | Action                    |
+| ------------------ | -------- | -------- | ------------------------- |
+| Data corruption    | 4 hours  | 24 hours | Restore from backup       |
+| Region outage      | 24 hours | 24 hours | Deploy to new region      |
+| Service compromise | 2 hours  | 0        | Rotate credentials, audit |
 
 ---
 
-*Next: [Data Models](../data/DATA_MODELS.md)*
+_Next: [Data Models](../data/DATA_MODELS.md)_

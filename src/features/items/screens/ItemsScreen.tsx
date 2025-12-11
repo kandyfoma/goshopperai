@@ -105,21 +105,27 @@ export function ItemsScreen() {
           // Update statistics
           itemData.minPrice = Math.min(itemData.minPrice, price);
           itemData.maxPrice = Math.max(itemData.maxPrice, price);
-          itemData.avgPrice = itemData.prices.reduce((sum, p) => sum + p.price, 0) / itemData.prices.length;
-          itemData.storeCount = new Set(itemData.prices.map(p => p.storeName)).size;
-          
+          itemData.avgPrice =
+            itemData.prices.reduce((sum, p) => sum + p.price, 0) /
+            itemData.prices.length;
+          itemData.storeCount = new Set(
+            itemData.prices.map(p => p.storeName),
+          ).size;
+
           // Determine primary currency (most common)
           const currencyCounts = itemData.prices.reduce((acc, p) => {
             acc[p.currency] = (acc[p.currency] || 0) + 1;
             return acc;
           }, {} as Record<string, number>);
-          itemData.currency = Object.entries(currencyCounts)
-            .sort(([,a], [,b]) => b - a)[0][0] as 'USD' | 'CDF';
+          itemData.currency = Object.entries(currencyCounts).sort(
+            ([, a], [, b]) => b - a,
+          )[0][0] as 'USD' | 'CDF';
         });
       });
 
-      const itemsArray = Array.from(itemsMap.values())
-        .sort((a, b) => b.prices.length - a.prices.length); // Sort by frequency
+      const itemsArray = Array.from(itemsMap.values()).sort(
+        (a, b) => b.prices.length - a.prices.length,
+      ); // Sort by frequency
 
       setItems(itemsArray);
     } catch (error) {
@@ -137,14 +143,14 @@ export function ItemsScreen() {
 
     const query = searchQuery.toLowerCase().trim();
     const filtered = items.filter(item =>
-      item.name.toLowerCase().includes(query)
+      item.name.toLowerCase().includes(query),
     );
     setFilteredItems(filtered);
 
     // Track item search
     analyticsService.logCustomEvent('item_search', {
       query: query,
-      results_count: filtered.length
+      results_count: filtered.length,
     });
   };
 
@@ -153,18 +159,23 @@ export function ItemsScreen() {
       <View style={styles.itemHeader}>
         <Text style={styles.itemName}>{item.name}</Text>
         <Text style={styles.itemStats}>
-          {item.prices.length} achats • {item.storeCount} magasin{item.storeCount > 1 ? 's' : ''}
+          {item.prices.length} achats • {item.storeCount} magasin
+          {item.storeCount > 1 ? 's' : ''}
         </Text>
       </View>
 
       <View style={styles.priceInfo}>
         <View style={styles.priceRow}>
           <Text style={styles.priceLabel}>Prix min:</Text>
-          <Text style={styles.priceValue}>{formatCurrency(item.minPrice, item.currency)}</Text>
+          <Text style={styles.priceValue}>
+            {formatCurrency(item.minPrice, item.currency)}
+          </Text>
         </View>
         <View style={styles.priceRow}>
           <Text style={styles.priceLabel}>Prix max:</Text>
-          <Text style={styles.priceValue}>{formatCurrency(item.maxPrice, item.currency)}</Text>
+          <Text style={styles.priceValue}>
+            {formatCurrency(item.maxPrice, item.currency)}
+          </Text>
         </View>
         <View style={styles.priceRow}>
           <Text style={styles.priceLabel}>Prix moyen:</Text>
@@ -182,11 +193,15 @@ export function ItemsScreen() {
           .map((price, index) => (
             <View key={index} style={styles.storePrice}>
               <Text style={styles.storeName}>{price.storeName}</Text>
-              <Text style={styles.storePriceValue}>{formatCurrency(price.price, price.currency)}</Text>
+              <Text style={styles.storePriceValue}>
+                {formatCurrency(price.price, price.currency)}
+              </Text>
             </View>
           ))}
         {item.prices.length > 3 && (
-          <Text style={styles.moreStores}>+{item.prices.length - 3} autres...</Text>
+          <Text style={styles.moreStores}>
+            +{item.prices.length - 3} autres...
+          </Text>
         )}
       </View>
     </TouchableOpacity>
@@ -207,9 +222,7 @@ export function ItemsScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Articles</Text>
-        <Text style={styles.subtitle}>
-          Comparez les prix de vos achats
-        </Text>
+        <Text style={styles.subtitle}>Comparez les prix de vos achats</Text>
       </View>
 
       <View style={styles.searchContainer}>
@@ -224,7 +237,8 @@ export function ItemsScreen() {
 
       <View style={styles.statsContainer}>
         <Text style={styles.statsText}>
-          {filteredItems.length} article{filteredItems.length > 1 ? 's' : ''} trouvé{filteredItems.length > 1 ? 's' : ''}
+          {filteredItems.length} article{filteredItems.length > 1 ? 's' : ''}{' '}
+          trouvé{filteredItems.length > 1 ? 's' : ''}
         </Text>
       </View>
 
@@ -237,7 +251,9 @@ export function ItemsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
-              {searchQuery ? 'Aucun article trouvé' : 'Aucun article disponible'}
+              {searchQuery
+                ? 'Aucun article trouvé'
+                : 'Aucun article disponible'}
             </Text>
           </View>
         }

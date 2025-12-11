@@ -76,31 +76,32 @@ Invoice Intelligence uses a **Serverless-First Mobile Stack** with a **Dual Data
 
 The mobile application handles all user interactions with optimizations for DRC market.
 
-| Component | Technology | Responsibility |
-|-----------|------------|----------------|
-| Core Framework | React Native + Hermes | Cross-platform UI (53% faster startup) |
-| UI Styling | NativeWind (Tailwind) | Consistent styling |
-| Camera Module | expo-camera | Receipt capture |
-| Image Processing | react-native-image-resizer | 90% compression before upload |
-| Offline Database | WatermelonDB | Complex offline queries |
-| Fallback OCR | ML Kit Text Recognition | Basic offline scanning |
-| State Management | Zustand | App state |
-| Charts | react-native-chart-kit | Report visualizations |
-| Navigation | React Navigation | Screen routing |
+| Component        | Technology                 | Responsibility                         |
+| ---------------- | -------------------------- | -------------------------------------- |
+| Core Framework   | React Native + Hermes      | Cross-platform UI (53% faster startup) |
+| UI Styling       | NativeWind (Tailwind)      | Consistent styling                     |
+| Camera Module    | expo-camera                | Receipt capture                        |
+| Image Processing | react-native-image-resizer | 90% compression before upload          |
+| Offline Database | WatermelonDB               | Complex offline queries                |
+| Fallback OCR     | ML Kit Text Recognition    | Basic offline scanning                 |
+| State Management | Zustand                    | App state                              |
+| Charts           | react-native-chart-kit     | Report visualizations                  |
+| Navigation       | React Navigation           | Screen routing                         |
 
 ### 2. Cloud Functions Layer (NEW)
 
 Proxy layer for security, caching, and rate limiting.
 
-| Function | Purpose | Trigger |
-|----------|---------|---------|
-| `parseReceipt` | Proxy Gemini API calls | HTTPS Callable |
-| `handlePaymentWebhook` | Process Moko Afrika confirmations | HTTPS |
-| `checkPriceAlerts` | Notify users of price drops | Firestore trigger |
-| `processStoreUpload` | Validate merchant CSV uploads | Storage trigger |
-| `cleanupOldData` | Remove expired data | Scheduled (daily) |
+| Function               | Purpose                           | Trigger           |
+| ---------------------- | --------------------------------- | ----------------- |
+| `parseReceipt`         | Proxy Gemini API calls            | HTTPS Callable    |
+| `handlePaymentWebhook` | Process Moko Afrika confirmations | HTTPS             |
+| `checkPriceAlerts`     | Notify users of price drops       | Firestore trigger |
+| `processStoreUpload`   | Validate merchant CSV uploads     | Storage trigger   |
+| `cleanupOldData`       | Remove expired data               | Scheduled (daily) |
 
 #### Gemini Proxy Benefits
+
 - ✅ API key never exposed to client
 - ✅ Per-user rate limiting (10/min, 50/day free, 500/day premium)
 - ✅ Cache common item categories
@@ -112,19 +113,22 @@ Proxy layer for security, caching, and rate limiting.
 External services that process data and handle authentication.
 
 #### Gemini AI Parser (via Proxy)
+
 - **Purpose**: Convert receipt images to structured JSON
 - **Method**: Cloud Function proxy (not direct client call)
 - **Model**: gemini-2.5-flash
 - **Input**: Compressed JPEG (max 1024x1536, ~300KB)
 
 #### Firebase Authentication
+
 - **Method**: Anonymous sign-in (device-linked)
-- **Features**: 
+- **Features**:
   - No email/password required initially
   - Can upgrade to full account later
   - Persistent across app reinstalls
 
 #### Payment Gateway (Moko Afrika)
+
 - **Purpose**: Process Mobile Money subscriptions
 - **Provider**: Moko Afrika (DRC-based, 47M+ wallets)
 - **Supported**: M-Pesa, Orange Money, Airtel Money, AfriMoney
@@ -134,17 +138,20 @@ External services that process data and handle authentication.
 ### 4. Data Layer
 
 #### Cloud Firestore
+
 - Real-time database with offline support
 - Separate collections for public vs private data
 - Security rules enforce data isolation
 
 #### WatermelonDB (NEW - Local)
+
 - SQLite-based local database
 - Complex offline queries (aggregations, joins)
 - Sync with Firestore when online
 - Used for: invoices, shopping lists, reports
 
 #### Cloud Storage
+
 - Compressed receipt images only
 - Merchant bulk upload processing
 - 90-day retention policy
@@ -170,6 +177,7 @@ External services that process data and handle authentication.
 ```
 
 **Detailed Steps:**
+
 1. User opens camera and captures receipt photo
 2. Image compressed to ~300KB (saves user data costs)
 3. **If online**: Cloud Function proxies to Gemini API
@@ -188,6 +196,7 @@ External services that process data and handle authentication.
 ```
 
 **Detailed Steps:**
+
 1. User navigates to comparison view
 2. App queries public storePrices collection
 3. Groups prices by item, sorts by price
@@ -204,6 +213,7 @@ External services that process data and handle authentication.
 ```
 
 **Detailed Steps:**
+
 1. Merchant accesses secure upload portal
 2. Uploads price list (CSV/Excel format)
 3. Firebase Function validates and sanitizes data
@@ -250,12 +260,14 @@ MOKO_API_URL=https://api.mokoafrika.com/v1
 ## Scalability Considerations
 
 ### Current Design (MVP) - Optimized
+
 - Gemini calls routed through Cloud Functions (secure + rate limited)
 - Image compression reduces bandwidth 90%
 - WatermelonDB handles offline-first with sync
 - Hermes engine for 2x faster startup
 
 ### Future Scaling Options
+
 1. **CDN**: Cache public price data at edge locations
 2. **Sharding**: Partition data by region if expanding beyond DRC
 3. **Price Alert Workers**: Separate function for high-volume alert checking
@@ -266,6 +278,7 @@ MOKO_API_URL=https://api.mokoafrika.com/v1
 See [SECURITY_RULES.md](../data/SECURITY_RULES.md) for detailed Firestore rules.
 
 ### Key Security Principles
+
 1. **Data Isolation**: Private user data never exposed to other users
 2. **Authentication Required**: All data access requires Firebase Auth
 3. **Write Restrictions**: Public data only writeable via secure backend
@@ -274,16 +287,16 @@ See [SECURITY_RULES.md](../data/SECURITY_RULES.md) for detailed Firestore rules.
 
 ## Performance Optimizations
 
-| Optimization | Implementation | Impact |
-|--------------|----------------|--------|
-| **Hermes Engine** | `enableHermes: true` in build.gradle | 53% faster startup |
-| **Image Compression** | react-native-image-resizer | 90% smaller uploads |
-| **Gemini Proxy** | Cloud Functions | Secure + cached |
-| **WatermelonDB** | Local SQLite | Instant offline queries |
-| **ML Kit Fallback** | On-device OCR | Works without internet |
+| Optimization          | Implementation                       | Impact                  |
+| --------------------- | ------------------------------------ | ----------------------- |
+| **Hermes Engine**     | `enableHermes: true` in build.gradle | 53% faster startup      |
+| **Image Compression** | react-native-image-resizer           | 90% smaller uploads     |
+| **Gemini Proxy**      | Cloud Functions                      | Secure + cached         |
+| **WatermelonDB**      | Local SQLite                         | Instant offline queries |
+| **ML Kit Fallback**   | On-device OCR                        | Works without internet  |
 
 See [STACK_OPTIMIZATIONS.md](./STACK_OPTIMIZATIONS.md) for detailed implementation guides.
 
 ---
 
-*Next: [Component Architecture](./COMPONENT_ARCHITECTURE.md)*
+_Next: [Component Architecture](./COMPONENT_ARCHITECTURE.md)_

@@ -8,11 +8,11 @@ This guide covers the deployment process for Invoice Intelligence across all pla
 
 ## Environments
 
-| Environment | Purpose | Firebase Project | Payment Mode |
-|-------------|---------|------------------|--------------|
-| Development | Local development | `invoice-intelligence-dev` | Test |
-| Staging | Pre-production testing | `invoice-intelligence-staging` | Test |
-| Production | Live users | `invoice-intelligence-drc` | Live |
+| Environment | Purpose                | Firebase Project               | Payment Mode |
+| ----------- | ---------------------- | ------------------------------ | ------------ |
+| Development | Local development      | `invoice-intelligence-dev`     | Test         |
+| Staging     | Pre-production testing | `invoice-intelligence-staging` | Test         |
+| Production  | Live users             | `invoice-intelligence-drc`     | Live         |
 
 ---
 
@@ -110,6 +110,7 @@ android {
 #### Upload to Play Store
 
 **Manual:**
+
 1. Go to [Google Play Console](https://play.google.com/console)
 2. Select app → Release → Production
 3. Create new release
@@ -118,6 +119,7 @@ android {
 6. Review and rollout
 
 **Automated (GitHub Actions):**
+
 ```yaml
 # .github/workflows/android-release.yml
 name: Android Release
@@ -132,21 +134,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Build Android Release
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -155,7 +157,7 @@ jobs:
         run: |
           cd android
           ./gradlew bundleRelease
-      
+
       - name: Upload to Play Store
         uses: r0adkll/upload-google-play@v1
         with:
@@ -234,6 +236,7 @@ end
 ```
 
 **Deploy:**
+
 ```bash
 cd ios
 fastlane beta    # TestFlight
@@ -275,21 +278,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Build
         run: npm run build:web
         env:
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           # ... other env vars
-      
+
       - name: Deploy to Firebase
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
@@ -315,6 +318,7 @@ jobs:
 ### CI/CD (GitHub Secrets)
 
 Required secrets:
+
 ```
 FIREBASE_API_KEY
 FIREBASE_PROJECT_ID
@@ -392,6 +396,7 @@ git push origin v1.0.0
 ### Rollback Procedure
 
 **Firebase Functions:**
+
 ```bash
 # List previous versions
 firebase functions:list
@@ -402,12 +407,14 @@ firebase deploy --only functions
 ```
 
 **Android:**
+
 1. Go to Play Console
 2. Release Management → App Releases
 3. Halt rollout
 4. Create new release with previous APK
 
 **iOS:**
+
 1. Go to App Store Connect
 2. Remove from sale (if critical)
 3. Submit new version with fix
@@ -464,13 +471,13 @@ gcloud firestore import gs://invoice-intelligence-backups/20251201
 
 ### Emergency Contacts
 
-| Role | Contact |
-|------|---------|
-| Firebase Issues | Firebase Support |
-| Payment Issues | Moko Afrika: +243 898 900 066 / info@mokoafrika.com |
-| Play Store Issues | Google Play Console |
-| App Store Issues | Apple Developer Support |
+| Role              | Contact                                             |
+| ----------------- | --------------------------------------------------- |
+| Firebase Issues   | Firebase Support                                    |
+| Payment Issues    | Moko Afrika: +243 898 900 066 / info@mokoafrika.com |
+| Play Store Issues | Google Play Console                                 |
+| App Store Issues  | Apple Developer Support                             |
 
 ---
 
-*For development setup, see [SETUP.md](./SETUP.md)*
+_For development setup, see [SETUP.md](./SETUP.md)_

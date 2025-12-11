@@ -28,34 +28,37 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Firebase error messages in French
 const getErrorMessage = (errorCode: string): string => {
   const errorMessages: Record<string, string> = {
-    'auth/invalid-email': 'L\'adresse email est invalide.',
+    'auth/invalid-email': "L'adresse email est invalide.",
     'auth/user-disabled': 'Ce compte a été désactivé.',
     'auth/user-not-found': 'Aucun compte trouvé avec cet email.',
     'auth/wrong-password': 'Mot de passe incorrect.',
     'auth/invalid-credential': 'Email ou mot de passe incorrect.',
     'auth/too-many-requests': 'Trop de tentatives. Réessayez plus tard.',
     'auth/network-request-failed': 'Erreur réseau. Vérifiez votre connexion.',
-    'auth/operation-not-allowed': 'Cette méthode de connexion n\'est pas activée.',
+    'auth/operation-not-allowed':
+      "Cette méthode de connexion n'est pas activée.",
   };
-  return errorMessages[errorCode] || 'Une erreur est survenue. Veuillez réessayer.';
+  return (
+    errorMessages[errorCode] || 'Une erreur est survenue. Veuillez réessayer.'
+  );
 };
 
 export function LoginScreen() {
   const navigation = useNavigation<NavigationProp>();
-  
+
   // Form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  
+
   // UI state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
+
   // Refs
   const passwordInputRef = useRef<TextInput>(null);
   const shakeAnimation = useRef(new Animated.Value(0)).current;
@@ -73,21 +76,37 @@ export function LoginScreen() {
   // Shake animation for errors
   const triggerShake = () => {
     Animated.sequence([
-      Animated.timing(shakeAnimation, {toValue: 10, duration: 50, useNativeDriver: true}),
-      Animated.timing(shakeAnimation, {toValue: -10, duration: 50, useNativeDriver: true}),
-      Animated.timing(shakeAnimation, {toValue: 10, duration: 50, useNativeDriver: true}),
-      Animated.timing(shakeAnimation, {toValue: 0, duration: 50, useNativeDriver: true}),
+      Animated.timing(shakeAnimation, {
+        toValue: 10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnimation, {
+        toValue: -10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnimation, {
+        toValue: 10,
+        duration: 50,
+        useNativeDriver: true,
+      }),
+      Animated.timing(shakeAnimation, {
+        toValue: 0,
+        duration: 50,
+        useNativeDriver: true,
+      }),
     ]).start();
   };
 
   // Validate email
   const validateEmail = (value: string): boolean => {
     if (!value.trim()) {
-      setEmailError('L\'email est requis');
+      setEmailError("L'email est requis");
       return false;
     }
     if (!EMAIL_REGEX.test(value)) {
-      setEmailError('Format d\'email invalide');
+      setEmailError("Format d'email invalide");
       return false;
     }
     setEmailError(null);
@@ -129,20 +148,19 @@ export function LoginScreen() {
     try {
       const user = await authService.signInWithEmail(email.trim(), password);
       console.log('✅ Login successful, user:', user?.uid);
-      
+
       setSuccessMessage('Connexion réussie! Redirection...');
-      
+
       // The AuthContext will handle navigation automatically
       // But if it doesn't happen within 3 seconds, show an error
       setTimeout(() => {
         setLoading(false);
       }, 3000);
-      
     } catch (err: any) {
       console.error('❌ Login error:', err);
       console.error('Error code:', err.code);
       console.error('Error message:', err.message);
-      
+
       const errorMessage = getErrorMessage(err.code || '');
       setError(errorMessage);
       triggerShake();
@@ -159,7 +177,7 @@ export function LoginScreen() {
     }
 
     if (!EMAIL_REGEX.test(email)) {
-      setEmailError('Format d\'email invalide');
+      setEmailError("Format d'email invalide");
       triggerShake();
       return;
     }
@@ -169,7 +187,9 @@ export function LoginScreen() {
 
     try {
       await authService.sendPasswordResetEmail(email.trim());
-      setSuccessMessage('Email de réinitialisation envoyé! Vérifiez votre boîte de réception.');
+      setSuccessMessage(
+        'Email de réinitialisation envoyé! Vérifiez votre boîte de réception.',
+      );
     } catch (err: any) {
       console.error('Password reset error:', err);
       setError(getErrorMessage(err.code || ''));
@@ -205,11 +225,10 @@ export function LoginScreen() {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}>
-        <ScrollView 
+        <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          
           <Animated.View style={[styles.content, {opacity: fadeAnim}]}>
             {/* Header */}
             <View style={styles.header}>
@@ -230,10 +249,10 @@ export function LoginScreen() {
 
             {/* Error Message */}
             {error && (
-              <Animated.View 
+              <Animated.View
                 style={[
                   styles.errorBanner,
-                  {transform: [{translateX: shakeAnimation}]}
+                  {transform: [{translateX: shakeAnimation}]},
                 ]}>
                 <Text style={styles.errorIcon}>⚠️</Text>
                 <Text style={styles.errorText}>{error}</Text>
@@ -241,20 +260,20 @@ export function LoginScreen() {
             )}
 
             {/* Form */}
-            <Animated.View 
+            <Animated.View
               style={[
                 styles.form,
-                {transform: [{translateX: shakeAnimation}]}
+                {transform: [{translateX: shakeAnimation}]},
               ]}>
-              
               {/* Email Input */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Email</Text>
-                <View style={[
-                  styles.inputWrapper,
-                  emailError ? styles.inputError : null,
-                  loading && styles.inputDisabled
-                ]}>
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    emailError ? styles.inputError : null,
+                    loading && styles.inputDisabled,
+                  ]}>
                   <Text style={styles.inputIcon}>📧</Text>
                   <TextInput
                     style={styles.input}
@@ -280,11 +299,12 @@ export function LoginScreen() {
               {/* Password Input */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Mot de passe</Text>
-                <View style={[
-                  styles.inputWrapper,
-                  passwordError ? styles.inputError : null,
-                  loading && styles.inputDisabled
-                ]}>
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    passwordError ? styles.inputError : null,
+                    loading && styles.inputDisabled,
+                  ]}>
                   <Text style={styles.inputIcon}>🔒</Text>
                   <TextInput
                     ref={passwordInputRef}
@@ -301,7 +321,7 @@ export function LoginScreen() {
                     returnKeyType="done"
                     onSubmitEditing={handleLogin}
                   />
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => setShowPassword(!showPassword)}
                     style={styles.eyeButton}
                     disabled={loading}>
@@ -317,29 +337,35 @@ export function LoginScreen() {
 
               {/* Remember Me & Forgot Password */}
               <View style={styles.optionsRow}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.rememberMe}
                   onPress={() => setRememberMe(!rememberMe)}
                   disabled={loading}>
-                  <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                  <View
+                    style={[
+                      styles.checkbox,
+                      rememberMe && styles.checkboxChecked,
+                    ]}>
                     {rememberMe && <Text style={styles.checkmark}>✓</Text>}
                   </View>
                   <Text style={styles.rememberMeText}>Se souvenir de moi</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   onPress={handleForgotPassword}
                   disabled={loading}>
-                  <Text style={styles.forgotPassword}>Mot de passe oublié?</Text>
+                  <Text style={styles.forgotPassword}>
+                    Mot de passe oublié?
+                  </Text>
                 </TouchableOpacity>
               </View>
 
               {/* Login Button */}
               <TouchableOpacity
                 style={[
-                  styles.button, 
+                  styles.button,
                   styles.primaryButton,
-                  loading && styles.buttonDisabled
+                  loading && styles.buttonDisabled,
                 ]}
                 onPress={handleLogin}
                 disabled={loading}
@@ -347,7 +373,9 @@ export function LoginScreen() {
                 {loading ? (
                   <View style={styles.loadingContent}>
                     <ActivityIndicator color="#fff" size="small" />
-                    <Text style={styles.loadingText}>Connexion en cours...</Text>
+                    <Text style={styles.loadingText}>
+                      Connexion en cours...
+                    </Text>
                   </View>
                 ) : (
                   <Text style={styles.buttonText}>Se connecter</Text>
@@ -364,7 +392,10 @@ export function LoginScreen() {
               {/* Social Buttons */}
               <View style={styles.socialButtons}>
                 <TouchableOpacity
-                  style={[styles.socialButton, loading && styles.buttonDisabled]}
+                  style={[
+                    styles.socialButton,
+                    loading && styles.buttonDisabled,
+                  ]}
                   onPress={handleGoogleSignIn}
                   disabled={loading}
                   activeOpacity={0.7}>
@@ -374,12 +405,18 @@ export function LoginScreen() {
 
                 {Platform.OS === 'ios' && (
                   <TouchableOpacity
-                    style={[styles.socialButton, styles.appleButton, loading && styles.buttonDisabled]}
+                    style={[
+                      styles.socialButton,
+                      styles.appleButton,
+                      loading && styles.buttonDisabled,
+                    ]}
                     onPress={handleAppleSignIn}
                     disabled={loading}
                     activeOpacity={0.7}>
                     <Text style={[styles.socialIcon, styles.appleIcon]}></Text>
-                    <Text style={[styles.socialButtonText, styles.appleText]}>Apple</Text>
+                    <Text style={[styles.socialButtonText, styles.appleText]}>
+                      Apple
+                    </Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -398,8 +435,8 @@ export function LoginScreen() {
             {/* Terms */}
             <Text style={styles.terms}>
               En vous connectant, vous acceptez nos{' '}
-              <Text style={styles.termsLink}>Conditions d'utilisation</Text>
-              {' '}et notre{' '}
+              <Text style={styles.termsLink}>Conditions d'utilisation</Text> et
+              notre{' '}
               <Text style={styles.termsLink}>Politique de confidentialité</Text>
             </Text>
           </Animated.View>

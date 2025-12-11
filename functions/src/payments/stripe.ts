@@ -6,8 +6,8 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import Stripe from 'stripe';
-import { config, collections } from '../config';
-import { PaymentRecord } from '../types';
+import {config, collections} from '../config';
+import {PaymentRecord} from '../types';
 
 const db = admin.firestore();
 
@@ -39,18 +39,18 @@ export const createCardPaymentIntent = functions
     if (!context.auth) {
       throw new functions.https.HttpsError(
         'unauthenticated',
-        'User must be authenticated to make payments'
+        'User must be authenticated to make payments',
       );
     }
 
     const userId = context.auth.uid;
-    const { planId, currency = 'USD', email } = data;
+    const {planId, currency = 'USD', email} = data;
 
     // Validate request
     if (!planId) {
       throw new functions.https.HttpsError(
         'invalid-argument',
-        'Plan ID is required'
+        'Plan ID is required',
       );
     }
 
@@ -59,7 +59,7 @@ export const createCardPaymentIntent = functions
     if (!planPricing) {
       throw new functions.https.HttpsError(
         'invalid-argument',
-        'Invalid plan selected'
+        'Invalid plan selected',
       );
     }
 
@@ -68,7 +68,9 @@ export const createCardPaymentIntent = functions
 
     try {
       // Create payment record first
-      const paymentRef = db.collection(collections.payments(userId)).doc(transactionId);
+      const paymentRef = db
+        .collection(collections.payments(userId))
+        .doc(transactionId);
       const now = admin.firestore.FieldValue.serverTimestamp();
 
       const paymentRecord: Partial<PaymentRecord> = {
@@ -117,14 +119,17 @@ export const createCardPaymentIntent = functions
     } catch (error: unknown) {
       console.error('Stripe payment intent error:', error);
 
-      const stripeError = error as { message?: string };
+      const stripeError = error as {message?: string};
       if (stripeError.message) {
-        throw new functions.https.HttpsError('unavailable', stripeError.message);
+        throw new functions.https.HttpsError(
+          'unavailable',
+          stripeError.message,
+        );
       }
 
       throw new functions.https.HttpsError(
         'internal',
-        'Failed to create payment. Please try again.'
+        'Failed to create payment. Please try again.',
       );
     }
   });
@@ -136,29 +141,39 @@ export const confirmCardPayment = functions
   .region(config.app.region)
   .https.onCall(async (data, context) => {
     if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Authentication required',
+      );
     }
 
     const userId = context.auth.uid;
-    const { paymentIntentId, transactionId } = data;
+    const {paymentIntentId, transactionId} = data;
 
     if (!paymentIntentId || !transactionId) {
       throw new functions.https.HttpsError(
         'invalid-argument',
-        'Payment intent ID and transaction ID required'
+        'Payment intent ID and transaction ID required',
       );
     }
 
     try {
       // Retrieve payment intent from Stripe
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      const paymentIntent = await stripe.paymentIntents.retrieve(
+        paymentIntentId,
+      );
 
       // Verify metadata matches
       if (paymentIntent.metadata.userId !== userId) {
-        throw new functions.https.HttpsError('permission-denied', 'Payment not authorized');
+        throw new functions.https.HttpsError(
+          'permission-denied',
+          'Payment not authorized',
+        );
       }
 
-      const paymentRef = db.collection(collections.payments(userId)).doc(transactionId);
+      const paymentRef = db
+        .collection(collections.payments(userId))
+        .doc(transactionId);
       const paymentDoc = await paymentRef.get();
 
       if (!paymentDoc.exists) {
@@ -181,7 +196,7 @@ export const confirmCardPayment = functions
           userId,
           payment.planId as 'basic' | 'standard' | 'premium',
           payment,
-          paymentIntentId
+          paymentIntentId,
         );
 
         return {
@@ -209,7 +224,10 @@ export const confirmCardPayment = functions
         throw error;
       }
 
-      throw new functions.https.HttpsError('internal', 'Failed to confirm payment');
+      throw new functions.https.HttpsError(
+        'internal',
+        'Failed to confirm payment',
+      );
     }
   });
 
@@ -227,7 +245,7 @@ export const stripeWebhook = functions
       event = stripe.webhooks.constructEvent(
         req.rawBody,
         sig,
-        config.stripe.webhookSecret
+        config.stripe.webhookSecret,
       );
     } catch (err: any) {
       console.error('Webhook signature verification failed:', err.message);
@@ -238,11 +256,13 @@ export const stripeWebhook = functions
     // Handle payment_intent.succeeded
     if (event.type === 'payment_intent.succeeded') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      const { userId, planId, transactionId } = paymentIntent.metadata;
+      const {userId, planId, transactionId} = paymentIntent.metadata;
 
       if (userId && planId && transactionId) {
         try {
-          const paymentRef = db.collection(collections.payments(userId)).doc(transactionId);
+          const paymentRef = db
+            .collection(collections.payments(userId))
+            .doc(transactionId);
           const paymentDoc = await paymentRef.get();
 
           if (paymentDoc.exists) {
@@ -260,7 +280,7 @@ export const stripeWebhook = functions
                 userId,
                 planId as 'basic' | 'standard' | 'premium',
                 payment,
-                paymentIntent.id
+                paymentIntent.id,
               );
             }
           }
@@ -273,11 +293,13 @@ export const stripeWebhook = functions
     // Handle payment_intent.payment_failed
     if (event.type === 'payment_intent.payment_failed') {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      const { userId, transactionId } = paymentIntent.metadata;
+      const {userId, transactionId} = paymentIntent.metadata;
 
       if (userId && transactionId) {
         try {
-          const paymentRef = db.collection(collections.payments(userId)).doc(transactionId);
+          const paymentRef = db
+            .collection(collections.payments(userId))
+            .doc(transactionId);
           await paymentRef.update({
             status: 'failed',
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -288,7 +310,7 @@ export const stripeWebhook = functions
       }
     }
 
-    res.status(200).json({ received: true });
+    res.status(200).json({received: true});
   });
 
 /**
@@ -298,7 +320,7 @@ async function activateCardSubscription(
   userId: string,
   planId: 'basic' | 'standard' | 'premium',
   payment: PaymentRecord,
-  stripePaymentIntentId: string
+  stripePaymentIntentId: string,
 ): Promise<void> {
   const subscriptionRef = db.doc(collections.subscription(userId));
   const now = new Date();
@@ -316,8 +338,10 @@ async function activateCardSubscription(
       planId,
       status: 'active',
       monthlyScansUsed: 0,
-      currentBillingPeriodStart: admin.firestore.Timestamp.fromDate(billingPeriodStart),
-      currentBillingPeriodEnd: admin.firestore.Timestamp.fromDate(billingPeriodEnd),
+      currentBillingPeriodStart:
+        admin.firestore.Timestamp.fromDate(billingPeriodStart),
+      currentBillingPeriodEnd:
+        admin.firestore.Timestamp.fromDate(billingPeriodEnd),
       subscriptionStartDate: admin.firestore.Timestamp.fromDate(now),
       subscriptionEndDate: admin.firestore.Timestamp.fromDate(endDate),
       lastPaymentDate: admin.firestore.Timestamp.fromDate(now),
@@ -330,8 +354,10 @@ async function activateCardSubscription(
       autoRenew: true,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     },
-    { merge: true }
+    {merge: true},
   );
 
-  console.log(`Card subscription activated for user ${userId}, plan: ${planId}`);
+  console.log(
+    `Card subscription activated for user ${userId}, plan: ${planId}`,
+  );
 }

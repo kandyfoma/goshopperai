@@ -3,39 +3,40 @@
 ## Overview
 
 Invoice Intelligence uses **dual payment providers** to serve both local and international users:
+
 - **Moko Afrika**: Primary payment gateway for DRC users (Mobile Money)
 - **Stripe**: Payment gateway for international users (Visa/Card payments)
 
 ## Payment Provider Selection by Location
 
-| User Location | Payment Options | Provider |
-|--------------|-----------------|----------|
-| **DRC (+243)** | Mobile Money, Visa/Card | Moko Afrika + Stripe |
-| **International** | Visa/Card only | Stripe |
+| User Location     | Payment Options         | Provider             |
+| ----------------- | ----------------------- | -------------------- |
+| **DRC (+243)**    | Mobile Money, Visa/Card | Moko Afrika + Stripe |
+| **International** | Visa/Card only          | Stripe               |
 
 ## Why Moko Afrika for DRC?
 
-| Feature | Moko Afrika | International Providers |
-|---------|-------------|------------------------|
-| **Local Presence** | ✅ DRC office & support | ❌ Remote support only |
-| **Local Phone** | +243 898 900 066 | International numbers |
-| **Mobile Money Focus** | ✅ Primary business | Secondary feature |
-| **DRC Currency** | ✅ Native CDF support | Limited/conversion fees |
-| **Onboarding** | 24-48 hours | Days/weeks |
-| **Connected Wallets** | 47M+ | N/A for DRC |
-| **Transactions** | 50M+ processed | N/A |
+| Feature                | Moko Afrika             | International Providers |
+| ---------------------- | ----------------------- | ----------------------- |
+| **Local Presence**     | ✅ DRC office & support | ❌ Remote support only  |
+| **Local Phone**        | +243 898 900 066        | International numbers   |
+| **Mobile Money Focus** | ✅ Primary business     | Secondary feature       |
+| **DRC Currency**       | ✅ Native CDF support   | Limited/conversion fees |
+| **Onboarding**         | 24-48 hours             | Days/weeks              |
+| **Connected Wallets**  | 47M+                    | N/A for DRC             |
+| **Transactions**       | 50M+ processed          | N/A                     |
 
 **Contact**: info@mokoafrika.com | +243 898 900 066 | https://www.mokoafrika.com
 
 ## Why Stripe for International?
 
-| Feature | Stripe |
-|---------|--------|
-| **Global Coverage** | 195+ countries |
-| **Card Support** | Visa, Mastercard, Amex |
-| **Developer Experience** | Excellent SDK & docs |
-| **Security** | PCI DSS Level 1 |
-| **Fraud Detection** | Built-in Radar |
+| Feature                  | Stripe                 |
+| ------------------------ | ---------------------- |
+| **Global Coverage**      | 195+ countries         |
+| **Card Support**         | Visa, Mastercard, Amex |
+| **Developer Experience** | Excellent SDK & docs   |
+| **Security**             | PCI DSS Level 1        |
+| **Fraud Detection**      | Built-in Radar         |
 
 **Dashboard**: https://dashboard.stripe.com
 
@@ -43,34 +44,34 @@ Invoice Intelligence uses **dual payment providers** to serve both local and int
 
 ### Supported Mobile Money Operators (DRC)
 
-| Operator | Network Code | Market Share |
-|----------|--------------|--------------|
-| M-Pesa | `MPESA` | ~30% |
-| Orange Money | `ORANGE` | ~30% |
-| Airtel Money | `AIRTEL` | ~25% |
-| AfriMoney | `AFRIMONEY` | ~15% |
+| Operator     | Network Code | Market Share |
+| ------------ | ------------ | ------------ |
+| M-Pesa       | `MPESA`      | ~30%         |
+| Orange Money | `ORANGE`     | ~30%         |
+| Airtel Money | `AIRTEL`     | ~25%         |
+| AfriMoney    | `AFRIMONEY`  | ~15%         |
 
 ### Supported Card Types (International)
 
-| Card Type | Support |
-|-----------|---------|
-| Visa | ✅ |
-| Mastercard | ✅ |
-| American Express | ✅ |
-| Discover | ✅ |
+| Card Type        | Support |
+| ---------------- | ------- |
+| Visa             | ✅      |
+| Mastercard       | ✅      |
+| American Express | ✅      |
+| Discover         | ✅      |
 
 ## Subscription Plans
 
 ### Pricing Structure
 
-| Plan | Price (USD) | Price (CDF) | Scan Limit |
-|------|-------------|-------------|------------|
-| **Free Trial** | $0 | 0 FC | 2 months unlimited |
-| **Basic** | $1.99 | 8,000 FC | 25 scans/month |
-| **Standard** | $2.99 | 12,000 FC | 100 scans/month |
-| **Premium** | $4.99 | 20,000 FC | Unlimited |
+| Plan           | Price (USD) | Price (CDF) | Scan Limit         |
+| -------------- | ----------- | ----------- | ------------------ |
+| **Free Trial** | $0          | 0 FC        | 2 months unlimited |
+| **Basic**      | $1.99       | 8,000 FC    | 25 scans/month     |
+| **Standard**   | $2.99       | 12,000 FC   | 100 scans/month    |
+| **Premium**    | $4.99       | 20,000 FC   | Unlimited          |
 
-*CDF prices based on ~2,700 CDF/USD rate, rounded for simplicity*
+_CDF prices based on ~2,700 CDF/USD rate, rounded for simplicity_
 
 ---
 
@@ -113,28 +114,30 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
 });
 
-export const createPaymentIntent = functions.https.onCall(async (data, context) => {
-  const { planId, currency, email } = data;
-  const userId = context.auth?.uid;
+export const createPaymentIntent = functions.https.onCall(
+  async (data, context) => {
+    const {planId, currency, email} = data;
+    const userId = context.auth?.uid;
 
-  const planPrices: Record<string, number> = {
-    basic: 199,    // $1.99 in cents
-    standard: 299, // $2.99 in cents
-    premium: 499,  // $4.99 in cents
-  };
+    const planPrices: Record<string, number> = {
+      basic: 199, // $1.99 in cents
+      standard: 299, // $2.99 in cents
+      premium: 499, // $4.99 in cents
+    };
 
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: planPrices[planId],
-    currency: currency.toLowerCase(),
-    metadata: { userId, planId },
-    receipt_email: email,
-  });
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: planPrices[planId],
+      currency: currency.toLowerCase(),
+      metadata: {userId, planId},
+      receipt_email: email,
+    });
 
-  return {
-    clientSecret: paymentIntent.client_secret,
-    paymentIntentId: paymentIntent.id,
-  };
-});
+    return {
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+    };
+  },
+);
 ```
 
 ### Webhook Handler
@@ -145,13 +148,13 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
   const event = stripe.webhooks.constructEvent(
     req.rawBody,
     sig,
-    process.env.STRIPE_WEBHOOK_SECRET!
+    process.env.STRIPE_WEBHOOK_SECRET!,
   );
 
   if (event.type === 'payment_intent.succeeded') {
     const paymentIntent = event.data.object;
-    const { userId, planId } = paymentIntent.metadata;
-    
+    const {userId, planId} = paymentIntent.metadata;
+
     // Activate subscription
     await activateSubscription(userId, planId, 'stripe');
   }
@@ -220,8 +223,8 @@ interface PaymentResult {
 }
 
 const PLAN_PRICES = {
-  monthly: { USD: 2.99, CDF: 8000 },
-  yearly: { USD: 24.99, CDF: 67000 },
+  monthly: {USD: 2.99, CDF: 8000},
+  yearly: {USD: 24.99, CDF: 67000},
 };
 
 export class MokoAfrikaService {
@@ -244,7 +247,9 @@ export class MokoAfrikaService {
       reference: txRef,
       amount: amount,
       currency: config.currency,
-      description: `Invoice Intelligence ${config.plan === 'monthly' ? 'Monthly' : 'Yearly'} Subscription`,
+      description: `Invoice Intelligence ${
+        config.plan === 'monthly' ? 'Monthly' : 'Yearly'
+      } Subscription`,
       callback_url: `${Config.APP_URL}/payment/callback`,
       metadata: {
         user_id: config.userId,
@@ -266,7 +271,7 @@ export class MokoAfrikaService {
       const response = await fetch(`${this.baseUrl}/payments/initialize`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.secretKey}`,
+          Authorization: `Bearer ${this.secretKey}`,
           'X-API-Key': this.apiKey,
           'Content-Type': 'application/json',
         },
@@ -288,7 +293,6 @@ export class MokoAfrikaService {
         success: false,
         error: result.message || 'Payment initialization failed',
       };
-
     } catch (error) {
       return {
         success: false,
@@ -303,10 +307,10 @@ export class MokoAfrikaService {
         `${this.baseUrl}/payments/verify/${transactionRef}`,
         {
           headers: {
-            'Authorization': `Bearer ${this.secretKey}`,
+            Authorization: `Bearer ${this.secretKey}`,
             'X-API-Key': this.apiKey,
           },
-        }
+        },
       );
 
       const result = await response.json();
@@ -326,7 +330,6 @@ export class MokoAfrikaService {
         verified: false,
         status: result.data?.status || 'unknown',
       };
-
     } catch (error) {
       return {
         verified: false,
@@ -342,10 +345,10 @@ export class MokoAfrikaService {
         `${this.baseUrl}/payments/status/${transactionRef}`,
         {
           headers: {
-            'Authorization': `Bearer ${this.secretKey}`,
+            Authorization: `Bearer ${this.secretKey}`,
             'X-API-Key': this.apiKey,
           },
-        }
+        },
       );
 
       const result = await response.json();
@@ -354,7 +357,6 @@ export class MokoAfrikaService {
         status: result.data?.status || 'pending',
         message: result.data?.message,
       };
-
     } catch (error) {
       return {
         status: 'error',
@@ -394,10 +396,18 @@ export const mokoService = new MokoAfrikaService();
 ```typescript
 // src/features/subscription/components/PaymentModal.tsx
 
-import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TouchableOpacity, ActivityIndicator, Linking, TextInput } from 'react-native';
-import { WebView } from 'react-native-webview';
-import { mokoService } from '@/shared/services/payment/mokoafrika';
+import React, {useState, useEffect} from 'react';
+import {
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  ActivityIndicator,
+  Linking,
+  TextInput,
+} from 'react-native';
+import {WebView} from 'react-native-webview';
+import {mokoService} from '@/shared/services/payment/mokoafrika';
 
 interface PaymentModalProps {
   visible: boolean;
@@ -407,13 +417,21 @@ interface PaymentModalProps {
   onSuccess: () => void;
 }
 
-export function PaymentModal({ visible, plan, userId, onClose, onSuccess }: PaymentModalProps) {
+export function PaymentModal({
+  visible,
+  plan,
+  userId,
+  onClose,
+  onSuccess,
+}: PaymentModalProps) {
   const [loading, setLoading] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [ussdCode, setUssdCode] = useState<string | null>(null);
   const [transactionRef, setTransactionRef] = useState<string | null>(null);
   const [phone, setPhone] = useState('');
-  const [network, setNetwork] = useState<'MPESA' | 'ORANGE' | 'AIRTEL' | 'AFRIMONEY'>('MPESA');
+  const [network, setNetwork] = useState<
+    'MPESA' | 'ORANGE' | 'AIRTEL' | 'AFRIMONEY'
+  >('MPESA');
   const [error, setError] = useState<string | null>(null);
   const [pollInterval, setPollInterval] = useState<NodeJS.Timeout | null>(null);
 
@@ -445,7 +463,7 @@ export function PaymentModal({ visible, plan, userId, onClose, onSuccess }: Paym
 
     if (result.success) {
       setTransactionRef(result.transactionRef || null);
-      
+
       if (result.paymentUrl) {
         setPaymentUrl(result.paymentUrl);
       } else if (result.ussdCode) {
@@ -462,7 +480,7 @@ export function PaymentModal({ visible, plan, userId, onClose, onSuccess }: Paym
     // Poll every 5 seconds for payment status
     const interval = setInterval(async () => {
       const status = await mokoService.checkStatus(txRef);
-      
+
       if (status.status === 'successful') {
         clearInterval(interval);
         setUssdCode(null);
@@ -473,19 +491,22 @@ export function PaymentModal({ visible, plan, userId, onClose, onSuccess }: Paym
         setError('Payment was not completed');
       }
     }, 5000);
-    
+
     setPollInterval(interval);
   };
 
   const handleWebViewNavigationChange = (navState: any) => {
-    const { url } = navState;
-    
+    const {url} = navState;
+
     // Check for success callback
-    if (url.includes('/payment/callback') && url.includes('status=successful')) {
+    if (
+      url.includes('/payment/callback') &&
+      url.includes('status=successful')
+    ) {
       setPaymentUrl(null);
       onSuccess();
     }
-    
+
     // Check for failure/cancel
     if (url.includes('status=cancelled') || url.includes('status=failed')) {
       setPaymentUrl(null);
@@ -502,7 +523,7 @@ export function PaymentModal({ visible, plan, userId, onClose, onSuccess }: Paym
 
   const formatPhoneNumber = (num: string): string => {
     const cleaned = num.replace(/[\s-]/g, '');
-    
+
     if (cleaned.startsWith('0')) {
       return `+243${cleaned.substring(1)}`;
     }
@@ -521,15 +542,14 @@ export function PaymentModal({ visible, plan, userId, onClose, onSuccess }: Paym
             <Text className="text-xl font-bold text-center mb-4">
               Complete Payment via USSD
             </Text>
-            
+
             <Text className="text-center text-gray-600 mb-4">
               Dial the code below on your phone to complete payment:
             </Text>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               onPress={handleDialUSSD}
-              className="bg-primary-50 border-2 border-primary-500 rounded-xl py-4 mb-4"
-            >
+              className="bg-primary-50 border-2 border-primary-500 rounded-xl py-4 mb-4">
               <Text className="text-2xl font-bold text-primary-500 text-center">
                 {ussdCode}
               </Text>
@@ -537,20 +557,19 @@ export function PaymentModal({ visible, plan, userId, onClose, onSuccess }: Paym
                 Tap to dial
               </Text>
             </TouchableOpacity>
-            
+
             <View className="flex-row items-center justify-center mb-4">
               <ActivityIndicator size="small" color="#22c55e" />
               <Text className="ml-2 text-gray-500">
                 Waiting for payment confirmation...
               </Text>
             </View>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               onPress={() => {
                 if (pollInterval) clearInterval(pollInterval);
                 setUssdCode(null);
-              }}
-            >
+              }}>
               <Text className="text-gray-500 text-center py-2">Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -571,7 +590,7 @@ export function PaymentModal({ visible, plan, userId, onClose, onSuccess }: Paym
             </TouchableOpacity>
           </View>
           <WebView
-            source={{ uri: paymentUrl }}
+            source={{uri: paymentUrl}}
             onNavigationStateChange={handleWebViewNavigationChange}
             startInLoadingState
             renderLoading={() => (
@@ -590,28 +609,32 @@ export function PaymentModal({ visible, plan, userId, onClose, onSuccess }: Paym
           <Text className="text-xl font-bold mb-4">
             Subscribe to {plan === 'monthly' ? 'Monthly' : 'Yearly'} Plan
           </Text>
-          
+
           <Text className="text-2xl font-bold text-primary-500 mb-6">
             ${plan === 'monthly' ? '2.99' : '24.99'}/
             {plan === 'monthly' ? 'month' : 'year'}
           </Text>
 
           {/* Network Selection */}
-          <Text className="text-sm text-gray-600 mb-2">Select Mobile Money Provider</Text>
+          <Text className="text-sm text-gray-600 mb-2">
+            Select Mobile Money Provider
+          </Text>
           <View className="flex-row flex-wrap gap-2 mb-4">
-            {(['MPESA', 'ORANGE', 'AIRTEL', 'AFRIMONEY'] as const).map((net) => (
+            {(['MPESA', 'ORANGE', 'AIRTEL', 'AFRIMONEY'] as const).map(net => (
               <TouchableOpacity
                 key={net}
                 onPress={() => setNetwork(net)}
                 className={`flex-1 min-w-[45%] py-3 rounded-lg border ${
-                  network === net 
-                    ? 'border-primary-500 bg-primary-50' 
+                  network === net
+                    ? 'border-primary-500 bg-primary-50'
                     : 'border-gray-300'
-                }`}
-              >
-                <Text className={`text-center ${
-                  network === net ? 'text-primary-500 font-semibold' : 'text-gray-600'
                 }`}>
+                <Text
+                  className={`text-center ${
+                    network === net
+                      ? 'text-primary-500 font-semibold'
+                      : 'text-gray-600'
+                  }`}>
                   {net === 'AFRIMONEY' ? 'AfriMoney' : net}
                 </Text>
               </TouchableOpacity>
@@ -628,9 +651,7 @@ export function PaymentModal({ visible, plan, userId, onClose, onSuccess }: Paym
             onChangeText={setPhone}
           />
 
-          {error && (
-            <Text className="text-red-500 mb-4">{error}</Text>
-          )}
+          {error && <Text className="text-red-500 mb-4">{error}</Text>}
 
           {/* Powered by Moko Afrika */}
           <Text className="text-xs text-gray-400 text-center mb-3">
@@ -643,8 +664,7 @@ export function PaymentModal({ visible, plan, userId, onClose, onSuccess }: Paym
             disabled={loading}
             className={`py-4 rounded-xl mb-3 ${
               loading ? 'bg-gray-300' : 'bg-primary-500'
-            }`}
-          >
+            }`}>
             {loading ? (
               <ActivityIndicator color="white" />
             ) : (
@@ -703,31 +723,37 @@ interface MokoWebhookPayload {
 }
 
 // Verify webhook signature using HMAC
-function verifyWebhookSignature(payload: any, signature: string, secret: string): boolean {
+function verifyWebhookSignature(
+  payload: any,
+  signature: string,
+  secret: string,
+): boolean {
   const expectedSignature = crypto
     .createHmac('sha256', secret)
     .update(JSON.stringify(payload))
     .digest('hex');
   return crypto.timingSafeEqual(
     Buffer.from(signature),
-    Buffer.from(expectedSignature)
+    Buffer.from(expectedSignature),
   );
 }
 
 export const handlePaymentWebhook = functions
   .region('europe-west1')
   .https.onRequest(async (req, res) => {
-    
     // Verify webhook signature
     const signature = req.headers['x-moko-signature'] as string;
-    if (!signature || !verifyWebhookSignature(req.body.data, signature, MOKO_WEBHOOK_SECRET)) {
+    if (
+      !signature ||
+      !verifyWebhookSignature(req.body.data, signature, MOKO_WEBHOOK_SECRET)
+    ) {
       console.error('Invalid webhook signature');
       res.status(401).send('Unauthorized');
       return;
     }
 
     const payload = req.body as MokoWebhookPayload;
-    
+
     // Only process successful payments
     if (payload.event !== 'payment.completed') {
       res.status(200).send('Event ignored');
@@ -740,7 +766,7 @@ export const handlePaymentWebhook = functions
       return;
     }
 
-    const { user_id, plan, app_id } = payload.data.metadata;
+    const {user_id, plan, app_id} = payload.data.metadata;
 
     if (!user_id || !plan || !app_id) {
       console.error('Missing required metadata');
@@ -751,7 +777,7 @@ export const handlePaymentWebhook = functions
     // Calculate subscription dates
     const now = new Date();
     const endDate = new Date(now);
-    
+
     if (plan === 'monthly') {
       endDate.setMonth(endDate.getMonth() + 1);
     } else {
@@ -759,38 +785,43 @@ export const handlePaymentWebhook = functions
     }
 
     // Update Firestore
-    const subscriptionRef = admin.firestore()
+    const subscriptionRef = admin
+      .firestore()
       .doc(`artifacts/${app_id}/users/${user_id}/subscription/status`);
 
     try {
-      await subscriptionRef.set({
-        userId: user_id,
-        isSubscribed: true,
-        plan: plan,
-        amount: payload.data.amount,
-        currency: payload.data.currency,
-        subscriptionStartDate: admin.firestore.FieldValue.serverTimestamp(),
-        subscriptionEndDate: admin.firestore.Timestamp.fromDate(endDate),
-        lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
-        lastPaymentAmount: payload.data.amount,
-        paymentMethod: 'mobile_money',
-        paymentProvider: 'moko_afrika',
-        mobileMoneyProvider: payload.data.payment_method.provider,
-        transactionId: payload.data.transaction_id,
-        transactionRef: payload.data.reference,
-        customerPhone: payload.data.customer.phone,
-        status: 'active',
-        autoRenew: true,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      }, { merge: true });
+      await subscriptionRef.set(
+        {
+          userId: user_id,
+          isSubscribed: true,
+          plan: plan,
+          amount: payload.data.amount,
+          currency: payload.data.currency,
+          subscriptionStartDate: admin.firestore.FieldValue.serverTimestamp(),
+          subscriptionEndDate: admin.firestore.Timestamp.fromDate(endDate),
+          lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
+          lastPaymentAmount: payload.data.amount,
+          paymentMethod: 'mobile_money',
+          paymentProvider: 'moko_afrika',
+          mobileMoneyProvider: payload.data.payment_method.provider,
+          transactionId: payload.data.transaction_id,
+          transactionRef: payload.data.reference,
+          customerPhone: payload.data.customer.phone,
+          status: 'active',
+          autoRenew: true,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        {merge: true},
+      );
 
-      console.log(`Subscription activated for user: ${user_id}, plan: ${plan}, provider: ${payload.data.payment_method.provider}`);
-      
+      console.log(
+        `Subscription activated for user: ${user_id}, plan: ${plan}, provider: ${payload.data.payment_method.provider}`,
+      );
+
       // Optional: Send confirmation SMS via Moko Afrika
       // await sendPaymentConfirmation(user_id, plan, payload.data.amount);
 
       res.status(200).send('OK');
-      
     } catch (error) {
       console.error('Error updating subscription:', error);
       res.status(500).send('Internal error');
@@ -802,27 +833,33 @@ export const verifyPayment = functions
   .region('europe-west1')
   .https.onCall(async (data, context) => {
     if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Must be authenticated');
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Must be authenticated',
+      );
     }
 
-    const { transactionRef } = data;
-    
+    const {transactionRef} = data;
+
     if (!transactionRef) {
-      throw new functions.https.HttpsError('invalid-argument', 'Transaction reference required');
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Transaction reference required',
+      );
     }
 
     const MOKO_SECRET = functions.config().moko?.secret_key;
     const MOKO_API_KEY = functions.config().moko?.api_key;
     const MOKO_API_URL = functions.config().moko?.api_url;
-    
+
     const response = await fetch(
       `${MOKO_API_URL}/payments/verify/${transactionRef}`,
       {
         headers: {
-          'Authorization': `Bearer ${MOKO_SECRET}`,
+          Authorization: `Bearer ${MOKO_SECRET}`,
           'X-API-Key': MOKO_API_KEY,
         },
-      }
+      },
     );
 
     const result = await response.json();
@@ -879,7 +916,7 @@ export class SubscriptionService {
     }
 
     const data = doc.data()!;
-    
+
     // Check if subscription has expired
     if (data.isSubscribed && data.subscriptionEndDate) {
       const endDate = data.subscriptionEndDate.toDate();
@@ -905,11 +942,11 @@ export class SubscriptionService {
 
   async canScan(): Promise<boolean> {
     const status = await this.getStatus();
-    
+
     if (status.isSubscribed && status.status === 'active') {
       return true;
     }
-    
+
     return status.trialScansRemaining > 0;
   }
 
@@ -918,7 +955,7 @@ export class SubscriptionService {
     if (!user) throw new Error('Not authenticated');
 
     const status = await this.getStatus();
-    
+
     if (status.isSubscribed) {
       // Subscribed users have unlimited scans
       return;
@@ -967,7 +1004,9 @@ export class SubscriptionService {
     };
   }
 
-  subscribeToStatus(callback: (status: SubscriptionStatus) => void): () => void {
+  subscribeToStatus(
+    callback: (status: SubscriptionStatus) => void,
+  ): () => void {
     const user = auth().currentUser;
     if (!user) {
       callback(this.getDefaultStatus());
@@ -976,7 +1015,7 @@ export class SubscriptionService {
 
     return firestore()
       .doc(`artifacts/${this.appId}/users/${user.uid}/subscription/status`)
-      .onSnapshot((doc) => {
+      .onSnapshot(doc => {
         if (doc.exists) {
           const data = doc.data()!;
           callback({
@@ -1010,15 +1049,15 @@ PAYMENT_MODE=test
 
 ### Test Phone Numbers
 
-| Network | Test Number | Expected Result |
-|---------|-------------|-----------------|
-| M-Pesa | +243812345678 | Success |
-| Orange Money | +243999999999 | Success |
-| Airtel Money | +243888888888 | Success |
-| AfriMoney | +243777777777 | Success |
-| Any | +243000000000 | Failure |
+| Network      | Test Number   | Expected Result |
+| ------------ | ------------- | --------------- |
+| M-Pesa       | +243812345678 | Success         |
+| Orange Money | +243999999999 | Success         |
+| Airtel Money | +243888888888 | Success         |
+| AfriMoney    | +243777777777 | Success         |
+| Any          | +243000000000 | Failure         |
 
-*Note: Actual test numbers provided by Moko Afrika after merchant onboarding*
+_Note: Actual test numbers provided by Moko Afrika after merchant onboarding_
 
 ### Testing Webhooks Locally
 
@@ -1033,12 +1072,14 @@ ngrok http 5001
 ## Moko Afrika Support
 
 ### Contact Information
+
 - **Phone**: +243 898 900 066
 - **Email**: info@mokoafrika.com
 - **Website**: https://www.mokoafrika.com
 - **Merchant Portal**: https://www.mokoafrika.com/en/become-merchant
 
 ### Onboarding Process
+
 1. Submit merchant application online
 2. Business verification (24-48 hours)
 3. Receive API credentials
@@ -1047,6 +1088,7 @@ ngrok http 5001
 6. Go live
 
 ### Key Advantages for DRC
+
 - **Local Presence**: DRC-based company with local support
 - **47M+ Wallets**: Direct connection to major Mobile Money networks
 - **50M+ Transactions**: Proven track record in DRC market
@@ -1056,4 +1098,4 @@ ngrok http 5001
 
 ---
 
-*Next: [User Flows](../product/USER_FLOWS.md)*
+_Next: [User Flows](../product/USER_FLOWS.md)_

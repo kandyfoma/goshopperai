@@ -6,13 +6,13 @@ Invoice Intelligence uses Google's Gemini 2.5 Flash model to extract structured 
 
 ## Why Gemini 2.5 Flash?
 
-| Feature | Benefit |
-|---------|---------|
+| Feature        | Benefit                           |
+| -------------- | --------------------------------- |
 | **Multimodal** | Native image + text understanding |
-| **Speed** | Fast inference (~1-3 seconds) |
-| **Cost** | Lower cost than larger models |
-| **JSON Mode** | Native structured output support |
-| **Accuracy** | Excellent OCR + interpretation |
+| **Speed**      | Fast inference (~1-3 seconds)     |
+| **Cost**       | Lower cost than larger models     |
+| **JSON Mode**  | Native structured output support  |
+| **Accuracy**   | Excellent OCR + interpretation    |
 
 ## Architecture
 
@@ -125,7 +125,8 @@ Retournez l'objet JSON maintenant:
 
 import Config from 'react-native-config';
 
-const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const GEMINI_ENDPOINT =
+  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 interface GeminiConfig {
   temperature: number;
@@ -135,9 +136,9 @@ interface GeminiConfig {
 }
 
 const DEFAULT_CONFIG: GeminiConfig = {
-  temperature: 0.1,      // Low for consistent structured output
-  topK: 1,               // Most likely token
-  topP: 0.8,             // Focused sampling
+  temperature: 0.1, // Low for consistent structured output
+  topK: 1, // Most likely token
+  topP: 0.8, // Focused sampling
   maxOutputTokens: 2048, // Sufficient for invoice JSON
 };
 
@@ -147,36 +148,42 @@ export class GeminiClient {
 
   constructor(config?: Partial<GeminiConfig>) {
     this.apiKey = Config.GEMINI_API_KEY;
-    this.config = { ...DEFAULT_CONFIG, ...config };
+    this.config = {...DEFAULT_CONFIG, ...config};
   }
 
-  async parseInvoice(imageBase64: string, language: 'en' | 'fr' = 'fr'): Promise<ParseResult> {
-    const prompt = language === 'fr' ? INVOICE_PARSE_PROMPT_FR : INVOICE_PARSE_PROMPT;
-    
+  async parseInvoice(
+    imageBase64: string,
+    language: 'en' | 'fr' = 'fr',
+  ): Promise<ParseResult> {
+    const prompt =
+      language === 'fr' ? INVOICE_PARSE_PROMPT_FR : INVOICE_PARSE_PROMPT;
+
     const requestBody = {
-      contents: [{
-        parts: [
-          { text: prompt },
-          {
-            inlineData: {
-              mimeType: 'image/jpeg',
-              data: imageBase64
-            }
-          }
-        ]
-      }],
+      contents: [
+        {
+          parts: [
+            {text: prompt},
+            {
+              inlineData: {
+                mimeType: 'image/jpeg',
+                data: imageBase64,
+              },
+            },
+          ],
+        },
+      ],
       generationConfig: {
         ...this.config,
-        responseMimeType: 'application/json'
+        responseMimeType: 'application/json',
       },
-      safetySettings: this.getSafetySettings()
+      safetySettings: this.getSafetySettings(),
     };
 
     try {
       const response = await fetch(`${GEMINI_ENDPOINT}?key=${this.apiKey}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -185,14 +192,13 @@ export class GeminiClient {
 
       const result = await response.json();
       return this.processResponse(result);
-      
     } catch (error) {
       return {
         success: false,
         error: {
           code: 'NETWORK_ERROR',
-          message: 'Failed to connect to AI service'
-        }
+          message: 'Failed to connect to AI service',
+        },
       };
     }
   }
@@ -200,56 +206,59 @@ export class GeminiClient {
   private getSafetySettings() {
     // Disable all safety filters for receipt parsing (safe content)
     return [
-      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+      {category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE'},
+      {category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE'},
+      {category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE'},
+      {category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE'},
     ];
   }
 
   private processResponse(result: any): ParseResult {
     const candidate = result.candidates?.[0];
-    
+
     if (!candidate) {
       return {
         success: false,
-        error: { code: 'NO_RESPONSE', message: 'AI returned no response' }
+        error: {code: 'NO_RESPONSE', message: 'AI returned no response'},
       };
     }
 
     if (candidate.finishReason === 'SAFETY') {
       return {
         success: false,
-        error: { code: 'BLOCKED', message: 'Content was blocked by safety filters' }
+        error: {
+          code: 'BLOCKED',
+          message: 'Content was blocked by safety filters',
+        },
       };
     }
 
     const text = candidate.content?.parts?.[0]?.text;
-    
+
     if (!text) {
       return {
         success: false,
-        error: { code: 'EMPTY_RESPONSE', message: 'AI returned empty response' }
+        error: {code: 'EMPTY_RESPONSE', message: 'AI returned empty response'},
       };
     }
 
     try {
       const data = JSON.parse(text);
       const validated = this.validateAndEnrich(data);
-      
+
       return {
         success: true,
         data: validated,
         metadata: {
           tokensUsed: result.usageMetadata?.totalTokenCount || 0,
-          confidence: this.calculateConfidence(validated)
-        }
+          confidence: this.calculateConfidence(validated),
+        },
       };
     } catch (parseError) {
       return {
         success: false,
-        error: { code: 'INVALID_JSON', message: 'AI returned invalid JSON' },
-        rawText: text
+        error: {code: 'INVALID_JSON', message: 'AI returned invalid JSON'},
+        rawText: text,
       };
     }
   }
@@ -259,18 +268,22 @@ export class GeminiClient {
     const invoice: ParsedInvoice = {
       shopName: data.shopName || 'Unknown Store',
       shopAddress: data.shopAddress || null,
-      date: this.normalizeDate(data.date) || new Date().toISOString().split('T')[0],
+      date:
+        this.normalizeDate(data.date) || new Date().toISOString().split('T')[0],
       invoiceNumber: data.invoiceNumber || null,
       subtotal: typeof data.subtotal === 'number' ? data.subtotal : null,
       tax: typeof data.tax === 'number' ? data.tax : null,
       total: typeof data.total === 'number' ? data.total : 0,
       currency: this.normalizeCurrency(data.currency),
-      items: this.normalizeItems(data.items || [])
+      items: this.normalizeItems(data.items || []),
     };
 
     // Calculate missing total from items
     if (invoice.total === 0 && invoice.items.length > 0) {
-      invoice.total = invoice.items.reduce((sum, item) => sum + item.totalPrice, 0);
+      invoice.total = invoice.items.reduce(
+        (sum, item) => sum + item.totalPrice,
+        0,
+      );
     }
 
     return invoice;
@@ -278,12 +291,12 @@ export class GeminiClient {
 
   private normalizeDate(date: string | null): string | null {
     if (!date) return null;
-    
+
     // Handle various date formats
     const patterns = [
-      /^(\d{4})-(\d{2})-(\d{2})$/,           // YYYY-MM-DD
-      /^(\d{2})\/(\d{2})\/(\d{4})$/,         // DD/MM/YYYY
-      /^(\d{2})-(\d{2})-(\d{4})$/,           // DD-MM-YYYY
+      /^(\d{4})-(\d{2})-(\d{2})$/, // YYYY-MM-DD
+      /^(\d{2})\/(\d{2})\/(\d{4})$/, // DD/MM/YYYY
+      /^(\d{2})-(\d{2})-(\d{4})$/, // DD-MM-YYYY
     ];
 
     for (const pattern of patterns) {
@@ -303,7 +316,7 @@ export class GeminiClient {
 
   private normalizeCurrency(currency: string | null): 'USD' | 'CDF' {
     if (!currency) return 'USD';
-    
+
     const upper = currency.toUpperCase();
     if (upper === 'CDF' || upper.includes('FRANC') || upper === 'FC') {
       return 'CDF';
@@ -315,17 +328,24 @@ export class GeminiClient {
     return items.map(item => ({
       name: this.cleanItemName(item.name || 'Unknown Item'),
       quantity: Math.max(1, Number(item.quantity) || 1),
-      unitPrice: Math.max(0, Number(item.unitPrice) || Number(item.totalPrice) || 0),
-      totalPrice: Math.max(0, Number(item.totalPrice) || 
-        (Number(item.unitPrice) * Number(item.quantity)) || 0)
+      unitPrice: Math.max(
+        0,
+        Number(item.unitPrice) || Number(item.totalPrice) || 0,
+      ),
+      totalPrice: Math.max(
+        0,
+        Number(item.totalPrice) ||
+          Number(item.unitPrice) * Number(item.quantity) ||
+          0,
+      ),
     }));
   }
 
   private cleanItemName(name: string): string {
     return name
       .trim()
-      .replace(/\s+/g, ' ')                    // Multiple spaces to single
-      .replace(/[^\w\s()/-]/g, '')              // Remove special chars except basics
+      .replace(/\s+/g, ' ') // Multiple spaces to single
+      .replace(/[^\w\s()/-]/g, '') // Remove special chars except basics
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
@@ -333,19 +353,19 @@ export class GeminiClient {
 
   private calculateConfidence(data: ParsedInvoice): number {
     let score = 1.0;
-    
+
     // Penalize missing critical fields
     if (data.shopName === 'Unknown Store') score -= 0.15;
     if (!data.date) score -= 0.15;
     if (data.total === 0) score -= 0.25;
     if (data.items.length === 0) score -= 0.25;
-    
+
     // Check items quality
-    const badItems = data.items.filter(item => 
-      item.name === 'Unknown Item' || item.totalPrice === 0
+    const badItems = data.items.filter(
+      item => item.name === 'Unknown Item' || item.totalPrice === 0,
     ).length;
     score -= (badItems / Math.max(1, data.items.length)) * 0.2;
-    
+
     // Verify totals
     const itemsSum = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
     const expectedTotal = data.subtotal || data.total;
@@ -358,24 +378,30 @@ export class GeminiClient {
 
   private async handleApiError(response: Response): Promise<ParseResult> {
     const errorBody = await response.json().catch(() => ({}));
-    
-    const errorMap: Record<number, { code: string; message: string }> = {
-      400: { code: 'BAD_REQUEST', message: 'Invalid image or request format' },
-      401: { code: 'UNAUTHORIZED', message: 'API key is invalid' },
-      403: { code: 'FORBIDDEN', message: 'API access denied' },
-      429: { code: 'RATE_LIMITED', message: 'Too many requests. Please wait and try again.' },
-      500: { code: 'SERVER_ERROR', message: 'AI service temporarily unavailable' },
+
+    const errorMap: Record<number, {code: string; message: string}> = {
+      400: {code: 'BAD_REQUEST', message: 'Invalid image or request format'},
+      401: {code: 'UNAUTHORIZED', message: 'API key is invalid'},
+      403: {code: 'FORBIDDEN', message: 'API access denied'},
+      429: {
+        code: 'RATE_LIMITED',
+        message: 'Too many requests. Please wait and try again.',
+      },
+      500: {
+        code: 'SERVER_ERROR',
+        message: 'AI service temporarily unavailable',
+      },
     };
 
     const error = errorMap[response.status] || {
       code: 'UNKNOWN',
-      message: `Request failed with status ${response.status}`
+      message: `Request failed with status ${response.status}`,
     };
 
     return {
       success: false,
       error,
-      rawResponse: errorBody
+      rawResponse: errorBody,
     };
   }
 }
@@ -435,7 +461,7 @@ export interface ParseMetadata {
 ```typescript
 // src/features/scanner/utils/imagePrep.ts
 
-import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
+import {manipulateAsync, SaveFormat} from 'expo-image-manipulator';
 
 interface ImagePrepOptions {
   maxWidth: number;
@@ -451,29 +477,29 @@ const DEFAULT_OPTIONS: ImagePrepOptions = {
 
 export async function prepareImageForParsing(
   imageUri: string,
-  options: Partial<ImagePrepOptions> = {}
+  options: Partial<ImagePrepOptions> = {},
 ): Promise<string> {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
-  
+  const opts = {...DEFAULT_OPTIONS, ...options};
+
   // Resize and compress
   const manipulated = await manipulateAsync(
     imageUri,
-    [
-      { resize: { width: opts.maxWidth, height: opts.maxHeight } }
-    ],
+    [{resize: {width: opts.maxWidth, height: opts.maxHeight}}],
     {
       compress: opts.quality,
       format: SaveFormat.JPEG,
       base64: true,
-    }
+    },
   );
 
   return manipulated.base64!;
 }
 
-export function validateImageQuality(imageUri: string): Promise<ImageQualityResult> {
+export function validateImageQuality(
+  imageUri: string,
+): Promise<ImageQualityResult> {
   // Basic validation - could be enhanced with actual image analysis
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     Image.getSize(
       imageUri,
       (width, height) => {
@@ -482,7 +508,9 @@ export function validateImageQuality(imageUri: string): Promise<ImageQualityResu
           isAcceptable,
           width,
           height,
-          suggestions: isAcceptable ? [] : ['Image resolution is too low. Try taking a closer photo.']
+          suggestions: isAcceptable
+            ? []
+            : ['Image resolution is too low. Try taking a closer photo.'],
         });
       },
       () => {
@@ -490,9 +518,9 @@ export function validateImageQuality(imageUri: string): Promise<ImageQualityResu
           isAcceptable: false,
           width: 0,
           height: 0,
-          suggestions: ['Could not read image. Please try again.']
+          suggestions: ['Could not read image. Please try again.'],
         });
-      }
+      },
     );
   });
 }
@@ -510,9 +538,9 @@ interface ImageQualityResult {
 ```typescript
 // src/features/scanner/hooks/useInvoiceScanner.ts
 
-import { useState, useCallback } from 'react';
-import { geminiClient } from '@/shared/services/gemini/client';
-import { prepareImageForParsing } from '../utils/imagePrep';
+import {useState, useCallback} from 'react';
+import {geminiClient} from '@/shared/services/gemini/client';
+import {prepareImageForParsing} from '../utils/imagePrep';
 
 const MAX_RETRIES = 2;
 const RETRY_DELAY = 1000;
@@ -528,38 +556,48 @@ export function useInvoiceScanner() {
     setResult(null);
 
     let lastError: string = '';
-    
+
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
         // Prepare image
         const base64 = await prepareImageForParsing(imageUri);
-        
+
         // Parse with Gemini
         const parseResult = await geminiClient.parseInvoice(base64);
-        
+
         if (parseResult.success && parseResult.data) {
           // Check confidence threshold
-          if (parseResult.metadata?.confidence && parseResult.metadata.confidence < 0.5) {
-            setError('Receipt was hard to read. Please review the extracted data carefully.');
+          if (
+            parseResult.metadata?.confidence &&
+            parseResult.metadata.confidence < 0.5
+          ) {
+            setError(
+              'Receipt was hard to read. Please review the extracted data carefully.',
+            );
           }
-          
+
           setResult(parseResult.data);
           setIsLoading(false);
           return parseResult.data;
         }
-        
+
         lastError = parseResult.error?.message || 'Unknown error';
-        
+
         // Don't retry on certain errors
-        if (['UNAUTHORIZED', 'FORBIDDEN', 'BAD_REQUEST'].includes(parseResult.error?.code || '')) {
+        if (
+          ['UNAUTHORIZED', 'FORBIDDEN', 'BAD_REQUEST'].includes(
+            parseResult.error?.code || '',
+          )
+        ) {
           break;
         }
-        
+
         // Wait before retry
         if (attempt < MAX_RETRIES) {
-          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (attempt + 1)));
+          await new Promise(resolve =>
+            setTimeout(resolve, RETRY_DELAY * (attempt + 1)),
+          );
         }
-        
       } catch (e) {
         lastError = e instanceof Error ? e.message : 'Unknown error';
       }
@@ -589,34 +627,34 @@ export function useInvoiceScanner() {
 // src/shared/services/gemini/__mocks__/client.ts
 
 export const mockParsedInvoice: ParsedInvoice = {
-  shopName: "Shoprite Gombe",
-  shopAddress: "Avenue du Commerce, Gombe, Kinshasa",
-  date: "2025-11-28",
-  invoiceNumber: "INV-2025-001234",
-  subtotal: 33.00,
+  shopName: 'Shoprite Gombe',
+  shopAddress: 'Avenue du Commerce, Gombe, Kinshasa',
+  date: '2025-11-28',
+  invoiceNumber: 'INV-2025-001234',
+  subtotal: 33.0,
   tax: 2.75,
   total: 35.75,
-  currency: "USD",
+  currency: 'USD',
   items: [
     {
-      name: "Banana (kg)",
+      name: 'Banana (kg)',
       quantity: 2.0,
-      unitPrice: 1.50,
-      totalPrice: 3.00
+      unitPrice: 1.5,
+      totalPrice: 3.0,
     },
     {
-      name: "Cooking Oil (5L)",
+      name: 'Cooking Oil (5L)',
       quantity: 1.0,
-      unitPrice: 12.50,
-      totalPrice: 12.50
+      unitPrice: 12.5,
+      totalPrice: 12.5,
     },
     {
-      name: "Rice (25kg)",
+      name: 'Rice (25kg)',
       quantity: 1.0,
-      unitPrice: 18.00,
-      totalPrice: 18.00
-    }
-  ]
+      unitPrice: 18.0,
+      totalPrice: 18.0,
+    },
+  ],
 };
 
 export const mockGeminiClient = {
@@ -625,12 +663,12 @@ export const mockGeminiClient = {
     data: mockParsedInvoice,
     metadata: {
       tokensUsed: 1500,
-      confidence: 0.92
-    }
-  })
+      confidence: 0.92,
+    },
+  }),
 };
 ```
 
 ---
 
-*Next: [Payment Integration](./PAYMENT_INTEGRATION.md)*
+_Next: [Payment Integration](./PAYMENT_INTEGRATION.md)_

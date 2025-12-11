@@ -43,62 +43,79 @@ export function SubscriptionProvider({children}: SubscriptionProviderProps) {
   });
 
   // Helper to calculate subscription state
-  const calculateState = useCallback((subscription: Subscription): SubscriptionState => {
-    const isTrialActive = subscriptionService.isTrialActive(subscription);
-    const trialDaysRemaining = subscriptionService.getTrialDaysRemaining(subscription);
-    
-    let scansRemaining = 0;
-    let canScan = false;
+  const calculateState = useCallback(
+    (subscription: Subscription): SubscriptionState => {
+      const isTrialActive = subscriptionService.isTrialActive(subscription);
+      const trialDaysRemaining =
+        subscriptionService.getTrialDaysRemaining(subscription);
 
-    // ==========================================
-    // TESTING MODE: Allow unlimited scanning
-    // TODO: Remove this for production
-    // ==========================================
-    const TESTING_MODE = true;
-    
-    if (TESTING_MODE) {
-      // Testing mode - always allow scanning
-      scansRemaining = -1; // -1 represents unlimited
-      canScan = true;
-    } else if (isTrialActive) {
-      // Trial users have unlimited scans
-      scansRemaining = -1; // -1 represents unlimited
-      canScan = true;
-    } else if (subscription.isSubscribed && subscription.status === 'active') {
-      // Check plan limits
-      if (subscription.planId === 'premium') {
-        scansRemaining = -1; // Unlimited
+      let scansRemaining = 0;
+      let canScan = false;
+
+      // ==========================================
+      // TESTING MODE: Allow unlimited scanning
+      // TODO: Remove this for production
+      // ==========================================
+      const TESTING_MODE = true;
+
+      if (TESTING_MODE) {
+        // Testing mode - always allow scanning
+        scansRemaining = -1; // -1 represents unlimited
         canScan = true;
-      } else {
-        const planLimit = PLAN_SCAN_LIMITS[subscription.planId as keyof typeof PLAN_SCAN_LIMITS] || 0;
-        if (planLimit === -1) {
-          scansRemaining = -1;
+      } else if (isTrialActive) {
+        // Trial users have unlimited scans
+        scansRemaining = -1; // -1 represents unlimited
+        canScan = true;
+      } else if (
+        subscription.isSubscribed &&
+        subscription.status === 'active'
+      ) {
+        // Check plan limits
+        if (subscription.planId === 'premium') {
+          scansRemaining = -1; // Unlimited
           canScan = true;
         } else {
-          scansRemaining = Math.max(0, planLimit - (subscription.monthlyScansUsed || 0));
-          canScan = scansRemaining > 0;
+          const planLimit =
+            PLAN_SCAN_LIMITS[
+              subscription.planId as keyof typeof PLAN_SCAN_LIMITS
+            ] || 0;
+          if (planLimit === -1) {
+            scansRemaining = -1;
+            canScan = true;
+          } else {
+            scansRemaining = Math.max(
+              0,
+              planLimit - (subscription.monthlyScansUsed || 0),
+            );
+            canScan = scansRemaining > 0;
+          }
         }
       }
-    }
 
-    const now = new Date();
-    const daysUntilExpiration = subscription.subscriptionEndDate
-      ? Math.ceil((subscription.subscriptionEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-      : 0;
-    const isExpiringSoon = daysUntilExpiration > 0 && daysUntilExpiration <= 7;
+      const now = new Date();
+      const daysUntilExpiration = subscription.subscriptionEndDate
+        ? Math.ceil(
+            (subscription.subscriptionEndDate.getTime() - now.getTime()) /
+              (1000 * 60 * 60 * 24),
+          )
+        : 0;
+      const isExpiringSoon =
+        daysUntilExpiration > 0 && daysUntilExpiration <= 7;
 
-    return {
-      subscription,
-      isLoading: false,
-      canScan,
-      scansRemaining,
-      isTrialActive,
-      trialDaysRemaining,
-      isExpiringSoon,
-      daysUntilExpiration,
-      error: null,
-    };
-  }, []);
+      return {
+        subscription,
+        isLoading: false,
+        canScan,
+        scansRemaining,
+        isTrialActive,
+        trialDaysRemaining,
+        isExpiringSoon,
+        daysUntilExpiration,
+        error: null,
+      };
+    },
+    [],
+  );
 
   // Subscribe to subscription changes
   useEffect(() => {

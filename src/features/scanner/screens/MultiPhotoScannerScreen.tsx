@@ -44,52 +44,58 @@ export function MultiPhotoScannerScreen() {
   const [error, setError] = useState<string | null>(null);
 
   // Add a new photo
-  const handleAddPhoto = useCallback(async (fromGallery: boolean = false) => {
-    if (photos.length >= MAX_PHOTOS) {
-      Alert.alert(
-        'Limite atteinte',
-        `Maximum ${MAX_PHOTOS} photos par facture`,
-      );
-      return;
-    }
-
-    const result = fromGallery
-      ? await cameraService.selectFromGallery()
-      : await cameraService.captureFromCamera();
-
-    if (!result.success || !result.uri) {
-      if (result.error && result.error !== 'Capture annulée') {
-        setError(result.error);
+  const handleAddPhoto = useCallback(
+    async (fromGallery: boolean = false) => {
+      if (photos.length >= MAX_PHOTOS) {
+        Alert.alert(
+          'Limite atteinte',
+          `Maximum ${MAX_PHOTOS} photos par facture`,
+        );
+        return;
       }
-      return;
-    }
 
-    // Compress and convert to base64
-    const base64 = await imageCompressionService.compressToBase64(result.uri);
+      const result = fromGallery
+        ? await cameraService.selectFromGallery()
+        : await cameraService.captureFromCamera();
 
-    const newPhoto: CapturedPhoto = {
-      id: `photo_${Date.now()}`,
-      uri: result.uri,
-      base64,
-      status: 'ready',
-    };
+      if (!result.success || !result.uri) {
+        if (result.error && result.error !== 'Capture annulée') {
+          setError(result.error);
+        }
+        return;
+      }
 
-    setPhotos(prev => [...prev, newPhoto]);
-    setState('reviewing');
-  }, [photos.length]);
+      // Compress and convert to base64
+      const base64 = await imageCompressionService.compressToBase64(result.uri);
+
+      const newPhoto: CapturedPhoto = {
+        id: `photo_${Date.now()}`,
+        uri: result.uri,
+        base64,
+        status: 'ready',
+      };
+
+      setPhotos(prev => [...prev, newPhoto]);
+      setState('reviewing');
+    },
+    [photos.length],
+  );
 
   // Remove a photo
-  const handleRemovePhoto = useCallback((photoId: string) => {
-    setPhotos(prev => prev.filter(p => p.id !== photoId));
-    if (photos.length <= 1) {
-      setState('capturing');
-    }
-  }, [photos.length]);
+  const handleRemovePhoto = useCallback(
+    (photoId: string) => {
+      setPhotos(prev => prev.filter(p => p.id !== photoId));
+      if (photos.length <= 1) {
+        setState('capturing');
+      }
+    },
+    [photos.length],
+  );
 
   // Retake a specific photo
   const handleRetakePhoto = useCallback(async (photoId: string) => {
     const result = await cameraService.captureFromCamera();
-    
+
     if (!result.success || !result.uri) return;
 
     const base64 = await imageCompressionService.compressToBase64(result.uri);
@@ -111,7 +117,10 @@ export function MultiPhotoScannerScreen() {
         'Passez à Premium pour continuer à scanner.',
         [
           {text: 'Annuler', style: 'cancel'},
-          {text: 'Voir Premium', onPress: () => navigation.navigate('Subscription')},
+          {
+            text: 'Voir Premium',
+            onPress: () => navigation.navigate('Subscription'),
+          },
         ],
       );
       return;
@@ -127,15 +136,13 @@ export function MultiPhotoScannerScreen() {
 
     try {
       // Get all base64 images
-      const images = photos
-        .filter(p => p.base64)
-        .map(p => p.base64!);
+      const images = photos.filter(p => p.base64).map(p => p.base64!);
 
       // Call V2 function for multi-image processing
       const parseReceiptV2 = functions().httpsCallable('parseReceiptV2');
-      
+
       setProcessingIndex(0);
-      
+
       const response = await parseReceiptV2({
         images,
         mimeType: 'image/jpeg',
@@ -152,9 +159,9 @@ export function MultiPhotoScannerScreen() {
       if (result.success && result.receiptId) {
         // Record scan usage
         await recordScan();
-        
+
         setState('success');
-        
+
         // Navigate to receipt detail
         setTimeout(() => {
           navigation.replace('ReceiptDetail', {receiptId: result.receiptId!});
@@ -232,9 +239,7 @@ export function MultiPhotoScannerScreen() {
         {state === 'capturing' && photos.length === 0 && (
           <>
             <Text style={styles.instructionEmoji}>📄</Text>
-            <Text style={styles.instructionTitle}>
-              Facture trop longue?
-            </Text>
+            <Text style={styles.instructionTitle}>Facture trop longue?</Text>
             <Text style={styles.instructionText}>
               Prenez plusieurs photos de haut en bas.
               {'\n'}Nous les fusionnerons automatiquement!
@@ -247,7 +252,8 @@ export function MultiPhotoScannerScreen() {
         {state === 'reviewing' && (
           <>
             <Text style={styles.instructionTitle}>
-              {photos.length} photo{photos.length > 1 ? 's' : ''} capturée{photos.length > 1 ? 's' : ''}
+              {photos.length} photo{photos.length > 1 ? 's' : ''} capturée
+              {photos.length > 1 ? 's' : ''}
             </Text>
             <Text style={styles.instructionText}>
               Ajoutez plus ou traitez maintenant
@@ -289,7 +295,7 @@ export function MultiPhotoScannerScreen() {
           contentContainerStyle={styles.thumbnailsContainer}
           showsHorizontalScrollIndicator={false}>
           {photos.map((photo, index) => renderPhotoThumbnail(photo, index))}
-          
+
           {/* Add More Button */}
           {state === 'reviewing' && photos.length < MAX_PHOTOS && (
             <TouchableOpacity
@@ -314,7 +320,7 @@ export function MultiPhotoScannerScreen() {
                   <Text style={styles.captureButtonIcon}>📸</Text>
                   <Text style={styles.captureButtonText}>Prendre Photo 1</Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   style={styles.galleryButton}
                   onPress={() => handleAddPhoto(true)}>
@@ -333,33 +339,27 @@ export function MultiPhotoScannerScreen() {
                     Analyser {photos.length} photo{photos.length > 1 ? 's' : ''}
                   </Text>
                 </TouchableOpacity>
-                
+
                 <View style={styles.secondaryActions}>
                   <TouchableOpacity
                     style={styles.secondaryButton}
                     onPress={() => handleAddPhoto(false)}>
-                    <Text style={styles.secondaryButtonText}>
-                      📸 + Photo
-                    </Text>
+                    <Text style={styles.secondaryButtonText}>📸 + Photo</Text>
                   </TouchableOpacity>
-                  
+
                   <TouchableOpacity
                     style={styles.secondaryButton}
                     onPress={() => handleAddPhoto(true)}>
-                    <Text style={styles.secondaryButtonText}>
-                      📁 Galerie
-                    </Text>
+                    <Text style={styles.secondaryButtonText}>📁 Galerie</Text>
                   </TouchableOpacity>
                 </View>
               </>
             )}
           </>
         )}
-        
+
         {state === 'error' && (
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={handleReset}>
+          <TouchableOpacity style={styles.retryButton} onPress={handleReset}>
             <Text style={styles.retryButtonText}>🔄 Réessayer</Text>
           </TouchableOpacity>
         )}
@@ -369,9 +369,13 @@ export function MultiPhotoScannerScreen() {
       {state === 'capturing' && photos.length === 0 && (
         <View style={styles.tips}>
           <Text style={styles.tipsTitle}>💡 Conseils</Text>
-          <Text style={styles.tipItem}>• Commencez par le haut de la facture</Text>
+          <Text style={styles.tipItem}>
+            • Commencez par le haut de la facture
+          </Text>
           <Text style={styles.tipItem}>• Incluez un peu de chevauchement</Text>
-          <Text style={styles.tipItem}>• Bonne lumière = meilleur résultat</Text>
+          <Text style={styles.tipItem}>
+            • Bonne lumière = meilleur résultat
+          </Text>
         </View>
       )}
     </SafeAreaView>

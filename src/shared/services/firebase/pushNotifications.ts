@@ -11,8 +11,7 @@ import {APP_ID} from './config';
 const FCM_TOKEN_KEY = '@goshopperai/fcm_token';
 const NOTIFICATION_PREFS_KEY = '@goshopperai/notification_prefs';
 
-const USERS_COLLECTION = (userId: string) =>
-  `apps/${APP_ID}/users/${userId}`;
+const USERS_COLLECTION = (userId: string) => `apps/${APP_ID}/users/${userId}`;
 
 export interface NotificationPreferences {
   priceAlerts: boolean;
@@ -42,18 +41,18 @@ class PushNotificationService {
   async init(): Promise<void> {
     // Request permission
     const hasPermission = await this.requestPermission();
-    
+
     if (!hasPermission) {
       console.log('[PushNotifications] Permission not granted');
       return;
     }
-    
+
     // Get and save FCM token
     await this.registerToken();
-    
+
     // Set up message handlers
     this.setupMessageHandlers();
-    
+
     console.log('[PushNotifications] Initialized');
   }
 
@@ -75,17 +74,17 @@ class PushNotificationService {
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
         );
-        
+
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
           return false;
         }
       }
-      
+
       const authStatus = await messaging().requestPermission();
       const enabled =
         authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
         authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-      
+
       return enabled;
     } catch (error) {
       console.error('[PushNotifications] Permission error:', error);
@@ -98,8 +97,10 @@ class PushNotificationService {
    */
   async isEnabled(): Promise<boolean> {
     const authStatus = await messaging().hasPermission();
-    return authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-           authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+    return (
+      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+      authStatus === messaging.AuthorizationStatus.PROVISIONAL
+    );
   }
 
   /**
@@ -108,19 +109,19 @@ class PushNotificationService {
   async registerToken(userId?: string): Promise<string | null> {
     try {
       const token = await messaging().getToken();
-      
+
       if (token) {
         await AsyncStorage.setItem(FCM_TOKEN_KEY, token);
-        
+
         // Save token to Firestore if userId provided
         if (userId) {
           await this.saveTokenToFirestore(userId, token);
         }
-        
+
         console.log('[PushNotifications] Token registered');
         return token;
       }
-      
+
       return null;
     } catch (error) {
       console.error('[PushNotifications] Token registration error:', error);
@@ -133,13 +134,14 @@ class PushNotificationService {
    */
   async saveTokenToFirestore(userId: string, token: string): Promise<void> {
     try {
-      await firestore()
-        .doc(USERS_COLLECTION(userId))
-        .set({
+      await firestore().doc(USERS_COLLECTION(userId)).set(
+        {
           fcmToken: token,
           fcmTokenUpdatedAt: firestore.FieldValue.serverTimestamp(),
           platform: Platform.OS,
-        }, {merge: true});
+        },
+        {merge: true},
+      );
     } catch (error) {
       console.error('[PushNotifications] Save token error:', error);
     }
@@ -152,16 +154,14 @@ class PushNotificationService {
     try {
       await messaging().deleteToken();
       await AsyncStorage.removeItem(FCM_TOKEN_KEY);
-      
+
       if (userId) {
-        await firestore()
-          .doc(USERS_COLLECTION(userId))
-          .update({
-            fcmToken: firestore.FieldValue.delete(),
-            fcmTokenUpdatedAt: firestore.FieldValue.serverTimestamp(),
-          });
+        await firestore().doc(USERS_COLLECTION(userId)).update({
+          fcmToken: firestore.FieldValue.delete(),
+          fcmTokenUpdatedAt: firestore.FieldValue.serverTimestamp(),
+        });
       }
-      
+
       console.log('[PushNotifications] Token deleted');
     } catch (error) {
       console.error('[PushNotifications] Delete token error:', error);
@@ -173,28 +173,35 @@ class PushNotificationService {
    */
   private setupMessageHandlers(): void {
     // Foreground messages
-    const unsubForeground = messaging().onMessage(async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
-      console.log('[PushNotifications] Foreground message:', remoteMessage);
-      await this.handleNotification(remoteMessage);
-    });
+    const unsubForeground = messaging().onMessage(
+      async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
+        console.log('[PushNotifications] Foreground message:', remoteMessage);
+        await this.handleNotification(remoteMessage);
+      },
+    );
     this.unsubscribeHandlers.push(unsubForeground);
-    
+
     // Background/Quit message opened
-    messaging().onNotificationOpenedApp((remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
-      console.log('[PushNotifications] Notification opened:', remoteMessage);
-      this.handleNotificationOpen(remoteMessage);
-    });
-    
+    messaging().onNotificationOpenedApp(
+      (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
+        console.log('[PushNotifications] Notification opened:', remoteMessage);
+        this.handleNotificationOpen(remoteMessage);
+      },
+    );
+
     // Check if app was opened from notification
     messaging()
       .getInitialNotification()
       .then((remoteMessage: FirebaseMessagingTypes.RemoteMessage | null) => {
         if (remoteMessage) {
-          console.log('[PushNotifications] Initial notification:', remoteMessage);
+          console.log(
+            '[PushNotifications] Initial notification:',
+            remoteMessage,
+          );
           this.handleNotificationOpen(remoteMessage);
         }
       });
-    
+
     // Token refresh
     const unsubToken = messaging().onTokenRefresh((token: string) => {
       console.log('[PushNotifications] Token refreshed');
@@ -217,10 +224,10 @@ class PushNotificationService {
       receivedAt: new Date(),
       read: false,
     };
-    
+
     // Save to local storage
     await this.saveNotification(notification);
-    
+
     // Notify listeners
     this.listeners.forEach(callback => callback(notification));
   }
@@ -233,7 +240,7 @@ class PushNotificationService {
   ): void {
     // Handle navigation based on data
     const data = message.data;
-    
+
     if (data) {
       switch (data.type) {
         case 'price_alert':
@@ -246,7 +253,10 @@ class PushNotificationService {
           break;
         case 'receipt':
           // Navigate to receipt detail
-          console.log('[PushNotifications] Navigate to receipt:', data.receiptId);
+          console.log(
+            '[PushNotifications] Navigate to receipt:',
+            data.receiptId,
+          );
           break;
         default:
           // Navigate to home
@@ -258,18 +268,20 @@ class PushNotificationService {
   /**
    * Save notification to local storage
    */
-  private async saveNotification(notification: PushNotification): Promise<void> {
+  private async saveNotification(
+    notification: PushNotification,
+  ): Promise<void> {
     try {
       const key = '@goshopperai/notifications';
       const data = await AsyncStorage.getItem(key);
       const notifications = data ? JSON.parse(data) : [];
-      
+
       // Add new notification at the beginning
       notifications.unshift(notification);
-      
+
       // Keep only last 50 notifications
       const trimmed = notifications.slice(0, 50);
-      
+
       await AsyncStorage.setItem(key, JSON.stringify(trimmed));
     } catch (error) {
       console.error('[PushNotifications] Save notification error:', error);
@@ -283,9 +295,9 @@ class PushNotificationService {
     try {
       const key = '@goshopperai/notifications';
       const data = await AsyncStorage.getItem(key);
-      
+
       if (!data) return [];
-      
+
       return JSON.parse(data).map((n: PushNotification) => ({
         ...n,
         receivedAt: new Date(n.receivedAt),
@@ -303,14 +315,14 @@ class PushNotificationService {
     try {
       const key = '@goshopperai/notifications';
       const data = await AsyncStorage.getItem(key);
-      
+
       if (!data) return;
-      
+
       const notifications = JSON.parse(data);
       const updated = notifications.map((n: PushNotification) =>
         n.id === notificationId ? {...n, read: true} : n,
       );
-      
+
       await AsyncStorage.setItem(key, JSON.stringify(updated));
     } catch (error) {
       console.error('[PushNotifications] Mark as read error:', error);
@@ -338,7 +350,7 @@ class PushNotificationService {
   async getPreferences(): Promise<NotificationPreferences> {
     try {
       const data = await AsyncStorage.getItem(NOTIFICATION_PREFS_KEY);
-      
+
       if (!data) {
         return {
           priceAlerts: true,
@@ -347,7 +359,7 @@ class PushNotificationService {
           promotions: false,
         };
       }
-      
+
       return JSON.parse(data);
     } catch (error) {
       console.error('[PushNotifications] Get preferences error:', error);
@@ -363,11 +375,16 @@ class PushNotificationService {
   /**
    * Update notification preferences
    */
-  async updatePreferences(prefs: Partial<NotificationPreferences>): Promise<void> {
+  async updatePreferences(
+    prefs: Partial<NotificationPreferences>,
+  ): Promise<void> {
     try {
       const current = await this.getPreferences();
       const updated = {...current, ...prefs};
-      await AsyncStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(updated));
+      await AsyncStorage.setItem(
+        NOTIFICATION_PREFS_KEY,
+        JSON.stringify(updated),
+      );
     } catch (error) {
       console.error('[PushNotifications] Update preferences error:', error);
     }
@@ -378,7 +395,7 @@ class PushNotificationService {
    */
   subscribe(callback: NotificationCallback): () => void {
     this.listeners.push(callback);
-    
+
     return () => {
       this.listeners = this.listeners.filter(l => l !== callback);
     };
@@ -394,7 +411,10 @@ class PushNotificationService {
   /**
    * Trigger achievement notification
    */
-  async triggerAchievementNotification(achievementTitle: string, language: string = 'fr'): Promise<void> {
+  async triggerAchievementNotification(
+    achievementTitle: string,
+    language: string = 'fr',
+  ): Promise<void> {
     try {
       await functions().httpsCallable('sendAchievementNotification')({
         achievementId: achievementTitle.toLowerCase().replace(/\s+/g, '_'),
@@ -402,14 +422,20 @@ class PushNotificationService {
         language,
       });
     } catch (error) {
-      console.error('[PushNotifications] Achievement notification error:', error);
+      console.error(
+        '[PushNotifications] Achievement notification error:',
+        error,
+      );
     }
   }
 
   /**
    * Trigger sync complete notification
    */
-  async triggerSyncCompleteNotification(syncedCount: number, language: string = 'fr'): Promise<void> {
+  async triggerSyncCompleteNotification(
+    syncedCount: number,
+    language: string = 'fr',
+  ): Promise<void> {
     try {
       await functions().httpsCallable('sendSyncCompleteNotification')({
         syncedCount,

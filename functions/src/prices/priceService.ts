@@ -5,8 +5,8 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import { config, collections } from '../config';
-import { PricePoint, PriceComparison, ReceiptItem } from '../types';
+import {config, collections} from '../config';
+import {PricePoint, PriceComparison, ReceiptItem} from '../types';
 
 const db = admin.firestore();
 
@@ -29,26 +29,29 @@ function normalizeProductName(name: string): string {
  */
 export const savePriceData = functions
   .region(config.app.region)
-  .firestore.document(`artifacts/${config.app.id}/users/{userId}/receipts/{receiptId}`)
+  .firestore.document(
+    `artifacts/${config.app.id}/users/{userId}/receipts/{receiptId}`,
+  )
   .onCreate(async (snapshot, context) => {
     const receipt = snapshot.data();
-    const { userId, receiptId } = context.params;
-    
+    const {userId, receiptId} = context.params;
+
     if (!receipt || !receipt.items || receipt.items.length === 0) {
       return null;
     }
-    
+
     try {
       const batch = db.batch();
       const pricesCollection = db.collection(collections.prices);
       const now = admin.firestore.FieldValue.serverTimestamp();
-      
+
       for (const item of receipt.items as ReceiptItem[]) {
         const pricePointRef = pricesCollection.doc();
-        
+
         const pricePoint: Partial<PricePoint> = {
           productName: item.name,
-          productNameNormalized: item.nameNormalized || normalizeProductName(item.name),
+          productNameNormalized:
+            item.nameNormalized || normalizeProductName(item.name),
           storeName: receipt.storeName,
           storeNameNormalized: receipt.storeNameNormalized,
           price: item.unitPrice,
@@ -60,15 +63,16 @@ export const savePriceData = functions
           receiptId,
           userId,
         };
-        
+
         batch.set(pricePointRef, pricePoint);
       }
-      
+
       await batch.commit();
-      console.log(`Saved ${receipt.items.length} price points for receipt ${receiptId}`);
-      
+      console.log(
+        `Saved ${receipt.items.length} price points for receipt ${receiptId}`,
+      );
+
       return null;
-      
     } catch (error) {
       console.error('Save price data error:', error);
       return null;
@@ -86,34 +90,40 @@ export const getPriceComparison = functions
   })
   .https.onCall(async (data, context) => {
     if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Authentication required',
+      );
     }
-    
-    const { receiptId, items } = data;
-    
+
+    const {receiptId, items} = data;
+
     if (!receiptId && (!items || !Array.isArray(items))) {
       throw new functions.https.HttpsError(
         'invalid-argument',
-        'Receipt ID or items array required'
+        'Receipt ID or items array required',
       );
     }
-    
+
     try {
       const userId = context.auth.uid;
       let receiptItems: ReceiptItem[];
       let currentStoreName: string;
-      
+
       if (receiptId) {
         // Load receipt from Firestore
         const receiptDoc = await db
           .collection(collections.receipts(userId))
           .doc(receiptId)
           .get();
-        
+
         if (!receiptDoc.exists) {
-          throw new functions.https.HttpsError('not-found', 'Receipt not found');
+          throw new functions.https.HttpsError(
+            'not-found',
+            'Receipt not found',
+          );
         }
-        
+
         const receipt = receiptDoc.data()!;
         receiptItems = receipt.items;
         currentStoreName = receipt.storeNameNormalized;
@@ -121,47 +131,48 @@ export const getPriceComparison = functions
         receiptItems = items;
         currentStoreName = data.storeName || '';
       }
-      
+
       const comparisons: PriceComparison[] = [];
-      
+
       // Collect all normalized product names
-      const normalizedNames = receiptItems.map(item => 
-        item.nameNormalized || normalizeProductName(item.name)
+      const normalizedNames = receiptItems.map(
+        item => item.nameNormalized || normalizeProductName(item.name),
       );
-      
+
       // Remove duplicates to avoid unnecessary queries
       const uniqueNormalizedNames = [...new Set(normalizedNames)];
-      
+
       // Query all price data for these products in batches (Firestore 'in' limit is 10)
       const batchSize = 10;
       const priceDataMap = new Map<string, PricePoint[]>();
-      
+
       for (let i = 0; i < uniqueNormalizedNames.length; i += batchSize) {
         const batch = uniqueNormalizedNames.slice(i, i + batchSize);
-        
+
         const priceQuery = await db
           .collection(collections.prices)
           .where('productNameNormalized', 'in', batch)
           .orderBy('recordedAt', 'desc')
           .get();
-        
+
         // Group prices by normalized name
         priceQuery.docs.forEach(doc => {
           const pricePoint = doc.data() as PricePoint;
           const key = pricePoint.productNameNormalized;
-          
+
           if (!priceDataMap.has(key)) {
             priceDataMap.set(key, []);
           }
           priceDataMap.get(key)!.push(pricePoint);
         });
       }
-      
+
       // Generate comparisons for each item
       for (const item of receiptItems) {
-        const normalizedName = item.nameNormalized || normalizeProductName(item.name);
+        const normalizedName =
+          item.nameNormalized || normalizeProductName(item.name);
         const prices = priceDataMap.get(normalizedName) || [];
-        
+
         if (prices.length === 0) {
           // No comparison data available
           comparisons.push({
@@ -177,21 +188,24 @@ export const getPriceComparison = functions
           });
           continue;
         }
-        
+
         // Calculate statistics
         const priceValues = prices.map(p => p.price);
         const minPrice = Math.min(...priceValues);
-        const avgPrice = priceValues.reduce((a, b) => a + b, 0) / priceValues.length;
-        
+        const avgPrice =
+          priceValues.reduce((a, b) => a + b, 0) / priceValues.length;
+
         // Find best price and store
         const bestPriceRecord = prices.find(p => p.price === minPrice)!;
-        
+
         // Calculate savings
-        const potentialSavings = Math.max(0, item.unitPrice - minPrice) * item.quantity;
-        const savingsPercentage = item.unitPrice > 0 
-          ? ((item.unitPrice - minPrice) / item.unitPrice) * 100 
-          : 0;
-        
+        const potentialSavings =
+          Math.max(0, item.unitPrice - minPrice) * item.quantity;
+        const savingsPercentage =
+          item.unitPrice > 0
+            ? ((item.unitPrice - minPrice) / item.unitPrice) * 100
+            : 0;
+
         comparisons.push({
           productName: item.name,
           currentPrice: item.unitPrice,
@@ -204,25 +218,30 @@ export const getPriceComparison = functions
           priceCount: prices.length,
         });
       }
-      
+
       // Calculate total potential savings
-      const totalSavings = comparisons.reduce((sum, c) => sum + c.potentialSavings, 0);
-      
+      const totalSavings = comparisons.reduce(
+        (sum, c) => sum + c.potentialSavings,
+        0,
+      );
+
       return {
         success: true,
         comparisons,
         totalPotentialSavings: Math.round(totalSavings * 100) / 100,
         itemsCompared: comparisons.length,
       };
-      
     } catch (error) {
       console.error('Get price comparison error:', error);
-      
+
       if (error instanceof functions.https.HttpsError) {
         throw error;
       }
-      
-      throw new functions.https.HttpsError('internal', 'Failed to get price comparison');
+
+      throw new functions.https.HttpsError(
+        'internal',
+        'Failed to get price comparison',
+      );
     }
   });
 
@@ -233,28 +252,38 @@ export const getPriceHistory = functions
   .region(config.app.region)
   .https.onCall(async (data, context) => {
     if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Authentication required',
+      );
     }
-    
-    const { productName, days = 30 } = data;
-    
+
+    const {productName, days = 30} = data;
+
     if (!productName) {
-      throw new functions.https.HttpsError('invalid-argument', 'Product name required');
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'Product name required',
+      );
     }
-    
+
     try {
       const normalizedName = normalizeProductName(productName);
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
-      
+
       const priceQuery = await db
         .collection(collections.prices)
         .where('productNameNormalized', '==', normalizedName)
-        .where('recordedAt', '>=', admin.firestore.Timestamp.fromDate(startDate))
+        .where(
+          'recordedAt',
+          '>=',
+          admin.firestore.Timestamp.fromDate(startDate),
+        )
         .orderBy('recordedAt', 'desc')
         .limit(100)
         .get();
-      
+
       const priceHistory = priceQuery.docs.map(doc => {
         const data = doc.data();
         return {
@@ -264,25 +293,26 @@ export const getPriceHistory = functions
           currency: data.currency,
         };
       });
-      
+
       // Group by store
-      const byStore: Record<string, { prices: number[]; latest: number }> = {};
-      
+      const byStore: Record<string, {prices: number[]; latest: number}> = {};
+
       for (const record of priceHistory) {
         if (!byStore[record.store]) {
-          byStore[record.store] = { prices: [], latest: record.price };
+          byStore[record.store] = {prices: [], latest: record.price};
         }
         byStore[record.store].prices.push(record.price);
       }
-      
+
       // Calculate store averages
       const storeAverages = Object.entries(byStore).map(([store, data]) => ({
         store,
-        averagePrice: data.prices.reduce((a, b) => a + b, 0) / data.prices.length,
+        averagePrice:
+          data.prices.reduce((a, b) => a + b, 0) / data.prices.length,
         latestPrice: data.latest,
         priceCount: data.prices.length,
       }));
-      
+
       return {
         success: true,
         productName,
@@ -290,9 +320,11 @@ export const getPriceHistory = functions
         byStore: storeAverages,
         totalRecords: priceHistory.length,
       };
-      
     } catch (error) {
       console.error('Get price history error:', error);
-      throw new functions.https.HttpsError('internal', 'Failed to get price history');
+      throw new functions.https.HttpsError(
+        'internal',
+        'Failed to get price history',
+      );
     }
   });

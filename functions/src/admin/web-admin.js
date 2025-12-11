@@ -8,7 +8,7 @@ const express = require('express');
 const admin = require('firebase-admin');
 const path = require('path');
 const fs = require('fs');
-const { config } = require('../../lib/config');
+const {config} = require('../../lib/config');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -17,23 +17,33 @@ const PORT = process.env.PORT || 3001;
 // Check if already initialized (to avoid double initialization)
 if (!admin.apps.length) {
   // Build absolute path to service account key
-  const serviceAccountPath = path.resolve(__dirname, '../../serviceAccountKey.json');
-  
+  const serviceAccountPath = path.resolve(
+    __dirname,
+    '../../serviceAccountKey.json',
+  );
+
   if (fs.existsSync(serviceAccountPath)) {
     try {
-      const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+      const serviceAccount = JSON.parse(
+        fs.readFileSync(serviceAccountPath, 'utf8'),
+      );
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        projectId: serviceAccount.project_id
+        projectId: serviceAccount.project_id,
       });
-      console.log('✅ Firebase initialized with service account:', serviceAccount.project_id);
+      console.log(
+        '✅ Firebase initialized with service account:',
+        serviceAccount.project_id,
+      );
     } catch (error) {
       console.error('❌ Error loading service account:', error.message);
       process.exit(1);
     }
   } else {
     console.error('❌ Service account key not found at:', serviceAccountPath);
-    console.error('Please download it from Firebase Console > Project Settings > Service Accounts');
+    console.error(
+      'Please download it from Firebase Console > Project Settings > Service Accounts',
+    );
     process.exit(1);
   }
 }
@@ -45,7 +55,7 @@ const messaging = admin.messaging();
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({extended: true}));
 
 // Basic HTML template
 function getHtmlTemplate(title, content) {
@@ -103,26 +113,32 @@ function getHtmlTemplate(title, content) {
 app.get('/', async (req, res) => {
   try {
     console.log('Loading dashboard...');
-    
+
     // Get basic stats
     console.log('Fetching users...');
-    let users = { users: [] };
+    let users = {users: []};
     let authError = null;
     try {
       users = await auth.listUsers();
       console.log(`Found ${users.users.length} users`);
     } catch (error) {
       authError = error;
-      console.error('❌ Error fetching users (Auth not configured?):', error.message);
+      console.error(
+        '❌ Error fetching users (Auth not configured?):',
+        error.message,
+      );
       // Continue without users
     }
-    
+
     console.log('Fetching receipts...');
     const receipts = await db.collectionGroup('receipts').get();
     console.log(`Found ${receipts.size} receipts`);
-    
+
     console.log('Fetching alerts...');
-    const alerts = await db.collectionGroup('priceAlerts').where('isActive', '==', true).get();
+    const alerts = await db
+      .collectionGroup('priceAlerts')
+      .where('isActive', '==', true)
+      .get();
     console.log(`Found ${alerts.size} alerts`);
 
     let totalSpending = 0;
@@ -132,7 +148,11 @@ app.get('/', async (req, res) => {
 
     const content = `
         <h2>Dashboard</h2>
-        ${authError ? `<div class="alert alert-error">Warning: Authentication service not accessible. User stats may be incomplete.</div>` : ''}
+        ${
+          authError
+            ? `<div class="alert alert-error">Warning: Authentication service not accessible. User stats may be incomplete.</div>`
+            : ''
+        }
         <div class="stats">
             <div class="stat-card">
                 <div class="stat-number">${users.users.length}</div>
@@ -162,7 +182,12 @@ app.get('/', async (req, res) => {
 
     res.send(getHtmlTemplate('Dashboard', content));
   } catch (error) {
-    res.send(getHtmlTemplate('Error', `<div class="alert alert-error">Error loading dashboard: ${error.message}</div>`));
+    res.send(
+      getHtmlTemplate(
+        'Error',
+        `<div class="alert alert-error">Error loading dashboard: ${error.message}</div>`,
+      ),
+    );
   }
 });
 
@@ -172,7 +197,9 @@ app.get('/users', async (req, res) => {
     let tableRows = '';
 
     for (const user of users.users) {
-      const userDoc = await db.doc(`artifacts/${config.app.id}/users/${user.uid}`).get();
+      const userDoc = await db
+        .doc(`artifacts/${config.app.id}/users/${user.uid}`)
+        .get();
       const profile = userDoc.exists ? userDoc.data() : {};
 
       tableRows += `
@@ -184,7 +211,9 @@ app.get('/users', async (req, res) => {
           <td>${profile.trialScansRemaining || 0}</td>
           <td>
             <a href="/users/${user.uid}" class="btn btn-primary">View</a>
-            <a href="/users/${user.uid}/delete" class="btn btn-danger" onclick="return confirm('Delete this user?')">Delete</a>
+            <a href="/users/${
+              user.uid
+            }/delete" class="btn btn-danger" onclick="return confirm('Delete this user?')">Delete</a>
           </td>
         </tr>
       `;
@@ -211,16 +240,27 @@ app.get('/users', async (req, res) => {
 
     res.send(getHtmlTemplate('Users', content));
   } catch (error) {
-    res.send(getHtmlTemplate('Error', `<div class="alert alert-error">Error loading users: ${error.message}</div>`));
+    res.send(
+      getHtmlTemplate(
+        'Error',
+        `<div class="alert alert-error">Error loading users: ${error.message}</div>`,
+      ),
+    );
   }
 });
 
 app.get('/users/:userId', async (req, res) => {
   try {
-    const { userId } = req.params;
+    const {userId} = req.params;
     const user = await auth.getUser(userId);
-    const profile = await db.doc(`artifacts/${config.app.id}/users/${userId}`).get();
-    const receipts = await db.collection(`artifacts/${config.app.id}/users/${userId}/receipts`).orderBy('date', 'desc').limit(5).get();
+    const profile = await db
+      .doc(`artifacts/${config.app.id}/users/${userId}`)
+      .get();
+    const receipts = await db
+      .collection(`artifacts/${config.app.id}/users/${userId}/receipts`)
+      .orderBy('date', 'desc')
+      .limit(5)
+      .get();
 
     const profileData = profile.exists ? profile.data() : {};
 
@@ -229,7 +269,9 @@ app.get('/users/:userId', async (req, res) => {
       receiptsHtml = '<ul>';
       receipts.docs.forEach(doc => {
         const data = doc.data();
-        receiptsHtml += `<li>${data.storeName} - $${data.total} (${data.date?.toDate()?.toLocaleDateString()})</li>`;
+        receiptsHtml += `<li>${data.storeName} - $${data.total} (${data.date
+          ?.toDate()
+          ?.toLocaleDateString()})</li>`;
       });
       receiptsHtml += '</ul>';
     }
@@ -243,8 +285,12 @@ app.get('/users/:userId', async (req, res) => {
         <p><strong>Created:</strong> ${user.metadata.creationTime}</p>
 
         <h3>Profile Data</h3>
-        <p><strong>Subscription:</strong> ${profileData.subscriptionStatus || 'N/A'}</p>
-        <p><strong>Trial Scans:</strong> ${profileData.trialScansRemaining || 0}</p>
+        <p><strong>Subscription:</strong> ${
+          profileData.subscriptionStatus || 'N/A'
+        }</p>
+        <p><strong>Trial Scans:</strong> ${
+          profileData.trialScansRemaining || 0
+        }</p>
         <p><strong>Total Savings:</strong> $${profileData.totalSavings || 0}</p>
 
         <h3>Recent Receipts</h3>
@@ -255,13 +301,22 @@ app.get('/users/:userId', async (req, res) => {
 
     res.send(getHtmlTemplate('User Details', content));
   } catch (error) {
-    res.send(getHtmlTemplate('Error', `<div class="alert alert-error">Error loading user: ${error.message}</div>`));
+    res.send(
+      getHtmlTemplate(
+        'Error',
+        `<div class="alert alert-error">Error loading user: ${error.message}</div>`,
+      ),
+    );
   }
 });
 
 app.get('/receipts', async (req, res) => {
   try {
-    const receipts = await db.collectionGroup('receipts').orderBy('date', 'desc').limit(50).get();
+    const receipts = await db
+      .collectionGroup('receipts')
+      .orderBy('date', 'desc')
+      .limit(50)
+      .get();
 
     let tableRows = '';
     receipts.docs.forEach(doc => {
@@ -276,8 +331,12 @@ app.get('/receipts', async (req, res) => {
           <td>$${data.total || 0}</td>
           <td>${data.date?.toDate()?.toLocaleDateString() || 'N/A'}</td>
           <td>
-            <a href="/receipts/${userId}/${doc.id}" class="btn btn-primary">View</a>
-            <a href="/receipts/${userId}/${doc.id}/delete" class="btn btn-danger" onclick="return confirm('Delete this receipt?')">Delete</a>
+            <a href="/receipts/${userId}/${
+        doc.id
+      }" class="btn btn-primary">View</a>
+            <a href="/receipts/${userId}/${
+        doc.id
+      }/delete" class="btn btn-danger" onclick="return confirm('Delete this receipt?')">Delete</a>
           </td>
         </tr>
       `;
@@ -304,13 +363,22 @@ app.get('/receipts', async (req, res) => {
 
     res.send(getHtmlTemplate('Receipts', content));
   } catch (error) {
-    res.send(getHtmlTemplate('Error', `<div class="alert alert-error">Error loading receipts: ${error.message}</div>`));
+    res.send(
+      getHtmlTemplate(
+        'Error',
+        `<div class="alert alert-error">Error loading receipts: ${error.message}</div>`,
+      ),
+    );
   }
 });
 
 app.get('/prices', async (req, res) => {
   try {
-    const prices = await db.collectionGroup('prices').orderBy('recordedAt', 'desc').limit(50).get();
+    const prices = await db
+      .collectionGroup('prices')
+      .orderBy('recordedAt', 'desc')
+      .limit(50)
+      .get();
 
     let tableRows = '';
     prices.docs.forEach(doc => {
@@ -345,7 +413,12 @@ app.get('/prices', async (req, res) => {
     res.send(getHtmlTemplate('Prices', content));
   } catch (error) {
     console.error('❌ Error loading prices:', error);
-    res.send(getHtmlTemplate('Error', `<div class="alert alert-error">Error loading prices: ${error.message}</div>`));
+    res.send(
+      getHtmlTemplate(
+        'Error',
+        `<div class="alert alert-error">Error loading prices: ${error.message}</div>`,
+      ),
+    );
   }
 });
 
@@ -362,8 +435,11 @@ app.get('/analytics', async (req, res) => {
       const data = doc.data();
       const date = data.date?.toDate();
       if (date) {
-        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        monthlySpending[monthKey] = (monthlySpending[monthKey] || 0) + (data.total || 0);
+        const monthKey = `${date.getFullYear()}-${String(
+          date.getMonth() + 1,
+        ).padStart(2, '0')}`;
+        monthlySpending[monthKey] =
+          (monthlySpending[monthKey] || 0) + (data.total || 0);
       }
     });
 
@@ -373,12 +449,13 @@ app.get('/analytics', async (req, res) => {
       const data = doc.data();
       (data.items || []).forEach(item => {
         const cat = item.category || 'Other';
-        categories[cat] = (categories[cat] || 0) + ((item.unitPrice || 0) * (item.quantity || 1));
+        categories[cat] =
+          (categories[cat] || 0) + (item.unitPrice || 0) * (item.quantity || 1);
       });
     });
 
     const topCategories = Object.entries(categories)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5);
 
     const content = `
@@ -409,9 +486,14 @@ app.get('/analytics', async (req, res) => {
                 </tr>
             </thead>
             <tbody>
-                ${Object.entries(monthlySpending).sort().reverse().map(([month, total]) =>
-                  `<tr><td>${month}</td><td>$${total.toFixed(2)}</td></tr>`
-                ).join('')}
+                ${Object.entries(monthlySpending)
+                  .sort()
+                  .reverse()
+                  .map(
+                    ([month, total]) =>
+                      `<tr><td>${month}</td><td>$${total.toFixed(2)}</td></tr>`,
+                  )
+                  .join('')}
             </tbody>
         </table>
 
@@ -424,16 +506,26 @@ app.get('/analytics', async (req, res) => {
                 </tr>
             </thead>
             <tbody>
-                ${topCategories.map(([category, total]) =>
-                  `<tr><td>${category}</td><td>$${total.toFixed(2)}</td></tr>`
-                ).join('')}
+                ${topCategories
+                  .map(
+                    ([category, total]) =>
+                      `<tr><td>${category}</td><td>$${total.toFixed(
+                        2,
+                      )}</td></tr>`,
+                  )
+                  .join('')}
             </tbody>
         </table>
     `;
 
     res.send(getHtmlTemplate('Analytics', content));
   } catch (error) {
-    res.send(getHtmlTemplate('Error', `<div class="alert alert-error">Error loading analytics: ${error.message}</div>`));
+    res.send(
+      getHtmlTemplate(
+        'Error',
+        `<div class="alert alert-error">Error loading analytics: ${error.message}</div>`,
+      ),
+    );
   }
 });
 
@@ -492,15 +584,20 @@ app.get('/notifications', (req, res) => {
         </div>
     `;
 
-    res.send(getHtmlTemplate('Notifications', content));
+  res.send(getHtmlTemplate('Notifications', content));
 });
 
 app.post('/notifications/broadcast', async (req, res) => {
   try {
-    const { title, body } = req.body;
+    const {title, body} = req.body;
 
     if (!title || !body) {
-      return res.send(getHtmlTemplate('Error', '<div class="alert alert-error">Title and body are required</div>'));
+      return res.send(
+        getHtmlTemplate(
+          'Error',
+          '<div class="alert alert-error">Title and body are required</div>',
+        ),
+      );
     }
 
     // Get all users with FCM tokens
@@ -541,7 +638,12 @@ app.post('/notifications/broadcast', async (req, res) => {
     }
 
     if (notifications.length === 0) {
-      return res.send(getHtmlTemplate('Notifications', '<div class="alert alert-error">No users with FCM tokens found</div>'));
+      return res.send(
+        getHtmlTemplate(
+          'Notifications',
+          '<div class="alert alert-error">No users with FCM tokens found</div>',
+        ),
+      );
     }
 
     // Send in batches of 500 (FCM limit)
@@ -563,26 +665,42 @@ app.post('/notifications/broadcast', async (req, res) => {
     `;
 
     res.send(getHtmlTemplate('Broadcast Sent', content));
-
   } catch (error) {
-    res.send(getHtmlTemplate('Error', `<div class="alert alert-error">Error sending broadcast: ${error.message}</div>`));
+    res.send(
+      getHtmlTemplate(
+        'Error',
+        `<div class="alert alert-error">Error sending broadcast: ${error.message}</div>`,
+      ),
+    );
   }
 });
 
 app.post('/notifications/user', async (req, res) => {
   try {
-    const { userId, title, body } = req.body;
+    const {userId, title, body} = req.body;
 
     if (!userId || !title || !body) {
-      return res.send(getHtmlTemplate('Error', '<div class="alert alert-error">User ID, title and body are required</div>'));
+      return res.send(
+        getHtmlTemplate(
+          'Error',
+          '<div class="alert alert-error">User ID, title and body are required</div>',
+        ),
+      );
     }
 
     // Get user's FCM token
-    const userDoc = await db.doc(`artifacts/${config.app.id}/users/${userId}`).get();
+    const userDoc = await db
+      .doc(`artifacts/${config.app.id}/users/${userId}`)
+      .get();
     const fcmToken = userDoc.data()?.fcmToken;
 
     if (!fcmToken) {
-      return res.send(getHtmlTemplate('Notifications', '<div class="alert alert-error">User not found or no FCM token available</div>'));
+      return res.send(
+        getHtmlTemplate(
+          'Notifications',
+          '<div class="alert alert-error">User not found or no FCM token available</div>',
+        ),
+      );
     }
 
     // Send notification
@@ -623,9 +741,13 @@ app.post('/notifications/user', async (req, res) => {
     `;
 
     res.send(getHtmlTemplate('Notification Sent', content));
-
   } catch (error) {
-    res.send(getHtmlTemplate('Error', `<div class="alert alert-error">Error sending notification: ${error.message}</div>`));
+    res.send(
+      getHtmlTemplate(
+        'Error',
+        `<div class="alert alert-error">Error sending notification: ${error.message}</div>`,
+      ),
+    );
   }
 });
 

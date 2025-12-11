@@ -16,11 +16,11 @@ export interface PricePoint {
   receiptId: string;
   userId: string;
   category?: ProductCategory;
-  
+
   // Source tracking
   source: 'user_scan' | 'store_upload' | 'manual';
   verified: boolean;
-  
+
   createdAt: Date;
 }
 
@@ -29,26 +29,26 @@ export interface PriceComparison {
   productNameNormalized: string;
   category?: ProductCategory;
   unit: string;
-  
+
   // Current receipt price
   currentPrice: number;
   currentStore: string;
-  
+
   // Best price found
   bestPrice: number;
   bestStore: string;
   bestDate: Date;
-  
+
   // Price stats
   averagePrice: number;
   minPrice: number;
   maxPrice: number;
   priceCount: number;
-  
+
   // Savings calculation
   potentialSavings: number;
   savingsPercentage: number;
-  
+
   // All prices for this product
   allPrices: PricePoint[];
 }

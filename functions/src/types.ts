@@ -46,32 +46,38 @@ export interface Receipt extends ParsedReceipt {
 
 export interface Subscription {
   userId: string;
-  
+
   // Trial tracking (2-month free trial)
   trialScansUsed: number;
   trialScansLimit: number;
   trialStartDate?: Date;
   trialEndDate?: Date;
   trialExtended?: boolean;
-  
+
   // Monthly usage tracking
   monthlyScansUsed?: number;
   currentBillingPeriodStart?: Date;
   currentBillingPeriodEnd?: Date;
-  
+
   // Subscription details
   isSubscribed: boolean;
   planId?: 'free' | 'basic' | 'standard' | 'premium';
-  status: 'trial' | 'active' | 'expired' | 'cancelled' | 'pending' | 'expiring_soon';
+  status:
+    | 'trial'
+    | 'active'
+    | 'expired'
+    | 'cancelled'
+    | 'pending'
+    | 'expiring_soon';
   durationMonths?: 1 | 3 | 6 | 12;
-  
+
   // Billing
   subscriptionStartDate?: Date;
   subscriptionEndDate?: Date;
   lastPaymentDate?: Date;
   lastPaymentAmount?: number;
   currency?: 'USD' | 'CDF';
-  
+
   // Payment info
   paymentMethod?: 'mobile_money' | 'card';
   paymentProvider?: 'moko_afrika' | 'stripe';
@@ -80,15 +86,15 @@ export interface Subscription {
   stripePaymentIntentId?: string;
   customerPhone?: string;
   customerEmail?: string;
-  
+
   // Auto-renewal
   autoRenew: boolean;
-  
+
   // Expiration notifications
   expirationNotificationSent?: boolean;
   expirationNotificationDate?: Date;
   daysUntilExpiration?: number;
-  
+
   // Timestamps
   createdAt?: Date;
   updatedAt?: Date;

@@ -49,7 +49,7 @@ export function HistoryScreen() {
 
     try {
       setIsLoading(true);
-      
+
       const receiptsSnapshot = await firestore()
         .collection('artifacts')
         .doc('goshopperai')
@@ -69,7 +69,9 @@ export function HistoryScreen() {
           storeAddress: data.storeAddress,
           storePhone: data.storePhone,
           receiptNumber: data.receiptNumber,
-          date: data.date ? new Date(data.date.seconds * 1000) : (data.scannedAt?.toDate() || new Date()),
+          date: data.date
+            ? new Date(data.date.seconds * 1000)
+            : data.scannedAt?.toDate() || new Date(),
           currency: data.currency || 'USD',
           items: (data.items || []).map((item: any) => ({
             id: item.id || Math.random().toString(36).substring(7),
@@ -118,9 +120,9 @@ export function HistoryScreen() {
     } else {
       const query = searchQuery.toLowerCase();
       const filtered = receipts.filter(
-        r => 
+        r =>
           r.storeName.toLowerCase().includes(query) ||
-          r.storeAddress?.toLowerCase().includes(query)
+          r.storeAddress?.toLowerCase().includes(query),
       );
       setFilteredReceipts(filtered);
     }
@@ -165,7 +167,7 @@ export function HistoryScreen() {
       <View style={styles.receiptIcon}>
         <Text style={styles.receiptEmoji}>🧾</Text>
       </View>
-      
+
       <View style={styles.receiptInfo}>
         <Text style={styles.storeName}>{item.storeName}</Text>
         <Text style={styles.storeAddress} numberOfLines={1}>
@@ -175,7 +177,7 @@ export function HistoryScreen() {
           {formatDate(item.purchaseDate || item.date)}
         </Text>
       </View>
-      
+
       <View style={styles.receiptRight}>
         <View style={styles.totalContainer}>
           {item.totalUSD !== undefined && item.totalCDF !== undefined ? (
@@ -195,14 +197,13 @@ export function HistoryScreen() {
             </Text>
           )}
         </View>
-        <View style={[
-          styles.statusBadge,
-          {backgroundColor: getStatusColor(item.status) + '15'}
-        ]}>
-          <Text style={[
-            styles.statusText,
-            {color: getStatusColor(item.status)}
+        <View
+          style={[
+            styles.statusBadge,
+            {backgroundColor: getStatusColor(item.status) + '15'},
           ]}>
+          <Text
+            style={[styles.statusText, {color: getStatusColor(item.status)}]}>
             {getStatusLabel(item.status)}
           </Text>
         </View>
@@ -217,8 +218,8 @@ export function HistoryScreen() {
         {searchQuery ? 'Aucun résultat' : 'Pas encore de factures'}
       </Text>
       <Text style={styles.emptyDesc}>
-        {searchQuery 
-          ? 'Essayez avec d\'autres termes de recherche'
+        {searchQuery
+          ? "Essayez avec d'autres termes de recherche"
           : 'Scannez votre première facture pour commencer à suivre vos dépenses'}
       </Text>
       {!searchQuery && (
@@ -277,9 +278,10 @@ export function HistoryScreen() {
                 filteredReceipts.reduce((sum, r) => {
                   // Use totalUSD if available, otherwise fall back to total if currency is USD
                   if (r.totalUSD !== undefined) return sum + r.totalUSD;
-                  if (r.currency === 'USD') return sum + (r.totalAmount || r.total);
+                  if (r.currency === 'USD')
+                    return sum + (r.totalAmount || r.total);
                   return sum;
-                }, 0)
+                }, 0),
               )}
             </Text>
             <Text style={styles.statLabel}>Total USD</Text>
@@ -291,10 +293,11 @@ export function HistoryScreen() {
                 filteredReceipts.reduce((sum, r) => {
                   // Use totalCDF if available, otherwise fall back to total if currency is CDF
                   if (r.totalCDF !== undefined) return sum + r.totalCDF;
-                  if (r.currency === 'CDF') return sum + (r.totalAmount || r.total);
+                  if (r.currency === 'CDF')
+                    return sum + (r.totalAmount || r.total);
                   return sum;
                 }, 0),
-                'CDF'
+                'CDF',
               )}
             </Text>
             <Text style={styles.statLabel}>Total CDF</Text>
@@ -309,7 +312,7 @@ export function HistoryScreen() {
         keyExtractor={item => item.id}
         contentContainerStyle={[
           styles.listContent,
-          filteredReceipts.length === 0 && styles.listContentEmpty
+          filteredReceipts.length === 0 && styles.listContentEmpty,
         ]}
         ListEmptyComponent={renderEmptyState}
         refreshControl={

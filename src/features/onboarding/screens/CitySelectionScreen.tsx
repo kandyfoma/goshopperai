@@ -148,10 +148,13 @@ export function CitySelectionScreen() {
         .doc('goshopperai')
         .collection('users')
         .doc(user.uid)
-        .set({
-          defaultCity: selectedCity,
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-        }, {merge: true});
+        .set(
+          {
+            defaultCity: selectedCity,
+            updatedAt: firestore.FieldValue.serverTimestamp(),
+          },
+          {merge: true},
+        );
 
       // Navigate to scanner
       navigation.replace('Scanner');
@@ -168,14 +171,12 @@ export function CitySelectionScreen() {
         styles.cityItem,
         selectedCity === item && styles.cityItemSelected,
       ]}
-      onPress={() => setSelectedCity(item)}
-    >
+      onPress={() => setSelectedCity(item)}>
       <Text
         style={[
           styles.cityText,
           selectedCity === item && styles.cityTextSelected,
-        ]}
-      >
+        ]}>
         {item}
       </Text>
     </TouchableOpacity>
@@ -186,14 +187,15 @@ export function CitySelectionScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Sélectionnez votre ville</Text>
         <Text style={styles.subtitle}>
-          Choisissez la ville où vous faites vos achats pour une meilleure expérience
+          Choisissez la ville où vous faites vos achats pour une meilleure
+          expérience
         </Text>
       </View>
 
       <FlatList
         data={DRC_CITIES}
         renderItem={renderCity}
-        keyExtractor={(item) => item}
+        keyExtractor={item => item}
         numColumns={2}
         contentContainerStyle={styles.citiesGrid}
         showsVerticalScrollIndicator={false}
@@ -206,8 +208,7 @@ export function CitySelectionScreen() {
             (!selectedCity || isSaving) && styles.continueButtonDisabled,
           ]}
           onPress={handleCitySelect}
-          disabled={!selectedCity || isSaving}
-        >
+          disabled={!selectedCity || isSaving}>
           {isSaving ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (

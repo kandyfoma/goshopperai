@@ -4,7 +4,7 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
 
-// Firebase configuration is handled by google-services.json (Android) 
+// Firebase configuration is handled by google-services.json (Android)
 // and GoogleService-Info.plist (iOS)
 
 let initialized = false;
@@ -15,9 +15,9 @@ export const initializeFirebase = async (): Promise<void> => {
   }
 
   try {
-    // React Native Firebase auto-initializes from google-services.json (Android) 
+    // React Native Firebase auto-initializes from google-services.json (Android)
     // and GoogleService-Info.plist (iOS), so we just need to configure Firestore
-    
+
     // Enable Firestore offline persistence
     await firestore().settings({
       persistence: true,
@@ -27,7 +27,10 @@ export const initializeFirebase = async (): Promise<void> => {
     initialized = true;
     console.log('✅ Firebase initialized successfully');
   } catch (error) {
-    console.warn('⚠️ Firebase initialization failed - running in demo mode:', error);
+    console.warn(
+      '⚠️ Firebase initialization failed - running in demo mode:',
+      error,
+    );
     // Don't throw error, allow app to continue
     initialized = true;
   }
@@ -46,8 +49,10 @@ export const COLLECTIONS = {
   users: (userId: string) => `artifacts/${APP_ID}/users/${userId}`,
   userProfile: (userId: string) => `artifacts/${APP_ID}/users/${userId}`,
   receipts: (userId: string) => `artifacts/${APP_ID}/users/${userId}/receipts`,
-  subscription: (userId: string) => `artifacts/${APP_ID}/users/${userId}/subscription/status`,
-  subscriptionStatus: (userId: string) => `artifacts/${APP_ID}/users/${userId}/subscription/status`,
+  subscription: (userId: string) =>
+    `artifacts/${APP_ID}/users/${userId}/subscription/status`,
+  subscriptionStatus: (userId: string) =>
+    `artifacts/${APP_ID}/users/${userId}/subscription/status`,
   prices: `artifacts/${APP_ID}/public/prices`,
   stores: `artifacts/${APP_ID}/public/stores`,
 } as const;

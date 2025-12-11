@@ -41,7 +41,8 @@ class CameraService {
         PermissionsAndroid.PERMISSIONS.CAMERA,
         {
           title: 'Permission Caméra',
-          message: 'GoShopperAI a besoin d\'accéder à votre caméra pour scanner les factures.',
+          message:
+            "GoShopperAI a besoin d'accéder à votre caméra pour scanner les factures.",
           buttonNeutral: 'Plus tard',
           buttonNegative: 'Refuser',
           buttonPositive: 'Autoriser',

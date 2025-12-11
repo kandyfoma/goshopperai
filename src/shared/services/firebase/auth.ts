@@ -35,8 +35,10 @@ class AuthService {
         await new Promise<void>(resolve => setTimeout(() => resolve(), 500));
         attempts++;
       }
-      
-      console.warn('Firebase not initialized after 5 seconds - auth service unavailable');
+
+      console.warn(
+        'Firebase not initialized after 5 seconds - auth service unavailable',
+      );
       return false;
     } catch (error) {
       console.warn('Auth service initialization failed:', error);
@@ -63,10 +65,10 @@ class AuthService {
       await this.ensureInitialized();
       const credential = await auth().signInAnonymously();
       const user = this.mapFirebaseUser(credential.user);
-      
+
       // Create user profile if new user
       await this.createUserProfileIfNotExists(user.uid);
-      
+
       return user;
     } catch (error) {
       console.error('Anonymous sign in failed:', error);
@@ -80,12 +82,15 @@ class AuthService {
   async signUpWithEmail(email: string, password: string): Promise<User> {
     try {
       await this.ensureInitialized();
-      const credential = await auth().createUserWithEmailAndPassword(email, password);
+      const credential = await auth().createUserWithEmailAndPassword(
+        email,
+        password,
+      );
       const user = this.mapFirebaseUser(credential.user);
-      
+
       // Create user profile
       await this.createUserProfileIfNotExists(user.uid);
-      
+
       return user;
     } catch (error) {
       console.error('Email sign up failed:', error);
@@ -99,7 +104,10 @@ class AuthService {
   async signInWithEmail(email: string, password: string): Promise<User> {
     try {
       await this.ensureInitialized();
-      const credential = await auth().signInWithEmailAndPassword(email, password);
+      const credential = await auth().signInWithEmailAndPassword(
+        email,
+        password,
+      );
       return this.mapFirebaseUser(credential.user);
     } catch (error) {
       console.error('Email sign in failed:', error);
@@ -115,7 +123,9 @@ class AuthService {
       await this.ensureInitialized();
       // Google Sign-In requires @react-native-google-signin/google-signin package
       // For now, throw an error indicating it needs to be implemented
-      throw new Error('Google Sign-In needs to be configured. Install @react-native-google-signin/google-signin');
+      throw new Error(
+        'Google Sign-In needs to be configured. Install @react-native-google-signin/google-signin',
+      );
     } catch (error) {
       console.error('Google sign in failed:', error);
       throw error;
@@ -130,7 +140,9 @@ class AuthService {
       await this.ensureInitialized();
       // Apple Sign-In requires @invertase/react-native-apple-authentication package
       // For now, throw an error indicating it needs to be implemented
-      throw new Error('Apple Sign-In needs to be configured. Install @invertase/react-native-apple-authentication');
+      throw new Error(
+        'Apple Sign-In needs to be configured. Install @invertase/react-native-apple-authentication',
+      );
     } catch (error) {
       console.error('Apple sign in failed:', error);
       throw error;
@@ -195,21 +207,19 @@ class AuthService {
   /**
    * Subscribe to auth state changes
    */
-  onAuthStateChanged(
-    callback: (user: User | null) => void,
-  ): () => void {
+  onAuthStateChanged(callback: (user: User | null) => void): () => void {
     let unsubscribe: (() => void) | null = null;
-    
+
     try {
       // Try to set up the listener directly
       const authInstance = auth();
-      
+
       unsubscribe = authInstance.onAuthStateChanged(firebaseUser => {
         console.log('🔄 Auth state changed:', firebaseUser?.uid || 'null');
         const user = firebaseUser ? this.mapFirebaseUser(firebaseUser) : null;
         callback(user);
       });
-      
+
       return () => {
         if (unsubscribe) {
           unsubscribe();
@@ -243,7 +253,7 @@ class AuthService {
       };
 
       await profileRef.set(profile);
-      
+
       // Initialize 2-month free trial subscription for new users
       await this.initializeNewUserSubscription(userId);
     }
@@ -254,7 +264,7 @@ class AuthService {
    */
   private async initializeNewUserSubscription(userId: string): Promise<void> {
     const subscriptionRef = firestore().doc(COLLECTIONS.subscription(userId));
-    
+
     // Calculate trial dates (60 days = 2 months)
     const trialStartDate = new Date();
     const trialEndDate = new Date();

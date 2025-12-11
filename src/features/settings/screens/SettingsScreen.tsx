@@ -15,7 +15,11 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useAuth, useUser, useSubscription, useTheme} from '@/shared/contexts';
 import {RootStackParamList} from '@/shared/types';
-import {COLORS, SUBSCRIPTION_PLANS, TRIAL_SCAN_LIMIT} from '@/shared/utils/constants';
+import {
+  COLORS,
+  SUBSCRIPTION_PLANS,
+  TRIAL_SCAN_LIMIT,
+} from '@/shared/utils/constants';
 import {formatDate} from '@/shared/utils/helpers';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -47,15 +51,14 @@ function SettingItem({
       activeOpacity={onPress ? 0.7 : 1}>
       <Text style={styles.settingIcon}>{icon}</Text>
       <View style={styles.settingContent}>
-        <Text style={[styles.settingTitle, danger && styles.settingTitleDanger]}>
+        <Text
+          style={[styles.settingTitle, danger && styles.settingTitleDanger]}>
           {title}
         </Text>
         {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
       </View>
       {rightElement}
-      {showArrow && onPress && (
-        <Text style={styles.settingArrow}>›</Text>
-      )}
+      {showArrow && onPress && <Text style={styles.settingArrow}>›</Text>}
     </TouchableOpacity>
   );
 }
@@ -86,8 +89,8 @@ export function SettingsScreen() {
   const notificationsEnabled = profile?.notificationsEnabled ?? true;
   const priceAlertsEnabled = profile?.priceAlertsEnabled ?? true;
 
-  const currentPlan = subscription?.planId 
-    ? SUBSCRIPTION_PLANS[subscription.planId] 
+  const currentPlan = subscription?.planId
+    ? SUBSCRIPTION_PLANS[subscription.planId]
     : SUBSCRIPTION_PLANS.free;
 
   const trialRemaining = Math.max(0, TRIAL_SCAN_LIMIT - trialScansUsed);
@@ -109,20 +112,16 @@ export function SettingsScreen() {
   };
 
   const handleSignOut = () => {
-    Alert.alert(
-      'Déconnexion',
-      'Êtes-vous sûr de vouloir vous déconnecter ?',
-      [
-        {text: 'Annuler', style: 'cancel'},
-        {
-          text: 'Déconnecter',
-          style: 'destructive',
-          onPress: async () => {
-            await signOut();
-          },
+    Alert.alert('Déconnexion', 'Êtes-vous sûr de vouloir vous déconnecter ?', [
+      {text: 'Annuler', style: 'cancel'},
+      {
+        text: 'Déconnecter',
+        style: 'destructive',
+        onPress: async () => {
+          await signOut();
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleDeleteData = () => {
@@ -136,15 +135,20 @@ export function SettingsScreen() {
           style: 'destructive',
           onPress: () => {
             // TODO: Implement data deletion
-            Alert.alert('Données supprimées', 'Toutes vos données ont été supprimées.');
+            Alert.alert(
+              'Données supprimées',
+              'Toutes vos données ont été supprimées.',
+            );
           },
         },
-      ]
+      ],
     );
   };
 
   const handleContactSupport = () => {
-    Linking.openURL('mailto:support@goshopperai.com?subject=Support Prix Tracker');
+    Linking.openURL(
+      'mailto:support@goshopperai.com?subject=Support Prix Tracker',
+    );
   };
 
   const handleRateApp = () => {
@@ -162,10 +166,9 @@ export function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}>
-
         {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.profileAvatar}>
@@ -175,9 +178,7 @@ export function SettingsScreen() {
             <Text style={styles.profileName}>
               {user?.displayName || 'Utilisateur'}
             </Text>
-            <Text style={styles.profileId}>
-              ID: {user?.id?.slice(0, 8)}...
-            </Text>
+            <Text style={styles.profileId}>ID: {user?.id?.slice(0, 8)}...</Text>
           </View>
         </View>
 
@@ -188,36 +189,39 @@ export function SettingsScreen() {
           activeOpacity={0.9}>
           <View style={styles.subscriptionHeader}>
             <View style={styles.subscriptionBadge}>
-              <Text style={styles.subscriptionBadgeText}>{currentPlan.name}</Text>
+              <Text style={styles.subscriptionBadgeText}>
+                {currentPlan.name}
+              </Text>
             </View>
             <Text style={styles.subscriptionArrow}>›</Text>
           </View>
-          
+
           {subscription?.planId === 'free' ? (
             <View style={styles.trialProgress}>
               <Text style={styles.trialText}>
                 Essai: {trialRemaining}/{TRIAL_SCAN_LIMIT} scans restants
               </Text>
               <View style={styles.trialBar}>
-                <View 
+                <View
                   style={[
-                    styles.trialBarFill, 
-                    {width: `${(trialRemaining / TRIAL_SCAN_LIMIT) * 100}%`}
-                  ]} 
+                    styles.trialBarFill,
+                    {width: `${(trialRemaining / TRIAL_SCAN_LIMIT) * 100}%`},
+                  ]}
                 />
               </View>
             </View>
           ) : (
             <Text style={styles.subscriptionExpiry}>
-              Expire le: {subscription?.expiryDate 
-                ? formatDate(subscription.expiryDate) 
+              Expire le:{' '}
+              {subscription?.expiryDate
+                ? formatDate(subscription.expiryDate)
                 : 'Illimité'}
             </Text>
           )}
-          
+
           <Text style={styles.upgradeText}>
-            {subscription?.planId === 'premium' 
-              ? 'Gérer mon abonnement' 
+            {subscription?.planId === 'premium'
+              ? 'Gérer mon abonnement'
               : 'Passer à Premium →'}
           </Text>
         </TouchableOpacity>
@@ -233,7 +237,10 @@ export function SettingsScreen() {
               <Switch
                 value={isDarkMode}
                 onValueChange={toggleTheme}
-                trackColor={{false: COLORS.gray[200], true: COLORS.primary[300]}}
+                trackColor={{
+                  false: COLORS.gray[200],
+                  true: COLORS.primary[300],
+                }}
                 thumbColor={isDarkMode ? COLORS.primary[500] : '#ffffff'}
               />
             }
@@ -247,8 +254,13 @@ export function SettingsScreen() {
               <Switch
                 value={notificationsEnabled}
                 onValueChange={handleToggleNotifications}
-                trackColor={{false: COLORS.gray[200], true: COLORS.primary[300]}}
-                thumbColor={notificationsEnabled ? COLORS.primary[500] : '#ffffff'}
+                trackColor={{
+                  false: COLORS.gray[200],
+                  true: COLORS.primary[300],
+                }}
+                thumbColor={
+                  notificationsEnabled ? COLORS.primary[500] : '#ffffff'
+                }
               />
             }
           />
@@ -261,8 +273,13 @@ export function SettingsScreen() {
               <Switch
                 value={priceAlertsEnabled}
                 onValueChange={handleTogglePriceAlerts}
-                trackColor={{false: COLORS.gray[200], true: COLORS.primary[300]}}
-                thumbColor={priceAlertsEnabled ? COLORS.primary[500] : '#ffffff'}
+                trackColor={{
+                  false: COLORS.gray[200],
+                  true: COLORS.primary[300],
+                }}
+                thumbColor={
+                  priceAlertsEnabled ? COLORS.primary[500] : '#ffffff'
+                }
               />
             }
           />

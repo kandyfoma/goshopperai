@@ -18,39 +18,39 @@ export interface Receipt {
   imageUrl?: string;
   imageUrls?: string[]; // For multi-page receipts
   thumbnailUrl?: string;
-  
+
   // Store information
   storeName: string;
   storeNameNormalized: string;
   storeAddress?: string;
   storePhone?: string;
   city?: string; // City where the purchase was made
-  
+
   // Receipt details
   receiptNumber?: string;
   date: Date;
   purchaseDate?: Date; // Alias for date
   currency: 'USD' | 'CDF';
-  
+
   // Items and totals
   items: ReceiptItem[];
   subtotal?: number;
   tax?: number;
   total: number;
   totalAmount?: number; // Alias for total
-  
+
   // Multi-currency support
   totalUSD?: number; // USD amount if receipt has both currencies
   totalCDF?: number; // CDF amount if receipt has both currencies
-  
+
   // Status
   status?: 'pending' | 'processing' | 'processed' | 'error';
   processingStatus: 'pending' | 'processing' | 'completed' | 'failed';
   errorMessage?: string;
-  
+
   // Metadata
   rawText?: string; // Original OCR text
-  
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;
@@ -78,4 +78,4 @@ export const PRODUCT_CATEGORIES = [
   'Autres', // Other
 ] as const;
 
-export type ProductCategory = typeof PRODUCT_CATEGORIES[number];
+export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];

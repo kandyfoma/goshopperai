@@ -5,6 +5,7 @@
 Receipts can be very long, especially from supermarkets with 20+ items. A standard phone camera view cannot capture the entire receipt in one photo.
 
 **Challenges:**
+
 - Receipt is longer than camera frame
 - Multiple photos may overlap or miss items
 - AI needs clear, readable images
@@ -14,12 +15,12 @@ Receipts can be very long, especially from supermarkets with 20+ items. A standa
 
 ## Solutions Overview
 
-| Approach | Pros | Cons | Recommended For |
-|----------|------|------|-----------------|
-| **Multi-Photo Capture** | Simple, reliable | User effort, merge logic | MVP |
-| **Scroll Capture** | Single action | Complex, may blur | Future |
-| **Partial + Manual** | Flexible | More user work | Fallback |
-| **Folded Capture** | Works for long receipts | Quality issues | Not recommended |
+| Approach                | Pros                    | Cons                     | Recommended For |
+| ----------------------- | ----------------------- | ------------------------ | --------------- |
+| **Multi-Photo Capture** | Simple, reliable        | User effort, merge logic | MVP             |
+| **Scroll Capture**      | Single action           | Complex, may blur        | Future          |
+| **Partial + Manual**    | Flexible                | More user work           | Fallback        |
+| **Folded Capture**      | Works for long receipts | Quality issues           | Not recommended |
 
 ---
 
@@ -34,7 +35,7 @@ Receipts can be very long, especially from supermarkets with 20+ items. A standa
 
     LONG RECEIPT                     USER CAPTURES                SYSTEM MERGES
     ────────────                     ─────────────                ────────────
-                                     
+
     ┌─────────┐                      ┌─────────┐
     │ Header  │  ◄── Photo 1 ───►   │ Photo 1 │
     │ Item 1  │                      │   ✓     │
@@ -161,7 +162,7 @@ interface ScanPhoto {
   photoId: string;
   imageUri: string;
   imageBase64?: string;
-  order: number;              // 1, 2, 3...
+  order: number; // 1, 2, 3...
   status: 'pending' | 'processing' | 'parsed' | 'failed';
   parsedData?: Partial<ParsedInvoice>;
 }
@@ -170,24 +171,29 @@ interface ScanPhoto {
 #### Processing Algorithm
 
 ```typescript
-async function processMultiPhotoScan(photos: ScanPhoto[]): Promise<ParsedInvoice> {
+async function processMultiPhotoScan(
+  photos: ScanPhoto[],
+): Promise<ParsedInvoice> {
   // Step 1: Parse each photo individually
   const parsedPhotos = await Promise.all(
-    photos.map(photo => geminiClient.parseInvoice(photo.imageBase64))
+    photos.map(photo => geminiClient.parseInvoice(photo.imageBase64)),
   );
-  
+
   // Step 2: Extract header info from first photo
   const headerInfo = extractHeader(parsedPhotos[0]);
-  
+
   // Step 3: Merge all items, removing duplicates
   const allItems = mergeItems(parsedPhotos);
-  
+
   // Step 4: Get total from last photo (usually contains total)
   const totalInfo = extractTotal(parsedPhotos[parsedPhotos.length - 1]);
-  
+
   // Step 5: Validate totals match
-  const calculatedTotal = allItems.reduce((sum, item) => sum + item.totalPrice, 0);
-  
+  const calculatedTotal = allItems.reduce(
+    (sum, item) => sum + item.totalPrice,
+    0,
+  );
+
   return {
     shopName: headerInfo.shopName,
     shopAddress: headerInfo.shopAddress,
@@ -201,28 +207,26 @@ async function processMultiPhotoScan(photos: ScanPhoto[]): Promise<ParsedInvoice
 function mergeItems(parsedPhotos: ParseResult[]): ParsedItem[] {
   const allItems: ParsedItem[] = [];
   const seenItems = new Set<string>();
-  
+
   for (const photo of parsedPhotos) {
     if (!photo.data?.items) continue;
-    
+
     for (const item of photo.data.items) {
       // Create unique key for deduplication
       const key = normalizeForComparison(item.name) + '_' + item.totalPrice;
-      
+
       if (!seenItems.has(key)) {
         seenItems.add(key);
         allItems.push(item);
       }
     }
   }
-  
+
   return allItems;
 }
 
 function normalizeForComparison(name: string): string {
-  return name.toLowerCase()
-    .replace(/\s+/g, '')
-    .replace(/[^\w]/g, '');
+  return name.toLowerCase().replace(/\s+/g, '').replace(/[^\w]/g, '');
 }
 ```
 
@@ -297,12 +301,12 @@ async function captureScrollFrames(videoUri: string): Promise<string[]> {
   const frames: string[] = [];
   const duration = await getVideoDuration(videoUri);
   const frameInterval = 500; // ms
-  
+
   for (let time = 0; time < duration; time += frameInterval) {
     const frame = await extractFrame(videoUri, time);
     frames.push(frame);
   }
-  
+
   return frames;
 }
 
@@ -313,16 +317,18 @@ async function stitchFrames(frames: string[]): Promise<string> {
   // 2. Align frames vertically
   // 3. Blend seams
   // 4. Output single long image
-  
+
   return stitchedImageBase64;
 }
 ```
 
 **Pros:**
+
 - Single, fluid action
 - No manual "add more" steps
 
 **Cons:**
+
 - Requires steady hand
 - Motion blur risk
 - Complex stitching logic
@@ -367,27 +373,29 @@ When scanning fails or receipt is illegible, allow manual entry:
 
 ## Edge Cases & Handling
 
-| Scenario | Handling |
-|----------|----------|
-| Photos have no overlap | Warn user; may have gaps |
-| Same item in multiple photos | Deduplicate by name+price |
-| Header in photo 2 (not 1) | Check all photos for header |
-| Total not visible | Calculate from items |
-| Very blurry section | Skip items; warn user |
-| 10+ photos | Allow but warn about processing time |
-| Duplicate totals | Use total from last photo |
+| Scenario                     | Handling                             |
+| ---------------------------- | ------------------------------------ |
+| Photos have no overlap       | Warn user; may have gaps             |
+| Same item in multiple photos | Deduplicate by name+price            |
+| Header in photo 2 (not 1)    | Check all photos for header          |
+| Total not visible            | Calculate from items                 |
+| Very blurry section          | Skip items; warn user                |
+| 10+ photos                   | Allow but warn about processing time |
+| Duplicate totals             | Use total from last photo            |
 
 ---
 
 ## UX Guidelines
 
 ### Do's ✅
+
 - Guide user on how much overlap to include
 - Show progress clearly
 - Allow retaking individual photos
 - Summarize what was extracted before final save
 
 ### Don'ts ❌
+
 - Force user to count items beforehand
 - Timeout too quickly during processing
 - Delete photos on failure (allow retry)
@@ -397,15 +405,15 @@ When scanning fails or receipt is illegible, allow manual entry:
 
 ## Implementation Priority
 
-| Phase | Feature | Effort |
-|-------|---------|--------|
-| **MVP** | Multi-photo capture (2-5 photos) | Medium |
-| **MVP** | Merge algorithm | Medium |
-| **MVP** | Manual entry fallback | Low |
-| **v1.1** | Overlap detection/guidance | Medium |
-| **v1.2** | Scroll capture mode | High |
-| **v2.0** | AI-powered stitching | High |
+| Phase    | Feature                          | Effort |
+| -------- | -------------------------------- | ------ |
+| **MVP**  | Multi-photo capture (2-5 photos) | Medium |
+| **MVP**  | Merge algorithm                  | Medium |
+| **MVP**  | Manual entry fallback            | Low    |
+| **v1.1** | Overlap detection/guidance       | Medium |
+| **v1.2** | Scroll capture mode              | High   |
+| **v2.0** | AI-powered stitching             | High   |
 
 ---
 
-*See also: [User Flows - Scanning](./USER_FLOWS.md#flow-2-invoice-scanning-core-feature)*
+_See also: [User Flows - Scanning](./USER_FLOWS.md#flow-2-invoice-scanning-core-feature)_

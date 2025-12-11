@@ -4,25 +4,17 @@ module.exports = {
     es6: true,
     node: true,
   },
-  extends: [
-    'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-  ],
+  extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     project: ['tsconfig.json'],
     sourceType: 'module',
   },
-  ignorePatterns: [
-    '/lib/**/*',
-    '.eslintrc.js',
-  ],
-  plugins: [
-    '@typescript-eslint',
-  ],
+  ignorePatterns: ['/lib/**/*', '.eslintrc.js'],
+  plugins: ['@typescript-eslint'],
   rules: {
     '@typescript-eslint/no-explicit-any': 'warn',
-    'quotes': ['error', 'single'],
-    'semi': ['error', 'always'],
+    quotes: ['error', 'single'],
+    semi: ['error', 'always'],
   },
 };

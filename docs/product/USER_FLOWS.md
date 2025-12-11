@@ -7,6 +7,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ## User Personas
 
 ### Primary: Marie - Cost-Conscious Shopper
+
 - **Age**: 28-45
 - **Location**: Kinshasa, DRC
 - **Goals**: Track family spending, find best prices
@@ -14,6 +15,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 - **Device**: Android smartphone (mid-range)
 
 ### Secondary: Jean - Small Business Owner
+
 - **Age**: 35-55
 - **Location**: Gombe, Kinshasa
 - **Goals**: Track business expenses, compare supplier prices
@@ -35,6 +37,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ### Screen Details
 
 #### 1.1 Splash Screen (2 seconds)
+
 - App logo centered
 - App name: "Invoice Intelligence"
 - Tagline: "Track. Compare. Save."
@@ -43,6 +46,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 #### 1.2 Welcome Screens (Swipeable, 3 screens)
 
 **Screen A: Scan**
+
 ```
 ┌────────────────────────┐
 │                        │
@@ -62,6 +66,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ```
 
 **Screen B: Compare**
+
 ```
 ┌────────────────────────┐
 │                        │
@@ -81,6 +86,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ```
 
 **Screen C: Save**
+
 ```
 ┌────────────────────────┐
 │                        │
@@ -100,6 +106,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ```
 
 #### 1.3 Anonymous Sign-in
+
 - Happens automatically in background
 - No user interaction required
 - Shows brief loading state if needed
@@ -124,6 +131,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ### Screen Details
 
 #### 2.1 Camera Screen
+
 ```
 ┌────────────────────────┐
 │ [←]              [⚡]  │  <- Back, Flash toggle
@@ -147,12 +155,14 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ```
 
 **Interactions:**
+
 - Flash toggle (auto/on/off)
 - Capture button (large, prominent)
 - Gallery picker option
 - Back button to cancel
 
 #### 2.2 Processing Screen
+
 ```
 ┌────────────────────────┐
 │                        │
@@ -172,11 +182,13 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ```
 
 **States:**
+
 - Uploading image...
 - Analyzing receipt...
 - Extracting items...
 
 #### 2.3 Validation Screen (Critical)
+
 ```
 ┌────────────────────────┐
 │ [←]        Review      │
@@ -205,6 +217,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ```
 
 **Features:**
+
 - All fields are editable
 - Delete items (swipe or trash icon)
 - Add new items manually
@@ -213,6 +226,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 - Confidence indicator (optional)
 
 #### 2.4 Success Screen
+
 ```
 ┌────────────────────────┐
 │                        │
@@ -247,6 +261,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ### Screen Details
 
 #### 3.1 Comparison List Screen
+
 ```
 ┌────────────────────────┐
 │      Compare Prices    │
@@ -280,6 +295,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ```
 
 **Features:**
+
 - Search by item name
 - Category filter chips
 - Best price highlighted with star
@@ -287,6 +303,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 - Tap for details
 
 #### 3.2 Item Detail Screen
+
 ```
 ┌────────────────────────┐
 │ [←]    Cooking Oil     │
@@ -366,6 +383,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ## Flow 5: Subscription/Paywall
 
 ### Trigger Points
+
 1. After 5th scan (trial exhausted)
 2. Attempting 6th scan
 3. Tapping "Upgrade" in settings
@@ -380,6 +398,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ### Screen Details
 
 #### 5.1 Paywall Screen
+
 ```
 ┌────────────────────────┐
 │        [✕]             │
@@ -413,6 +432,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ```
 
 #### 5.2 Payment Screen
+
 ```
 ┌────────────────────────┐
 │ [←]        Payment     │
@@ -441,6 +461,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ```
 
 #### 5.3 Payment Confirmation (Mobile Money)
+
 ```
 ┌────────────────────────┐
 │                        │
@@ -466,6 +487,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ```
 
 #### 5.4 Success Screen
+
 ```
 ┌────────────────────────┐
 │                        │
@@ -492,6 +514,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ## Flow 6: Trial Status Indicator
 
 ### UI Component (Always Visible)
+
 ```
 # During Trial (in header or floating)
 ┌────────────────────────┐
@@ -516,6 +539,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ## Error States
 
 ### Scan Failed
+
 ```
 ┌────────────────────────┐
 │                        │
@@ -537,6 +561,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ```
 
 ### No Internet
+
 ```
 ┌────────────────────────┐
 │                        │
@@ -557,6 +582,7 @@ This document describes the key user journeys through Invoice Intelligence, incl
 ```
 
 ### Payment Failed
+
 ```
 ┌────────────────────────┐
 │                        │
@@ -613,4 +639,4 @@ App
 
 ---
 
-*Next: [Features Specification](./FEATURES.md)*
+_Next: [Features Specification](./FEATURES.md)_

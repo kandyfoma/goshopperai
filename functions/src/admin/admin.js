@@ -6,15 +6,15 @@
 
 const admin = require('firebase-admin');
 const readline = require('readline');
-const { config } = require('../config');
+const {config} = require('../config');
 
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout
+  output: process.stdout,
 });
 
 function question(prompt) {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     rl.question(prompt, resolve);
   });
 }
@@ -28,13 +28,13 @@ class FirebaseAdmin {
         const serviceAccount = require('./serviceAccountKey.json');
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
-          projectId: config.app.id
+          projectId: config.app.id,
         });
         console.log('✅ Firebase initialized with service account');
       } catch (error) {
         // Fallback to default credentials
         admin.initializeApp({
-          projectId: config.app.id || 'your-firebase-project-id'
+          projectId: config.app.id || 'your-firebase-project-id',
         });
         console.log('⚠️ Firebase initialized with default credentials');
       }
@@ -118,7 +118,11 @@ class FirebaseAdmin {
       console.log(`Found ${users.users.length} users:`);
 
       users.users.forEach(user => {
-        console.log(`- ${user.uid}: ${user.email || user.phoneNumber} (${user.displayName || 'No name'})`);
+        console.log(
+          `- ${user.uid}: ${user.email || user.phoneNumber} (${
+            user.displayName || 'No name'
+          })`,
+        );
       });
     } catch (error) {
       console.error('Error listing users:', error);
@@ -140,7 +144,9 @@ class FirebaseAdmin {
       console.log(`Last Sign In: ${user.metadata.lastSignInTime}`);
 
       // Get user profile data
-      const userDoc = await this.db.doc(`artifacts/${config.app.id}/users/${userId}`).get();
+      const userDoc = await this.db
+        .doc(`artifacts/${config.app.id}/users/${userId}`)
+        .get();
       if (userDoc.exists) {
         const profile = userDoc.data();
         console.log('\n📊 Profile Data:');
@@ -150,9 +156,10 @@ class FirebaseAdmin {
       }
 
       // Count receipts
-      const receiptsSnapshot = await this.db.collection(`artifacts/${config.app.id}/users/${userId}/receipts`).get();
+      const receiptsSnapshot = await this.db
+        .collection(`artifacts/${config.app.id}/users/${userId}/receipts`)
+        .get();
       console.log(`Receipts: ${receiptsSnapshot.size}`);
-
     } catch (error) {
       console.error('Error viewing user:', error);
     }
@@ -160,8 +167,12 @@ class FirebaseAdmin {
 
   async deleteUser() {
     try {
-      const userId = await question('Enter user ID to DELETE (this cannot be undone): ');
-      const confirm = await question(`Are you sure you want to delete user ${userId}? Type 'YES' to confirm: `);
+      const userId = await question(
+        'Enter user ID to DELETE (this cannot be undone): ',
+      );
+      const confirm = await question(
+        `Are you sure you want to delete user ${userId}? Type 'YES' to confirm: `,
+      );
 
       if (confirm !== 'YES') {
         console.log('Deletion cancelled.');
@@ -175,7 +186,6 @@ class FirebaseAdmin {
       await this.auth.deleteUser(userId);
 
       console.log(`✅ User ${userId} deleted successfully.`);
-
     } catch (error) {
       console.error('Error deleting user:', error);
     }
@@ -185,19 +195,27 @@ class FirebaseAdmin {
     const batch = this.db.batch();
 
     // Delete receipts
-    const receipts = await this.db.collection(`artifacts/${config.app.id}/users/${userId}/receipts`).get();
+    const receipts = await this.db
+      .collection(`artifacts/${config.app.id}/users/${userId}/receipts`)
+      .get();
     receipts.docs.forEach(doc => batch.delete(doc.ref));
 
     // Delete price alerts
-    const alerts = await this.db.collection(`artifacts/${config.app.id}/users/${userId}/priceAlerts`).get();
+    const alerts = await this.db
+      .collection(`artifacts/${config.app.id}/users/${userId}/priceAlerts`)
+      .get();
     alerts.docs.forEach(doc => batch.delete(doc.ref));
 
     // Delete shopping lists
-    const lists = await this.db.collection(`artifacts/${config.app.id}/users/${userId}/shoppingLists`).get();
+    const lists = await this.db
+      .collection(`artifacts/${config.app.id}/users/${userId}/shoppingLists`)
+      .get();
     lists.docs.forEach(doc => batch.delete(doc.ref));
 
     // Delete savings profile
-    const profileRef = this.db.doc(`artifacts/${config.app.id}/users/${userId}`);
+    const profileRef = this.db.doc(
+      `artifacts/${config.app.id}/users/${userId}`,
+    );
     batch.delete(profileRef);
 
     await batch.commit();
@@ -216,9 +234,12 @@ class FirebaseAdmin {
       console.log(`\n🧾 Recent receipts for user ${userId}:`);
       receipts.docs.forEach(doc => {
         const data = doc.data();
-        console.log(`- ${doc.id}: ${data.storeName} - $${data.total} (${data.date?.toDate()?.toLocaleDateString()})`);
+        console.log(
+          `- ${doc.id}: ${data.storeName} - $${data.total} (${data.date
+            ?.toDate()
+            ?.toLocaleDateString()})`,
+        );
       });
-
     } catch (error) {
       console.error('Error listing receipts:', error);
     }
@@ -229,9 +250,10 @@ class FirebaseAdmin {
       const userId = await question('Enter user ID: ');
       const receiptId = await question('Enter receipt ID to delete: ');
 
-      await this.db.doc(`artifacts/${config.app.id}/users/${userId}/receipts/${receiptId}`).delete();
+      await this.db
+        .doc(`artifacts/${config.app.id}/users/${userId}/receipts/${receiptId}`)
+        .delete();
       console.log(`✅ Receipt ${receiptId} deleted.`);
-
     } catch (error) {
       console.error('Error deleting receipt:', error);
     }
@@ -248,9 +270,12 @@ class FirebaseAdmin {
 
       prices.docs.forEach(doc => {
         const data = doc.data();
-        console.log(`- ${data.productName}: $${data.price} at ${data.storeName} (${data.recordedAt?.toDate()?.toLocaleDateString()})`);
+        console.log(
+          `- ${data.productName}: $${data.price} at ${
+            data.storeName
+          } (${data.recordedAt?.toDate()?.toLocaleDateString()})`,
+        );
       });
-
     } catch (error) {
       console.error('Error viewing price data:', error);
     }
@@ -258,7 +283,9 @@ class FirebaseAdmin {
 
   async clearTestData() {
     try {
-      const confirm = await question('This will delete ALL test data. Type "DELETE_ALL_TEST_DATA" to confirm: ');
+      const confirm = await question(
+        'This will delete ALL test data. Type "DELETE_ALL_TEST_DATA" to confirm: ',
+      );
 
       if (confirm !== 'DELETE_ALL_TEST_DATA') {
         console.log('Operation cancelled.');
@@ -269,8 +296,9 @@ class FirebaseAdmin {
 
       // This is a simplified version - in production you'd want more sophisticated filtering
       // For now, just show what would be done
-      console.log('⚠️  This is a placeholder. Implement specific test data filtering logic.');
-
+      console.log(
+        '⚠️  This is a placeholder. Implement specific test data filtering logic.',
+      );
     } catch (error) {
       console.error('Error clearing test data:', error);
     }
@@ -281,8 +309,12 @@ class FirebaseAdmin {
       const userId = await question('Enter user ID to export: ');
 
       const user = await this.auth.getUser(userId);
-      const profile = await this.db.doc(`artifacts/${config.app.id}/users/${userId}`).get();
-      const receipts = await this.db.collection(`artifacts/${config.app.id}/users/${userId}/receipts`).get();
+      const profile = await this.db
+        .doc(`artifacts/${config.app.id}/users/${userId}`)
+        .get();
+      const receipts = await this.db
+        .collection(`artifacts/${config.app.id}/users/${userId}/receipts`)
+        .get();
 
       const exportData = {
         user: {
@@ -290,15 +322,14 @@ class FirebaseAdmin {
           email: user.email,
           phoneNumber: user.phoneNumber,
           displayName: user.displayName,
-          metadata: user.metadata
+          metadata: user.metadata,
         },
         profile: profile.data(),
-        receipts: receipts.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+        receipts: receipts.docs.map(doc => ({id: doc.id, ...doc.data()})),
       };
 
       console.log('\n📤 User Data Export:');
       console.log(JSON.stringify(exportData, null, 2));
-
     } catch (error) {
       console.error('Error exporting user data:', error);
     }
@@ -325,8 +356,11 @@ class FirebaseAdmin {
 
       // Count price alerts
       const alerts = await this.db.collectionGroup('priceAlerts').get();
-      console.log(`Active Price Alerts: ${alerts.docs.filter(doc => doc.data().isActive).length}`);
-
+      console.log(
+        `Active Price Alerts: ${
+          alerts.docs.filter(doc => doc.data().isActive).length
+        }`,
+      );
     } catch (error) {
       console.error('Error running analytics:', error);
     }
@@ -354,12 +388,11 @@ class FirebaseAdmin {
         data: {
           type: 'admin_broadcast',
           sentAt: new Date().toISOString(),
-        }
+        },
       });
 
       console.log('✅ Broadcast sent successfully!');
       console.log(`Sent to ${result.data.sentCount} users`);
-
     } catch (error) {
       console.error('Error sending broadcast:', error);
     }
@@ -389,11 +422,10 @@ class FirebaseAdmin {
         data: {
           type: 'admin_broadcast',
           sentAt: new Date().toISOString(),
-        }
+        },
       });
 
       console.log('✅ Notification sent successfully!');
-
     } catch (error) {
       console.error('Error sending notification:', error);
     }
@@ -410,8 +442,8 @@ class FirebaseAdmin {
       data: {
         success: true,
         sentCount: Math.floor(Math.random() * 100) + 1,
-        message: 'Notification sent successfully'
-      }
+        message: 'Notification sent successfully',
+      },
     };
   }
 }

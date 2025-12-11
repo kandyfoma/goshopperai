@@ -35,7 +35,9 @@ export function ShoppingListScreen() {
   const [newItemName, setNewItemName] = useState('');
   const [newItemQuantity, setNewItemQuantity] = useState('1');
   const [isCreating, setIsCreating] = useState(false);
-  const [optimization, setOptimization] = useState<OptimizationResult | null>(null);
+  const [optimization, setOptimization] = useState<OptimizationResult | null>(
+    null,
+  );
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
   // Load shopping lists
@@ -46,11 +48,11 @@ export function ShoppingListScreen() {
 
   const loadLists = async () => {
     if (!user?.uid) return;
-    
+
     try {
       const loadedLists = await shoppingListService.getLists(user.uid);
       setLists(loadedLists);
-      
+
       if (loadedLists.length > 0 && !selectedList) {
         setSelectedList(loadedLists[0]);
       }
@@ -63,7 +65,7 @@ export function ShoppingListScreen() {
 
   const loadSuggestions = async () => {
     if (!user?.uid) return;
-    
+
     try {
       const items = await shoppingListService.getQuickSuggestions(user.uid);
       setSuggestions(items);
@@ -74,10 +76,13 @@ export function ShoppingListScreen() {
 
   const handleCreateList = useCallback(async () => {
     if (!user?.uid || !newListName.trim()) return;
-    
+
     setIsCreating(true);
     try {
-      const list = await shoppingListService.createList(user.uid, newListName.trim());
+      const list = await shoppingListService.createList(
+        user.uid,
+        newListName.trim(),
+      );
       setLists(prev => [list, ...prev]);
       setSelectedList(list);
       setShowNewListModal(false);
@@ -92,68 +97,82 @@ export function ShoppingListScreen() {
 
   const handleAddItem = useCallback(async () => {
     if (!user?.uid || !selectedList || !newItemName.trim()) return;
-    
+
     setIsCreating(true);
     try {
-      const item = await shoppingListService.addItem(user.uid, selectedList.id, {
-        name: newItemName.trim(),
-        quantity: parseInt(newItemQuantity) || 1,
-      });
-      
+      const item = await shoppingListService.addItem(
+        user.uid,
+        selectedList.id,
+        {
+          name: newItemName.trim(),
+          quantity: parseInt(newItemQuantity) || 1,
+        },
+      );
+
       // Refresh list
-      const updatedList = await shoppingListService.getList(user.uid, selectedList.id);
+      const updatedList = await shoppingListService.getList(
+        user.uid,
+        selectedList.id,
+      );
       if (updatedList) {
         setSelectedList(updatedList);
-        setLists(prev => prev.map(l => l.id === updatedList.id ? updatedList : l));
+        setLists(prev =>
+          prev.map(l => (l.id === updatedList.id ? updatedList : l)),
+        );
       }
-      
+
       setShowAddItemModal(false);
       setNewItemName('');
       setNewItemQuantity('1');
     } catch (error) {
       console.error('Add item error:', error);
-      Alert.alert('Erreur', 'Impossible d\'ajouter l\'article');
+      Alert.alert('Erreur', "Impossible d'ajouter l'article");
     } finally {
       setIsCreating(false);
     }
   }, [user?.uid, selectedList, newItemName, newItemQuantity]);
 
-  const handleToggleItem = useCallback(async (itemId: string) => {
-    if (!user?.uid || !selectedList) return;
-    
-    try {
-      await shoppingListService.toggleItem(user.uid, selectedList.id, itemId);
-      
-      // Update local state
-      setSelectedList(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          items: prev.items.map(item =>
-            item.id === itemId ? {...item, isChecked: !item.isChecked} : item
-          ),
-        };
-      });
-    } catch (error) {
-      console.error('Toggle item error:', error);
-    }
-  }, [user?.uid, selectedList]);
+  const handleToggleItem = useCallback(
+    async (itemId: string) => {
+      if (!user?.uid || !selectedList) return;
 
-  const handleRemoveItem = useCallback(async (itemId: string) => {
-    if (!user?.uid || !selectedList) return;
-    
-    Alert.alert(
-      'Supprimer ?',
-      'Supprimer cet article de la liste ?',
-      [
+      try {
+        await shoppingListService.toggleItem(user.uid, selectedList.id, itemId);
+
+        // Update local state
+        setSelectedList(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            items: prev.items.map(item =>
+              item.id === itemId ? {...item, isChecked: !item.isChecked} : item,
+            ),
+          };
+        });
+      } catch (error) {
+        console.error('Toggle item error:', error);
+      }
+    },
+    [user?.uid, selectedList],
+  );
+
+  const handleRemoveItem = useCallback(
+    async (itemId: string) => {
+      if (!user?.uid || !selectedList) return;
+
+      Alert.alert('Supprimer ?', 'Supprimer cet article de la liste ?', [
         {text: 'Annuler', style: 'cancel'},
         {
           text: 'Supprimer',
           style: 'destructive',
           onPress: async () => {
             try {
-              await shoppingListService.removeItem(user.uid, selectedList.id, itemId);
-              
+              await shoppingListService.removeItem(
+                user.uid,
+                selectedList.id,
+                itemId,
+              );
+
               setSelectedList(prev => {
                 if (!prev) return prev;
                 return {
@@ -166,26 +185,33 @@ export function ShoppingListScreen() {
             }
           },
         },
-      ],
-    );
-  }, [user?.uid, selectedList]);
+      ]);
+    },
+    [user?.uid, selectedList],
+  );
 
   const handleOptimize = useCallback(async () => {
     if (!user?.uid || !selectedList) return;
-    
+
     setIsLoading(true);
     try {
-      const result = await shoppingListService.optimizeList(user.uid, selectedList.id);
+      const result = await shoppingListService.optimizeList(
+        user.uid,
+        selectedList.id,
+      );
       setOptimization(result);
-      
+
       // Refresh list
-      const updatedList = await shoppingListService.getList(user.uid, selectedList.id);
+      const updatedList = await shoppingListService.getList(
+        user.uid,
+        selectedList.id,
+      );
       if (updatedList) {
         setSelectedList(updatedList);
       }
     } catch (error) {
       console.error('Optimize error:', error);
-      Alert.alert('Erreur', 'Impossible d\'optimiser la liste');
+      Alert.alert('Erreur', "Impossible d'optimiser la liste");
     } finally {
       setIsLoading(false);
     }
@@ -201,13 +227,12 @@ export function ShoppingListScreen() {
       <TouchableOpacity
         style={styles.checkBox}
         onPress={() => handleToggleItem(item.id)}>
-        <Text style={styles.checkBoxText}>
-          {item.isChecked ? '✓' : '○'}
-        </Text>
+        <Text style={styles.checkBoxText}>{item.isChecked ? '✓' : '○'}</Text>
       </TouchableOpacity>
-      
+
       <View style={styles.itemInfo}>
-        <Text style={[styles.itemName, item.isChecked && styles.itemNameChecked]}>
+        <Text
+          style={[styles.itemName, item.isChecked && styles.itemNameChecked]}>
           {item.name}
         </Text>
         <View style={styles.itemDetails}>
@@ -219,7 +244,7 @@ export function ShoppingListScreen() {
           )}
         </View>
       </View>
-      
+
       <TouchableOpacity
         style={styles.removeButton}
         onPress={() => handleRemoveItem(item.id)}>
@@ -254,8 +279,8 @@ export function ShoppingListScreen() {
 
       {/* List Selector */}
       {lists.length > 0 && (
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           style={styles.listSelector}
           showsHorizontalScrollIndicator={false}>
           {lists.map(list => (
@@ -266,10 +291,11 @@ export function ShoppingListScreen() {
                 selectedList?.id === list.id && styles.listTabActive,
               ]}
               onPress={() => setSelectedList(list)}>
-              <Text style={[
-                styles.listTabText,
-                selectedList?.id === list.id && styles.listTabTextActive,
-              ]}>
+              <Text
+                style={[
+                  styles.listTabText,
+                  selectedList?.id === list.id && styles.listTabTextActive,
+                ]}>
                 {list.name}
               </Text>
               <Text style={styles.listTabCount}>
@@ -288,9 +314,7 @@ export function ShoppingListScreen() {
             <View style={styles.savingsCard}>
               <Text style={styles.savingsIcon}>💰</Text>
               <View style={styles.savingsInfo}>
-                <Text style={styles.savingsTitle}>
-                  Économies potentielles
-                </Text>
+                <Text style={styles.savingsTitle}>Économies potentielles</Text>
                 <Text style={styles.savingsAmount}>
                   ${selectedList.potentialSavings.toFixed(2)}
                 </Text>
@@ -388,7 +412,7 @@ export function ShoppingListScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Nouvelle Liste</Text>
             <Text style={styles.modalSubtitle}>Oyo ya sika</Text>
-            
+
             <TextInput
               style={styles.modalInput}
               value={newListName}
@@ -397,14 +421,14 @@ export function ShoppingListScreen() {
               placeholderTextColor={COLORS.gray[400]}
               autoFocus
             />
-            
+
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalCancelButton}
                 onPress={() => setShowNewListModal(false)}>
                 <Text style={styles.modalCancelText}>Annuler</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[
                   styles.modalCreateButton,
@@ -433,7 +457,7 @@ export function ShoppingListScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Ajouter Article</Text>
             <Text style={styles.modalSubtitle}>Bakisa eloko</Text>
-            
+
             <TextInput
               style={styles.modalInput}
               value={newItemName}
@@ -442,12 +466,16 @@ export function ShoppingListScreen() {
               placeholderTextColor={COLORS.gray[400]}
               autoFocus
             />
-            
+
             <View style={styles.quantityContainer}>
               <Text style={styles.quantityLabel}>Quantité:</Text>
               <TouchableOpacity
                 style={styles.quantityButton}
-                onPress={() => setNewItemQuantity(String(Math.max(1, parseInt(newItemQuantity) - 1)))}>
+                onPress={() =>
+                  setNewItemQuantity(
+                    String(Math.max(1, parseInt(newItemQuantity) - 1)),
+                  )
+                }>
                 <Text style={styles.quantityButtonText}>-</Text>
               </TouchableOpacity>
               <TextInput
@@ -458,18 +486,20 @@ export function ShoppingListScreen() {
               />
               <TouchableOpacity
                 style={styles.quantityButton}
-                onPress={() => setNewItemQuantity(String(parseInt(newItemQuantity) + 1))}>
+                onPress={() =>
+                  setNewItemQuantity(String(parseInt(newItemQuantity) + 1))
+                }>
                 <Text style={styles.quantityButtonText}>+</Text>
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalCancelButton}
                 onPress={() => setShowAddItemModal(false)}>
                 <Text style={styles.modalCancelText}>Annuler</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[
                   styles.modalCreateButton,

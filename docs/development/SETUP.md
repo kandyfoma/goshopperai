@@ -8,24 +8,24 @@ This guide covers setting up the development environment for Invoice Intelligenc
 
 ### Required Software
 
-| Software | Version | Purpose |
-|----------|---------|---------|
-| Node.js | 18.x LTS | JavaScript runtime |
-| npm / yarn | Latest | Package manager |
-| Git | Latest | Version control |
-| VS Code | Latest | Recommended IDE |
-| Android Studio | Latest | Android development |
-| Xcode | 14+ | iOS development (macOS only) |
-| Java JDK | 17 | Required for Android builds |
+| Software       | Version  | Purpose                      |
+| -------------- | -------- | ---------------------------- |
+| Node.js        | 18.x LTS | JavaScript runtime           |
+| npm / yarn     | Latest   | Package manager              |
+| Git            | Latest   | Version control              |
+| VS Code        | Latest   | Recommended IDE              |
+| Android Studio | Latest   | Android development          |
+| Xcode          | 14+      | iOS development (macOS only) |
+| Java JDK       | 17       | Required for Android builds  |
 
 ### Accounts Required
 
-| Service | Purpose | Sign Up |
-|---------|---------|---------|
-| Firebase | Backend services | [console.firebase.google.com](https://console.firebase.google.com) |
-| Google Cloud | Gemini API | [console.cloud.google.com](https://console.cloud.google.com) |
-| Moko Afrika | Payments (DRC) | [mokoafrika.com/become-merchant](https://www.mokoafrika.com/en/become-merchant) |
-| Expo (optional) | Managed workflow | [expo.dev](https://expo.dev) |
+| Service         | Purpose          | Sign Up                                                                         |
+| --------------- | ---------------- | ------------------------------------------------------------------------------- |
+| Firebase        | Backend services | [console.firebase.google.com](https://console.firebase.google.com)              |
+| Google Cloud    | Gemini API       | [console.cloud.google.com](https://console.cloud.google.com)                    |
+| Moko Afrika     | Payments (DRC)   | [mokoafrika.com/become-merchant](https://www.mokoafrika.com/en/become-merchant) |
+| Expo (optional) | Managed workflow | [expo.dev](https://expo.dev)                                                    |
 
 ---
 
@@ -58,6 +58,7 @@ npm install @react-native-ml-kit/text-recognition        # Offline OCR
 Hermes provides 53% faster startup and 33% smaller bundle size.
 
 **Android** - Edit `android/app/build.gradle`:
+
 ```gradle
 project.ext.react = [
     enableHermes: true,  // Make sure this is true
@@ -65,11 +66,13 @@ project.ext.react = [
 ```
 
 **iOS** - Edit `ios/Podfile`:
+
 ```ruby
 :hermes_enabled => true,
 ```
 
 Then rebuild:
+
 ```bash
 cd ios && pod install && cd ..
 ```
@@ -198,6 +201,7 @@ The `parseReceipt` Cloud Function will proxy all Gemini calls securely. See [STA
 4. Add to `.env.development`
 
 Or via Google Cloud Console:
+
 1. Enable "Generative Language API"
 2. Create credentials > API key
 3. Restrict to Generative Language API only
@@ -249,17 +253,17 @@ npm run web
 
 ## Project Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm start` | Start Metro bundler |
-| `npm run android` | Run on Android |
-| `npm run ios` | Run on iOS |
-| `npm run web` | Run on web |
-| `npm run test` | Run unit tests |
-| `npm run lint` | Run ESLint |
-| `npm run typecheck` | Run TypeScript checks |
-| `npm run build:android` | Build Android APK |
-| `npm run build:ios` | Build iOS archive |
+| Command                    | Description            |
+| -------------------------- | ---------------------- |
+| `npm start`                | Start Metro bundler    |
+| `npm run android`          | Run on Android         |
+| `npm run ios`              | Run on iOS             |
+| `npm run web`              | Run on web             |
+| `npm run test`             | Run unit tests         |
+| `npm run lint`             | Run ESLint             |
+| `npm run typecheck`        | Run TypeScript checks  |
+| `npm run build:android`    | Build Android APK      |
+| `npm run build:ios`        | Build iOS archive      |
 | `npm run deploy:functions` | Deploy Cloud Functions |
 
 ---
@@ -271,20 +275,20 @@ npm run web
 ```typescript
 // Add to App.tsx to verify
 const isHermes = () => !!global.HermesInternal;
-console.log('Hermes enabled:', isHermes());  // Should be true
+console.log('Hermes enabled:', isHermes()); // Should be true
 ```
 
 ### Test Image Compression
 
 ```typescript
 // Test compression in dev
-import { compressReceiptImage } from '@/services/image/compression';
+import {compressReceiptImage} from '@/services/image/compression';
 
 const testCompression = async (imageUri: string) => {
   const result = await compressReceiptImage(imageUri);
   console.log(`Original: ${result.originalSize}`);
   console.log(`Compressed: ${result.compressedSize}`);
-  console.log(`Savings: ${result.savingsPercent}%`);  // Should be ~90%
+  console.log(`Savings: ${result.savingsPercent}%`); // Should be ~90%
 };
 ```
 
@@ -292,7 +296,7 @@ const testCompression = async (imageUri: string) => {
 
 ```typescript
 // Test ML Kit OCR
-import { performOnDeviceOcr } from '@/services/ocr/mlkit';
+import {performOnDeviceOcr} from '@/services/ocr/mlkit';
 
 const testOfflineOcr = async (imageUri: string) => {
   const result = await performOnDeviceOcr(imageUri);
@@ -305,7 +309,7 @@ const testOfflineOcr = async (imageUri: string) => {
 
 ```typescript
 // Test local database
-import { database } from '@/database';
+import {database} from '@/database';
 
 const testDatabase = async () => {
   const invoices = await database.get('invoices').query().fetch();
@@ -523,4 +527,4 @@ After setup is complete:
 
 ---
 
-*For deployment instructions, see [Deployment Guide](./DEPLOYMENT.md)*
+_For deployment instructions, see [Deployment Guide](./DEPLOYMENT.md)_

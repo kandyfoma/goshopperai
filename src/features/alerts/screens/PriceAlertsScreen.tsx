@@ -31,43 +31,44 @@ export function PriceAlertsScreen() {
   // Load alerts
   useEffect(() => {
     if (!user?.uid) return;
-    
-    const unsubscribe = priceAlertsService.subscribeToAlerts(user.uid, loadedAlerts => {
-      setAlerts(loadedAlerts);
-      setIsLoading(false);
-    });
-    
+
+    const unsubscribe = priceAlertsService.subscribeToAlerts(
+      user.uid,
+      loadedAlerts => {
+        setAlerts(loadedAlerts);
+        setIsLoading(false);
+      },
+    );
+
     return () => unsubscribe();
   }, [user?.uid]);
 
   const handleCreateAlert = useCallback(async () => {
     if (!user?.uid || !newProductName.trim() || !newTargetPrice) return;
-    
+
     setIsCreating(true);
     try {
       await priceAlertsService.createAlert(user.uid, {
         productName: newProductName.trim(),
         targetPrice: parseFloat(newTargetPrice),
       });
-      
+
       setShowAddModal(false);
       setNewProductName('');
       setNewTargetPrice('');
     } catch (error) {
       console.error('Create alert error:', error);
-      Alert.alert('Erreur', 'Impossible de créer l\'alerte');
+      Alert.alert('Erreur', "Impossible de créer l'alerte");
     } finally {
       setIsCreating(false);
     }
   }, [user?.uid, newProductName, newTargetPrice]);
 
-  const handleDeleteAlert = useCallback(async (alertId: string) => {
-    if (!user?.uid) return;
-    
-    Alert.alert(
-      'Supprimer l\'alerte ?',
-      'Cette action est irréversible.',
-      [
+  const handleDeleteAlert = useCallback(
+    async (alertId: string) => {
+      if (!user?.uid) return;
+
+      Alert.alert("Supprimer l'alerte ?", 'Cette action est irréversible.', [
         {text: 'Annuler', style: 'cancel'},
         {
           text: 'Supprimer',
@@ -80,26 +81,33 @@ export function PriceAlertsScreen() {
             }
           },
         },
-      ],
-    );
-  }, [user?.uid]);
+      ]);
+    },
+    [user?.uid],
+  );
 
-  const handleToggleAlert = useCallback(async (alertId: string, isActive: boolean) => {
-    if (!user?.uid) return;
-    
-    try {
-      await priceAlertsService.updateAlert(user.uid, alertId, {isActive: !isActive});
-    } catch (error) {
-      console.error('Toggle alert error:', error);
-    }
-  }, [user?.uid]);
+  const handleToggleAlert = useCallback(
+    async (alertId: string, isActive: boolean) => {
+      if (!user?.uid) return;
+
+      try {
+        await priceAlertsService.updateAlert(user.uid, alertId, {
+          isActive: !isActive,
+        });
+      } catch (error) {
+        console.error('Toggle alert error:', error);
+      }
+    },
+    [user?.uid],
+  );
 
   const renderAlertItem = ({item}: {item: PriceAlert}) => {
     const isTriggered = item.isTriggered;
     const hasPrice = item.currentLowestPrice !== undefined;
-    
+
     return (
-      <View style={[styles.alertCard, isTriggered && styles.alertCardTriggered]}>
+      <View
+        style={[styles.alertCard, isTriggered && styles.alertCardTriggered]}>
         <View style={styles.alertHeader}>
           <View style={styles.alertInfo}>
             <Text style={styles.alertProductName}>{item.productName}</Text>
@@ -107,14 +115,14 @@ export function PriceAlertsScreen() {
               Prix cible: ${item.targetPrice.toFixed(2)}
             </Text>
           </View>
-          
+
           {isTriggered && (
             <View style={styles.triggeredBadge}>
               <Text style={styles.triggeredBadgeText}>🎉 Prix atteint!</Text>
             </View>
           )}
         </View>
-        
+
         {hasPrice && (
           <View style={styles.priceInfo}>
             <Text style={styles.currentPrice}>
@@ -127,16 +135,19 @@ export function PriceAlertsScreen() {
             )}
           </View>
         )}
-        
+
         <View style={styles.alertActions}>
           <TouchableOpacity
-            style={[styles.toggleButton, !item.isActive && styles.toggleButtonInactive]}
+            style={[
+              styles.toggleButton,
+              !item.isActive && styles.toggleButtonInactive,
+            ]}
             onPress={() => handleToggleAlert(item.id, item.isActive)}>
             <Text style={styles.toggleButtonText}>
               {item.isActive ? '✓ Active' : '○ Inactive'}
             </Text>
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={() => handleDeleteAlert(item.id)}>
@@ -175,7 +186,8 @@ export function PriceAlertsScreen() {
         <View style={styles.infoTextContainer}>
           <Text style={styles.infoTitle}>Comment ça marche ?</Text>
           <Text style={styles.infoText}>
-            Définissez un prix cible pour un article. Nous vous alertons quand le prix baisse !
+            Définissez un prix cible pour un article. Nous vous alertons quand
+            le prix baisse !
           </Text>
           <Text style={styles.infoTextLingala}>
             Pesa ntalo oyo olingi. Tokoyebisa yo ntango ntalo ekokita!
@@ -219,7 +231,7 @@ export function PriceAlertsScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Nouvelle Alerte</Text>
             <Text style={styles.modalTitleLingala}>Alerte ya sika</Text>
-            
+
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Nom du produit</Text>
               <TextInput
@@ -230,7 +242,7 @@ export function PriceAlertsScreen() {
                 placeholderTextColor={COLORS.gray[400]}
               />
             </View>
-            
+
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Prix cible ($)</Text>
               <TextInput
@@ -242,21 +254,24 @@ export function PriceAlertsScreen() {
                 keyboardType="decimal-pad"
               />
             </View>
-            
+
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={() => setShowAddModal(false)}>
                 <Text style={styles.cancelButtonText}>Annuler</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[
                   styles.createButton,
-                  (!newProductName.trim() || !newTargetPrice) && styles.createButtonDisabled,
+                  (!newProductName.trim() || !newTargetPrice) &&
+                    styles.createButtonDisabled,
                 ]}
                 onPress={handleCreateAlert}
-                disabled={!newProductName.trim() || !newTargetPrice || isCreating}>
+                disabled={
+                  !newProductName.trim() || !newTargetPrice || isCreating
+                }>
                 {isCreating ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (

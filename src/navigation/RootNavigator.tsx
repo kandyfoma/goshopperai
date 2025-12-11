@@ -8,8 +8,17 @@ import {useAuth} from '@/shared/contexts';
 
 // Screens
 import {MainTabNavigator} from './MainTabNavigator';
-import {WelcomeScreen, LoginScreen, RegisterScreen} from '@/features/onboarding/screens';
-import {ScannerScreen, MultiPhotoScannerScreen, ReceiptDetailScreen, PriceComparisonScreen} from '@/features/scanner/screens';
+import {
+  WelcomeScreen,
+  LoginScreen,
+  RegisterScreen,
+} from '@/features/onboarding/screens';
+import {
+  ScannerScreen,
+  MultiPhotoScannerScreen,
+  ReceiptDetailScreen,
+  PriceComparisonScreen,
+} from '@/features/scanner/screens';
 import {SubscriptionScreen} from '@/features/subscription/screens';
 import {SettingsScreen} from '@/features/settings/screens';
 import {UpdateProfileScreen} from '@/features/profile/screens';
@@ -29,14 +38,19 @@ export function RootNavigator() {
   const {isAuthenticated, isLoading} = useAuth();
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
 
-  console.log('🧭 RootNavigator render - isAuthenticated:', isAuthenticated, 'isLoading:', isLoading);
+  console.log(
+    '🧭 RootNavigator render - isAuthenticated:',
+    isAuthenticated,
+    'isLoading:',
+    isLoading,
+  );
 
   useEffect(() => {
     const checkFirstLaunch = async () => {
       try {
         const hasSeenOnboarding = await AsyncStorage.getItem(ONBOARDING_KEY);
         setIsFirstLaunch(hasSeenOnboarding === null);
-        
+
         // Mark onboarding as complete for future launches
         if (hasSeenOnboarding === null) {
           await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
@@ -69,21 +83,21 @@ export function RootNavigator() {
           animation: 'slide_from_right',
         }}>
         {isFirstLaunch ? (
-          <Stack.Screen 
-            name="Welcome" 
+          <Stack.Screen
+            name="Welcome"
             component={WelcomeScreen}
-            options={{ animation: 'fade' }}
+            options={{animation: 'fade'}}
           />
         ) : null}
-        <Stack.Screen 
-          name="Login" 
+        <Stack.Screen
+          name="Login"
           component={LoginScreen}
-          options={{ animation: 'slide_from_right' }}
+          options={{animation: 'slide_from_right'}}
         />
-        <Stack.Screen 
-          name="Register" 
+        <Stack.Screen
+          name="Register"
           component={RegisterScreen}
-          options={{ animation: 'slide_from_right' }}
+          options={{animation: 'slide_from_right'}}
         />
       </Stack.Navigator>
     );
@@ -176,15 +190,15 @@ export function RootNavigator() {
         options={{headerShown: false}}
       />
       {/* Keep auth screens accessible for re-login scenarios */}
-      <Stack.Screen 
-        name="Login" 
+      <Stack.Screen
+        name="Login"
         component={LoginScreen}
-        options={{ animation: 'slide_from_right' }}
+        options={{animation: 'slide_from_right'}}
       />
-      <Stack.Screen 
-        name="Register" 
+      <Stack.Screen
+        name="Register"
         component={RegisterScreen}
-        options={{ animation: 'slide_from_right' }}
+        options={{animation: 'slide_from_right'}}
       />
     </Stack.Navigator>
   );

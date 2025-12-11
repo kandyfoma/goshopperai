@@ -27,7 +27,9 @@ export function AIAssistantScreen() {
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState(naturalLanguageService.getSuggestedQueries());
+  const [suggestions, setSuggestions] = useState(
+    naturalLanguageService.getSuggestedQueries(),
+  );
   const flatListRef = useRef<FlatList>(null);
 
   // Load conversation history
@@ -38,11 +40,11 @@ export function AIAssistantScreen() {
 
   const handleSend = async () => {
     if (!inputText.trim() || !user?.uid || isLoading) return;
-    
+
     const query = inputText.trim();
     setInputText('');
     setIsLoading(true);
-    
+
     // Add user message immediately
     const userMessage: ConversationMessage = {
       id: `msg_${Date.now()}`,
@@ -50,12 +52,16 @@ export function AIAssistantScreen() {
       content: query,
       timestamp: new Date(),
     };
-    
+
     setMessages(prev => [...prev, userMessage]);
-    
+
     try {
-      const result = await naturalLanguageService.processQuery(user.uid, query, true);
-      
+      const result = await naturalLanguageService.processQuery(
+        user.uid,
+        query,
+        true,
+      );
+
       // Add assistant response
       const assistantMessage: ConversationMessage = {
         id: `msg_${Date.now()}_resp`,
@@ -65,25 +71,24 @@ export function AIAssistantScreen() {
         timestamp: new Date(),
         data: result,
       };
-      
+
       setMessages(prev => [...prev, assistantMessage]);
-      
+
       // Update suggestions based on response
       if (result.suggestions) {
         setSuggestions(result.suggestions.map(s => ({fr: s, lingala: ''})));
       }
-      
     } catch (error) {
       console.error('Query error:', error);
-      
+
       const errorMessage: ConversationMessage = {
         id: `msg_${Date.now()}_err`,
         role: 'assistant',
-        content: 'Désolé, je n\'ai pas pu traiter votre demande. Réessayez.',
+        content: "Désolé, je n'ai pas pu traiter votre demande. Réessayez.",
         contentLingala: 'Limbisa, nakoki te. Meka lisusu.',
         timestamp: new Date(),
       };
-      
+
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
@@ -103,26 +108,32 @@ export function AIAssistantScreen() {
   const renderMessage = ({item}: {item: ConversationMessage}) => {
     const isUser = item.role === 'user';
     const queryResult = item.data as QueryResult | undefined;
-    
+
     return (
-      <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.assistantBubble]}>
+      <View
+        style={[
+          styles.messageBubble,
+          isUser ? styles.userBubble : styles.assistantBubble,
+        ]}>
         {!isUser && (
           <View style={styles.assistantAvatar}>
             <Text style={styles.avatarText}>🤖</Text>
           </View>
         )}
-        
-        <View style={[styles.messageContent, isUser ? styles.userContent : styles.assistantContent]}>
+
+        <View
+          style={[
+            styles.messageContent,
+            isUser ? styles.userContent : styles.assistantContent,
+          ]}>
           <Text style={[styles.messageText, isUser && styles.userText]}>
             {item.content}
           </Text>
-          
+
           {item.contentLingala && !isUser && (
-            <Text style={styles.lingalaText}>
-              {item.contentLingala}
-            </Text>
+            <Text style={styles.lingalaText}>{item.contentLingala}</Text>
           )}
-          
+
           {/* Chart data preview */}
           {queryResult?.chartData && (
             <View style={styles.chartPreview}>
@@ -133,13 +144,14 @@ export function AIAssistantScreen() {
                 <View key={index} style={styles.chartRow}>
                   <Text style={styles.chartLabel}>{label}</Text>
                   <Text style={styles.chartValue}>
-                    ${queryResult.chartData!.datasets[0].data[index]?.toFixed(2)}
+                    $
+                    {queryResult.chartData!.datasets[0].data[index]?.toFixed(2)}
                   </Text>
                 </View>
               ))}
             </View>
           )}
-          
+
           {/* Suggestions from response */}
           {queryResult?.suggestions && queryResult.suggestions.length > 0 && (
             <View style={styles.inlineSuggestions}>
@@ -154,7 +166,7 @@ export function AIAssistantScreen() {
             </View>
           )}
         </View>
-        
+
         {isUser && (
           <View style={styles.userAvatar}>
             <Text style={styles.avatarText}>👤</Text>
@@ -180,11 +192,10 @@ export function AIAssistantScreen() {
         </TouchableOpacity>
       </View>
 
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         style={styles.content}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={90}>
-        
         {/* Messages */}
         {messages.length === 0 ? (
           <View style={styles.welcomeContainer}>
@@ -192,12 +203,13 @@ export function AIAssistantScreen() {
             <Text style={styles.welcomeTitle}>Bonjour!</Text>
             <Text style={styles.welcomeSubtitle}>Mbote!</Text>
             <Text style={styles.welcomeText}>
-              Posez-moi des questions sur vos dépenses, vos factures, ou les prix.
+              Posez-moi des questions sur vos dépenses, vos factures, ou les
+              prix.
             </Text>
             <Text style={styles.welcomeTextLingala}>
               Tuna ngai mituna na mbongo na yo, factures, to ntalo.
             </Text>
-            
+
             {/* Initial Suggestions */}
             <View style={styles.welcomeSuggestions}>
               <Text style={styles.suggestionsTitle}>Essayez:</Text>
@@ -206,9 +218,13 @@ export function AIAssistantScreen() {
                   key={index}
                   style={styles.welcomeSuggestionButton}
                   onPress={() => handleSuggestionPress(suggestion.fr)}>
-                  <Text style={styles.welcomeSuggestionText}>{suggestion.fr}</Text>
+                  <Text style={styles.welcomeSuggestionText}>
+                    {suggestion.fr}
+                  </Text>
                   {suggestion.lingala && (
-                    <Text style={styles.welcomeSuggestionLingala}>{suggestion.lingala}</Text>
+                    <Text style={styles.welcomeSuggestionLingala}>
+                      {suggestion.lingala}
+                    </Text>
                   )}
                 </TouchableOpacity>
               ))}
@@ -235,7 +251,11 @@ export function AIAssistantScreen() {
               renderItem={({item}) => (
                 <TouchableOpacity
                   style={styles.suggestionChip}
-                  onPress={() => handleSuggestionPress(typeof item === 'string' ? item : item.fr)}>
+                  onPress={() =>
+                    handleSuggestionPress(
+                      typeof item === 'string' ? item : item.fr,
+                    )
+                  }>
                   <Text style={styles.suggestionChipText}>
                     {typeof item === 'string' ? item : item.fr}
                   </Text>
@@ -260,9 +280,12 @@ export function AIAssistantScreen() {
             maxLength={500}
             editable={!isLoading}
           />
-          
+
           <TouchableOpacity
-            style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+            style={[
+              styles.sendButton,
+              !inputText.trim() && styles.sendButtonDisabled,
+            ]}
             onPress={handleSend}
             disabled={!inputText.trim() || isLoading}>
             {isLoading ? (

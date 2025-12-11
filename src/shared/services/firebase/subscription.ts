@@ -1,10 +1,7 @@
 // Subscription Service
 import firestore from '@react-native-firebase/firestore';
 import functions from '@react-native-firebase/functions';
-import {
-  Subscription,
-  SubscriptionState,
-} from '@/shared/types';
+import {Subscription, SubscriptionState} from '@/shared/types';
 import {COLLECTIONS, APP_ID} from './config';
 import {authService} from './auth';
 import {
@@ -51,7 +48,7 @@ class SubscriptionService {
     if (!subscription.trialStartDate || !subscription.trialEndDate) {
       return false;
     }
-    
+
     const now = new Date();
     const trialEnd = new Date(subscription.trialEndDate);
     return now < trialEnd && subscription.status === 'trial';
@@ -62,12 +59,12 @@ class SubscriptionService {
    */
   getTrialDaysRemaining(subscription: Subscription): number {
     if (!subscription.trialEndDate) return 0;
-    
+
     const now = new Date();
     const trialEnd = new Date(subscription.trialEndDate);
     const diffTime = trialEnd.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     return Math.max(0, diffDays);
   }
 
@@ -89,16 +86,19 @@ class SubscriptionService {
         const isValid = new Date(subscription.subscriptionEndDate) > new Date();
         if (!isValid) return false;
       }
-      
+
       // Premium users have unlimited scans
       if (subscription.planId === 'premium') {
         return true;
       }
-      
+
       // Basic/Standard users have limited monthly scans
-      const planLimit = PLAN_SCAN_LIMITS[subscription.planId as keyof typeof PLAN_SCAN_LIMITS] || 0;
+      const planLimit =
+        PLAN_SCAN_LIMITS[
+          subscription.planId as keyof typeof PLAN_SCAN_LIMITS
+        ] || 0;
       if (planLimit === -1) return true; // Unlimited
-      
+
       return (subscription.monthlyScansUsed || 0) < planLimit;
     }
 
@@ -122,10 +122,13 @@ class SubscriptionService {
       if (subscription.planId === 'premium') {
         return Infinity;
       }
-      
-      const planLimit = PLAN_SCAN_LIMITS[subscription.planId as keyof typeof PLAN_SCAN_LIMITS] || 0;
+
+      const planLimit =
+        PLAN_SCAN_LIMITS[
+          subscription.planId as keyof typeof PLAN_SCAN_LIMITS
+        ] || 0;
       if (planLimit === -1) return Infinity;
-      
+
       return Math.max(0, planLimit - (subscription.monthlyScansUsed || 0));
     }
 
@@ -160,10 +163,18 @@ class SubscriptionService {
 
     // Basic/Standard users have limited scans
     if (subscription.isSubscribed && subscription.status === 'active') {
-      const planLimit = PLAN_SCAN_LIMITS[subscription.planId as keyof typeof PLAN_SCAN_LIMITS] || 0;
-      
-      if (planLimit !== -1 && (subscription.monthlyScansUsed || 0) >= planLimit) {
-        throw new Error('Limite de scans atteinte. Passez à Premium pour des scans illimités.');
+      const planLimit =
+        PLAN_SCAN_LIMITS[
+          subscription.planId as keyof typeof PLAN_SCAN_LIMITS
+        ] || 0;
+
+      if (
+        planLimit !== -1 &&
+        (subscription.monthlyScansUsed || 0) >= planLimit
+      ) {
+        throw new Error(
+          'Limite de scans atteinte. Passez à Premium pour des scans illimités.',
+        );
       }
 
       await firestore()
@@ -189,15 +200,17 @@ class SubscriptionService {
 
     // Can only extend if not already extended
     if (subscription.trialExtended) {
-      throw new Error('L\'essai a déjà été prolongé une fois.');
+      throw new Error("L'essai a déjà été prolongé une fois.");
     }
 
     // Can only extend if trial ended within 7 days
     if (subscription.trialEndDate) {
       const trialEnd = new Date(subscription.trialEndDate);
       const now = new Date();
-      const daysSinceExpiry = Math.ceil((now.getTime() - trialEnd.getTime()) / (1000 * 60 * 60 * 24));
-      
+      const daysSinceExpiry = Math.ceil(
+        (now.getTime() - trialEnd.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
       if (daysSinceExpiry > 7) {
         throw new Error('La période de prolongation est expirée.');
       }
@@ -207,14 +220,12 @@ class SubscriptionService {
     const newTrialEnd = new Date();
     newTrialEnd.setDate(newTrialEnd.getDate() + TRIAL_EXTENSION_DAYS);
 
-    await firestore()
-      .doc(COLLECTIONS.subscription(user.uid))
-      .update({
-        trialEndDate: newTrialEnd,
-        trialExtended: true,
-        status: 'trial',
-        updatedAt: firestore.FieldValue.serverTimestamp(),
-      });
+    await firestore().doc(COLLECTIONS.subscription(user.uid)).update({
+      trialEndDate: newTrialEnd,
+      trialExtended: true,
+      status: 'trial',
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+    });
 
     return true;
   }
@@ -320,15 +331,24 @@ class SubscriptionService {
       trialEndDate: data.trialEndDate?.toDate?.() || data.trialEndDate,
       trialExtended: data.trialExtended || false,
       monthlyScansUsed: data.monthlyScansUsed || 0,
-      currentBillingPeriodStart: data.currentBillingPeriodStart?.toDate?.() || data.currentBillingPeriodStart,
-      currentBillingPeriodEnd: data.currentBillingPeriodEnd?.toDate?.() || data.currentBillingPeriodEnd,
+      currentBillingPeriodStart:
+        data.currentBillingPeriodStart?.toDate?.() ||
+        data.currentBillingPeriodStart,
+      currentBillingPeriodEnd:
+        data.currentBillingPeriodEnd?.toDate?.() ||
+        data.currentBillingPeriodEnd,
       isSubscribed: data.isSubscribed || false,
       planId: data.planId || data.plan,
       plan: data.plan || data.planId,
       status: data.status || 'trial',
-      subscriptionStartDate: data.subscriptionStartDate?.toDate?.() || data.subscriptionStartDate,
-      subscriptionEndDate: data.subscriptionEndDate?.toDate?.() || data.subscriptionEndDate,
-      expiryDate: data.expiryDate?.toDate?.() || data.subscriptionEndDate?.toDate?.() || data.expiryDate,
+      subscriptionStartDate:
+        data.subscriptionStartDate?.toDate?.() || data.subscriptionStartDate,
+      subscriptionEndDate:
+        data.subscriptionEndDate?.toDate?.() || data.subscriptionEndDate,
+      expiryDate:
+        data.expiryDate?.toDate?.() ||
+        data.subscriptionEndDate?.toDate?.() ||
+        data.expiryDate,
       lastPaymentDate: data.lastPaymentDate?.toDate?.() || data.lastPaymentDate,
       lastPaymentAmount: data.lastPaymentAmount,
       currency: data.currency,

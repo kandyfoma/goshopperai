@@ -55,20 +55,20 @@ User                    App                     Gemini API              Firestor
 
 **Step Details:**
 
-| Step | Action | Data |
-|------|--------|------|
-| 1 | User initiates scan | None |
-| 2 | Camera module activates | None |
-| 3 | Image captured | `ImageData` (base64 or URI) |
-| 4 | API request | `{ image, schema, prompt }` |
-| 5 | Parsed response | `InvoiceData` JSON |
-| 6 | Display for editing | Parsed items, totals |
-| 7 | User corrections | Edited `InvoiceData` |
-| 8 | Query subscription | `userId` |
-| 9 | Subscription check | `{ isSubscribed, trialRemaining }` |
-| 10 | Write invoice | Full `Invoice` document |
-| 11 | Update trial count | `trialScansUsed += 1` |
-| 12 | Confirmation | Success message |
+| Step | Action                  | Data                               |
+| ---- | ----------------------- | ---------------------------------- |
+| 1    | User initiates scan     | None                               |
+| 2    | Camera module activates | None                               |
+| 3    | Image captured          | `ImageData` (base64 or URI)        |
+| 4    | API request             | `{ image, schema, prompt }`        |
+| 5    | Parsed response         | `InvoiceData` JSON                 |
+| 6    | Display for editing     | Parsed items, totals               |
+| 7    | User corrections        | Edited `InvoiceData`               |
+| 8    | Query subscription      | `userId`                           |
+| 9    | Subscription check      | `{ isSubscribed, trialRemaining }` |
+| 10   | Write invoice           | Full `Invoice` document            |
+| 11   | Update trial count      | `trialScansUsed += 1`              |
+| 12   | Confirmation            | Success message                    |
 
 ### 2. Price Comparison Flow (Public Data)
 
@@ -77,47 +77,47 @@ User                    App                     Gemini API              Firestor
 │                         PRICE COMPARISON FLOW                                │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-User                    App                     Firestore (Public)      
- │                       │                          │                   
- │  1. Open Compare tab  │                          │                   
- │──────────────────────▶│                          │                   
- │                       │                          │                   
- │                       │  2. Query public prices  │                   
- │                       │─────────────────────────▶│                   
- │                       │                          │                   
- │                       │  3. Return price list    │                   
- │                       │◀─────────────────────────│                   
- │                       │                          │                   
- │  4. Display items     │                          │                   
- │◀──────────────────────│                          │                   
- │                       │                          │                   
- │  5. Search "cooking oil"                         │                   
- │──────────────────────▶│                          │                   
- │                       │                          │                   
- │                       │  6. Filtered query       │                   
- │                       │─────────────────────────▶│                   
- │                       │                          │                   
- │                       │  7. Matching prices      │                   
- │                       │◀─────────────────────────│                   
- │                       │                          │                   
- │  8. Show results      │                          │                   
- │◀──────────────────────│                          │                   
- │                       │                          │                   
- │  9. Tap item detail   │                          │                   
- │──────────────────────▶│                          │                   
- │                       │                          │                   
- │                       │  10. Get all store prices│                   
- │                       │─────────────────────────▶│                   
- │                       │                          │                   
- │                       │  11. Price comparison    │                   
- │                       │◀─────────────────────────│                   
- │                       │                          │                   
- │                       │  12. Get user history    │                   
+User                    App                     Firestore (Public)
+ │                       │                          │
+ │  1. Open Compare tab  │                          │
+ │──────────────────────▶│                          │
+ │                       │                          │
+ │                       │  2. Query public prices  │
+ │                       │─────────────────────────▶│
+ │                       │                          │
+ │                       │  3. Return price list    │
+ │                       │◀─────────────────────────│
+ │                       │                          │
+ │  4. Display items     │                          │
+ │◀──────────────────────│                          │
+ │                       │                          │
+ │  5. Search "cooking oil"                         │
+ │──────────────────────▶│                          │
+ │                       │                          │
+ │                       │  6. Filtered query       │
+ │                       │─────────────────────────▶│
+ │                       │                          │
+ │                       │  7. Matching prices      │
+ │                       │◀─────────────────────────│
+ │                       │                          │
+ │  8. Show results      │                          │
+ │◀──────────────────────│                          │
+ │                       │                          │
+ │  9. Tap item detail   │                          │
+ │──────────────────────▶│                          │
+ │                       │                          │
+ │                       │  10. Get all store prices│
+ │                       │─────────────────────────▶│
+ │                       │                          │
+ │                       │  11. Price comparison    │
+ │                       │◀─────────────────────────│
+ │                       │                          │
+ │                       │  12. Get user history    │
  │                       │─────────────────────────▶│ (Private invoices)
- │                       │                          │                   
- │  13. Full comparison  │                          │                   
- │◀──────────────────────│                          │                   
- │                       │                          │                   
+ │                       │                          │
+ │  13. Full comparison  │                          │
+ │◀──────────────────────│                          │
+ │                       │                          │
 ```
 
 ### 3. Store Price Upload Flow (Merchant Portal)
@@ -158,6 +158,7 @@ Merchant          Portal           Cloud Storage      Cloud Function      Firest
 ```
 
 **CSV Format Expected:**
+
 ```csv
 item_name,price,currency,unit,category
 Cooking Oil (5L),12.00,USD,5L,Groceries
@@ -213,37 +214,37 @@ User          App           Moko Afrika        Webhook Function      Firestore
 │                           REPORTING FLOW                                     │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-User                    App                     Firestore (Private)     
- │                       │                          │                   
- │  1. Open Dashboard    │                          │                   
- │──────────────────────▶│                          │                   
- │                       │                          │                   
- │                       │  2. Query user invoices  │                   
- │                       │─────────────────────────▶│                   
- │                       │                          │                   
- │                       │  3. Invoice list         │                   
- │                       │◀─────────────────────────│                   
- │                       │                          │                   
- │                       │  4. Calculate locally:   │                   
- │                       │     - Monthly total      │                   
- │                       │     - Category breakdown │                   
- │                       │     - Savings estimate   │                   
- │                       │                          │                   
- │  5. Display reports   │                          │                   
- │◀──────────────────────│                          │                   
- │                       │                          │                   
- │  6. Change date range │                          │                   
- │──────────────────────▶│                          │                   
- │                       │                          │                   
- │                       │  7. Re-query with range  │                   
- │                       │─────────────────────────▶│                   
- │                       │                          │                   
- │                       │  8. Filtered invoices    │                   
- │                       │◀─────────────────────────│                   
- │                       │                          │                   
- │  9. Updated reports   │                          │                   
- │◀──────────────────────│                          │                   
- │                       │                          │                   
+User                    App                     Firestore (Private)
+ │                       │                          │
+ │  1. Open Dashboard    │                          │
+ │──────────────────────▶│                          │
+ │                       │                          │
+ │                       │  2. Query user invoices  │
+ │                       │─────────────────────────▶│
+ │                       │                          │
+ │                       │  3. Invoice list         │
+ │                       │◀─────────────────────────│
+ │                       │                          │
+ │                       │  4. Calculate locally:   │
+ │                       │     - Monthly total      │
+ │                       │     - Category breakdown │
+ │                       │     - Savings estimate   │
+ │                       │                          │
+ │  5. Display reports   │                          │
+ │◀──────────────────────│                          │
+ │                       │                          │
+ │  6. Change date range │                          │
+ │──────────────────────▶│                          │
+ │                       │                          │
+ │                       │  7. Re-query with range  │
+ │                       │─────────────────────────▶│
+ │                       │                          │
+ │                       │  8. Filtered invoices    │
+ │                       │◀─────────────────────────│
+ │                       │                          │
+ │  9. Updated reports   │                          │
+ │◀──────────────────────│                          │
+ │                       │                          │
 ```
 
 ## Query Patterns
@@ -288,21 +289,29 @@ const getPricesByCategory = async (category: string) => {
 
 ```typescript
 // Get user's invoices (paginated)
-const getUserInvoices = async (userId: string, limit = 20, lastDoc?: DocumentSnapshot) => {
+const getUserInvoices = async (
+  userId: string,
+  limit = 20,
+  lastDoc?: DocumentSnapshot,
+) => {
   let query = firestore()
     .collection(`artifacts/${APP_ID}/users/${userId}/invoices`)
     .orderBy('timestamp', 'desc')
     .limit(limit);
-  
+
   if (lastDoc) {
     query = query.startAfter(lastDoc);
   }
-  
+
   return query.get();
 };
 
 // Get invoices in date range
-const getInvoicesInRange = async (userId: string, startDate: Date, endDate: Date) => {
+const getInvoicesInRange = async (
+  userId: string,
+  startDate: Date,
+  endDate: Date,
+) => {
   return firestore()
     .collection(`artifacts/${APP_ID}/users/${userId}/invoices`)
     .where('date', '>=', startDate.toISOString().split('T')[0])
@@ -317,15 +326,15 @@ const getUserPriceHistory = async (userId: string, itemName: string) => {
     .collection(`artifacts/${APP_ID}/users/${userId}/invoices`)
     .orderBy('timestamp', 'desc')
     .get();
-  
+
   const prices: UserPriceHistory[] = [];
-  
+
   invoices.forEach(doc => {
     const invoice = doc.data();
-    const item = invoice.items.find(i => 
-      normalizeItemName(i.name) === normalizeItemName(itemName)
+    const item = invoice.items.find(
+      i => normalizeItemName(i.name) === normalizeItemName(itemName),
     );
-    
+
     if (item) {
       prices.push({
         price: item.unitPrice,
@@ -334,7 +343,7 @@ const getUserPriceHistory = async (userId: string, itemName: string) => {
       });
     }
   });
-  
+
   return prices;
 };
 ```
@@ -345,7 +354,10 @@ const getUserPriceHistory = async (userId: string, itemName: string) => {
 
 ```typescript
 // Listen for subscription changes (for payment confirmation)
-const subscribeToSubscriptionStatus = (userId: string, callback: (status: SubscriptionStatus) => void) => {
+const subscribeToSubscriptionStatus = (
+  userId: string,
+  callback: (status: SubscriptionStatus) => void,
+) => {
   return firestore()
     .doc(`artifacts/${APP_ID}/users/${userId}/subscription/status`)
     .onSnapshot(doc => {
@@ -360,7 +372,10 @@ const subscribeToSubscriptionStatus = (userId: string, callback: (status: Subscr
 
 ```typescript
 // Real-time invoice updates
-const subscribeToInvoices = (userId: string, callback: (invoices: Invoice[]) => void) => {
+const subscribeToInvoices = (
+  userId: string,
+  callback: (invoices: Invoice[]) => void,
+) => {
   return firestore()
     .collection(`artifacts/${APP_ID}/users/${userId}/invoices`)
     .orderBy('timestamp', 'desc')
@@ -368,7 +383,7 @@ const subscribeToInvoices = (userId: string, callback: (invoices: Invoice[]) => 
     .onSnapshot(snapshot => {
       const invoices = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       })) as Invoice[];
       callback(invoices);
     });
@@ -385,15 +400,15 @@ const handleFirestoreError = (error: FirestoreError) => {
     case 'permission-denied':
       // User not authorized - redirect to auth
       return 'Access denied. Please sign in again.';
-    
+
     case 'unavailable':
       // Offline - use cached data
       return 'You appear to be offline. Showing cached data.';
-    
+
     case 'resource-exhausted':
       // Rate limited
       return 'Too many requests. Please wait a moment.';
-    
+
     default:
       return 'Something went wrong. Please try again.';
   }
@@ -412,16 +427,16 @@ firestore().settings({
 // Check network status before sync-critical operations
 const saveInvoice = async (invoice: Invoice) => {
   const networkStatus = await NetInfo.fetch();
-  
+
   if (!networkStatus.isConnected) {
     // Queue for later sync
     await AsyncStorage.setItem(
       `pending_invoice_${Date.now()}`,
-      JSON.stringify(invoice)
+      JSON.stringify(invoice),
     );
-    return { success: true, pending: true };
+    return {success: true, pending: true};
   }
-  
+
   // Normal save
   return firestore()
     .collection(`artifacts/${APP_ID}/users/${invoice.userId}/invoices`)
@@ -431,4 +446,4 @@ const saveInvoice = async (invoice: Invoice) => {
 
 ---
 
-*Next: [API Contracts](../api/API_CONTRACTS.md)*
+_Next: [API Contracts](../api/API_CONTRACTS.md)_

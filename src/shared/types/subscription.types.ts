@@ -1,7 +1,13 @@
 // Type definitions for Subscription
 
 export type SubscriptionPlanId = 'free' | 'basic' | 'standard' | 'premium';
-export type SubscriptionStatus = 'trial' | 'active' | 'expired' | 'cancelled' | 'pending' | 'expiring_soon';
+export type SubscriptionStatus =
+  | 'trial'
+  | 'active'
+  | 'expired'
+  | 'cancelled'
+  | 'pending'
+  | 'expiring_soon';
 export type SubscriptionDuration = 1 | 3 | 6 | 12; // Months
 export type MobileMoneyProvider = 'mpesa' | 'orange' | 'airtel' | 'afrimoney';
 export type PaymentMethodType = 'mobile_money' | 'card';
@@ -9,26 +15,26 @@ export type PaymentProviderType = 'moko_afrika' | 'stripe';
 
 export interface Subscription {
   userId: string;
-  
+
   // Trial tracking (2-month free trial)
   trialScansUsed: number;
   trialScansLimit: number;
   trialStartDate?: Date;
   trialEndDate?: Date;
   trialExtended?: boolean;
-  
+
   // Monthly usage tracking
   monthlyScansUsed: number;
   currentBillingPeriodStart?: Date;
   currentBillingPeriodEnd?: Date;
-  
+
   // Subscription details
   isSubscribed: boolean;
   planId?: SubscriptionPlanId;
   plan?: SubscriptionPlanId; // Alias for planId
   status: SubscriptionStatus;
   durationMonths?: SubscriptionDuration; // Subscription duration in months
-  
+
   // Billing
   subscriptionStartDate?: Date;
   subscriptionEndDate?: Date;
@@ -36,7 +42,7 @@ export interface Subscription {
   lastPaymentDate?: Date;
   lastPaymentAmount?: number;
   currency?: 'USD' | 'CDF';
-  
+
   // Payment info
   paymentMethod?: PaymentMethodType;
   paymentProvider?: PaymentProviderType;
@@ -46,15 +52,15 @@ export interface Subscription {
   stripePaymentIntentId?: string;
   customerPhone?: string;
   customerEmail?: string;
-  
+
   // Auto-renewal
   autoRenew: boolean;
-  
+
   // Expiration notifications
   expirationNotificationSent?: boolean;
   expirationNotificationDate?: Date;
   daysUntilExpiration?: number;
-  
+
   // Timestamps
   createdAt?: Date;
   updatedAt?: Date;
@@ -94,10 +100,31 @@ export interface DurationPricing {
 }
 
 export const SUBSCRIPTION_DURATIONS: DurationPricing[] = [
-  { months: 1, label: '1 Month', labelFr: '1 Mois', discountPercent: 0 },
-  { months: 3, label: '3 Months', labelFr: '3 Mois', discountPercent: 10, badge: 'Save 10%', badgeFr: '-10%' },
-  { months: 6, label: '6 Months', labelFr: '6 Mois', discountPercent: 20, badge: 'Save 20%', badgeFr: '-20%' },
-  { months: 12, label: '1 Year', labelFr: '1 An', discountPercent: 30, badge: 'Best Value', badgeFr: 'Meilleur prix' },
+  {months: 1, label: '1 Month', labelFr: '1 Mois', discountPercent: 0},
+  {
+    months: 3,
+    label: '3 Months',
+    labelFr: '3 Mois',
+    discountPercent: 10,
+    badge: 'Save 10%',
+    badgeFr: '-10%',
+  },
+  {
+    months: 6,
+    label: '6 Months',
+    labelFr: '6 Mois',
+    discountPercent: 20,
+    badge: 'Save 20%',
+    badgeFr: '-20%',
+  },
+  {
+    months: 12,
+    label: '1 Year',
+    labelFr: '1 An',
+    discountPercent: 30,
+    badge: 'Best Value',
+    badgeFr: 'Meilleur prix',
+  },
 ];
 
 export const PLAN_PRICING: PlanPricing[] = [
@@ -110,7 +137,7 @@ export const PLAN_PRICING: PlanPricing[] = [
     scanLimit: -1,
     features: [
       '2 mois gratuits',
-      'Scans illimités pendant l\'essai',
+      "Scans illimités pendant l'essai",
       'Toutes les fonctionnalités premium',
     ],
   },

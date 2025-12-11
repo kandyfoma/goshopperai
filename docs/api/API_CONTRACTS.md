@@ -13,12 +13,14 @@ This document defines all API contracts for Invoice Intelligence, including the 
 **Method:** `POST`
 
 **Headers:**
+
 ```
 Content-Type: application/json
 x-goog-api-key: {GEMINI_API_KEY}
 ```
 
 **Request Body:**
+
 ```json
 {
   "contents": [
@@ -65,6 +67,7 @@ x-goog-api-key: {GEMINI_API_KEY}
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "candidates": [
@@ -90,12 +93,12 @@ x-goog-api-key: {GEMINI_API_KEY}
 
 **Error Responses:**
 
-| Status | Error | Description |
-|--------|-------|-------------|
-| 400 | INVALID_ARGUMENT | Malformed request or invalid image |
-| 403 | PERMISSION_DENIED | Invalid API key |
-| 429 | RESOURCE_EXHAUSTED | Rate limit exceeded |
-| 500 | INTERNAL | Gemini service error |
+| Status | Error              | Description                        |
+| ------ | ------------------ | ---------------------------------- |
+| 400    | INVALID_ARGUMENT   | Malformed request or invalid image |
+| 403    | PERMISSION_DENIED  | Invalid API key                    |
+| 429    | RESOURCE_EXHAUSTED | Rate limit exceeded                |
+| 500    | INTERNAL           | Gemini service error               |
 
 ### Client Implementation
 
@@ -128,10 +131,12 @@ interface ParsedItem {
   totalPrice: number;
 }
 
-export const parseInvoiceImage = async (imageBase64: string): Promise<GeminiParseResult> => {
+export const parseInvoiceImage = async (
+  imageBase64: string,
+): Promise<GeminiParseResult> => {
   const API_KEY = Config.GEMINI_API_KEY;
   const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
-  
+
   try {
     const response = await fetch(ENDPOINT, {
       method: 'POST',
@@ -139,62 +144,63 @@ export const parseInvoiceImage = async (imageBase64: string): Promise<GeminiPars
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: INVOICE_PARSE_PROMPT },
-            { inlineData: { mimeType: 'image/jpeg', data: imageBase64 }}
-          ]
-        }],
+        contents: [
+          {
+            parts: [
+              {text: INVOICE_PARSE_PROMPT},
+              {inlineData: {mimeType: 'image/jpeg', data: imageBase64}},
+            ],
+          },
+        ],
         generationConfig: {
           temperature: 0.1,
           maxOutputTokens: 2048,
-          responseMimeType: 'application/json'
-        }
-      })
+          responseMimeType: 'application/json',
+        },
+      }),
     });
-    
+
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);
     }
-    
+
     const result = await response.json();
     const text = result.candidates[0]?.content?.parts[0]?.text;
-    
+
     if (!text) {
       throw new Error('No response from AI');
     }
-    
+
     const parsed = JSON.parse(text) as ParsedInvoice;
-    
+
     return {
       success: true,
       data: parsed,
-      confidence: calculateConfidence(parsed)
+      confidence: calculateConfidence(parsed),
     };
-    
   } catch (error) {
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
 };
 
 const calculateConfidence = (data: ParsedInvoice): number => {
   let score = 1.0;
-  
+
   // Reduce confidence for missing fields
   if (!data.shopName) score -= 0.2;
   if (!data.date) score -= 0.2;
   if (!data.total) score -= 0.3;
   if (!data.items || data.items.length === 0) score -= 0.3;
-  
+
   // Check item totals match
   const itemsTotal = data.items.reduce((sum, item) => sum + item.totalPrice, 0);
   if (Math.abs(itemsTotal - (data.subtotal || data.total)) > 0.5) {
     score -= 0.2;
   }
-  
+
   return Math.max(0, score);
 };
 ```
@@ -213,6 +219,7 @@ Contact: info@mokoafrika.com | +243 898 900 066
 **Method:** `POST`
 
 **Headers:**
+
 ```
 Authorization: Bearer {MOKO_SECRET_KEY}
 X-API-Key: {MOKO_API_KEY}
@@ -220,6 +227,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "reference": "INV-{timestamp}-{userId}-{random}",
@@ -245,6 +253,7 @@ Content-Type: application/json
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -264,12 +273,14 @@ Content-Type: application/json
 **Method:** `POST`
 
 **Headers:**
+
 ```
 X-Moko-Signature: {HMAC_SHA256_SIGNATURE}
 Content-Type: application/json
 ```
 
 **Webhook Payload:**
+
 ```json
 {
   "event": "payment.completed",
@@ -328,16 +339,16 @@ export const handlePaymentWebhook = functions
       res.status(401).send('Invalid signature');
       return;
     }
-    
-    const { event, data } = req.body;
-    
+
+    const {event, data} = req.body;
+
     if (event !== 'payment.completed' || data.status !== 'successful') {
       res.status(200).send('Ignored');
       return;
     }
-    
-    const { user_id, plan, app_id } = data.metadata;
-    
+
+    const {user_id, plan, app_id} = data.metadata;
+
     // Calculate subscription end date
     const now = new Date();
     const endDate = new Date(now);
@@ -346,28 +357,32 @@ export const handlePaymentWebhook = functions
     } else if (plan === 'yearly') {
       endDate.setFullYear(endDate.getFullYear() + 1);
     }
-    
+
     // Update user subscription
-    await admin.firestore()
+    await admin
+      .firestore()
       .doc(`artifacts/${app_id}/users/${user_id}/subscription/status`)
-      .set({
-        isSubscribed: true,
-        plan: plan,
-        amount: data.amount,
-        currency: data.currency,
-        subscriptionStartDate: admin.firestore.FieldValue.serverTimestamp(),
-        subscriptionEndDate: admin.firestore.Timestamp.fromDate(endDate),
-        lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
-        lastPaymentAmount: data.amount,
-        paymentMethod: 'mobile_money',
-        paymentProvider: 'moko_afrika',
-        mobileMoneyProvider: data.payment_method.provider,
-        transactionId: data.transaction_id,
-        customerPhone: data.customer.phone,
-        status: 'active',
-        autoRenew: true,
-      }, { merge: true });
-    
+      .set(
+        {
+          isSubscribed: true,
+          plan: plan,
+          amount: data.amount,
+          currency: data.currency,
+          subscriptionStartDate: admin.firestore.FieldValue.serverTimestamp(),
+          subscriptionEndDate: admin.firestore.Timestamp.fromDate(endDate),
+          lastPaymentDate: admin.firestore.FieldValue.serverTimestamp(),
+          lastPaymentAmount: data.amount,
+          paymentMethod: 'mobile_money',
+          paymentProvider: 'moko_afrika',
+          mobileMoneyProvider: data.payment_method.provider,
+          transactionId: data.transaction_id,
+          customerPhone: data.customer.phone,
+          status: 'active',
+          autoRenew: true,
+        },
+        {merge: true},
+      );
+
     res.status(200).send('OK');
   });
 ```
@@ -384,19 +399,19 @@ export const handlePaymentWebhook = functions
 interface AuthService {
   // Sign in anonymously (default for new users)
   signInAnonymously(): Promise<AuthResult>;
-  
+
   // Link anonymous account to email/password
   linkWithEmail(email: string, password: string): Promise<AuthResult>;
-  
+
   // Sign in with existing email
   signInWithEmail(email: string, password: string): Promise<AuthResult>;
-  
+
   // Sign out
   signOut(): Promise<void>;
-  
+
   // Get current user
   getCurrentUser(): User | null;
-  
+
   // Listen for auth state changes
   onAuthStateChanged(callback: (user: User | null) => void): Unsubscribe;
 }
@@ -423,19 +438,22 @@ interface User {
 interface InvoiceService {
   // Create new invoice
   createInvoice(invoice: CreateInvoiceDTO): Promise<ServiceResult<Invoice>>;
-  
+
   // Get user's invoices
   getInvoices(options?: GetInvoicesOptions): Promise<ServiceResult<Invoice[]>>;
-  
+
   // Get single invoice
   getInvoice(invoiceId: string): Promise<ServiceResult<Invoice>>;
-  
+
   // Update invoice
-  updateInvoice(invoiceId: string, updates: UpdateInvoiceDTO): Promise<ServiceResult<Invoice>>;
-  
+  updateInvoice(
+    invoiceId: string,
+    updates: UpdateInvoiceDTO,
+  ): Promise<ServiceResult<Invoice>>;
+
   // Delete invoice
   deleteInvoice(invoiceId: string): Promise<ServiceResult<void>>;
-  
+
   // Subscribe to real-time updates
   subscribeToInvoices(callback: (invoices: Invoice[]) => void): Unsubscribe;
 }
@@ -475,19 +493,21 @@ interface ServiceResult<T> {
 interface PriceService {
   // Search prices by item name
   searchPrices(query: string): Promise<ServiceResult<PriceItem[]>>;
-  
+
   // Get prices for specific item
   getPricesForItem(itemName: string): Promise<ServiceResult<StorePrice[]>>;
-  
+
   // Get prices by category
   getPricesByCategory(category: string): Promise<ServiceResult<PriceItem[]>>;
-  
+
   // Get all stores
   getStores(): Promise<ServiceResult<Store[]>>;
-  
+
   // Get user's price history for item
-  getUserPriceHistory(itemName: string): Promise<ServiceResult<UserPriceHistory[]>>;
-  
+  getUserPriceHistory(
+    itemName: string,
+  ): Promise<ServiceResult<UserPriceHistory[]>>;
+
   // Get best price for item
   getBestPrice(itemName: string): Promise<ServiceResult<StorePrice>>;
 }
@@ -497,7 +517,7 @@ interface PriceItem {
   category: string;
   prices: StorePrice[];
   bestPrice: StorePrice;
-  priceRange: { min: number; max: number };
+  priceRange: {min: number; max: number};
 }
 
 interface StorePrice {
@@ -523,18 +543,22 @@ interface UserPriceHistory {
 interface SubscriptionService {
   // Get current subscription status
   getStatus(): Promise<ServiceResult<SubscriptionStatus>>;
-  
+
   // Check if user can perform scan
   canScan(): Promise<boolean>;
-  
+
   // Record scan usage (decrements trial or validates subscription)
   recordScanUsage(): Promise<ServiceResult<void>>;
-  
+
   // Initialize payment
-  initiatePayment(plan: 'monthly' | 'yearly'): Promise<ServiceResult<PaymentInitResult>>;
-  
+  initiatePayment(
+    plan: 'monthly' | 'yearly',
+  ): Promise<ServiceResult<PaymentInitResult>>;
+
   // Subscribe to status changes
-  subscribeToStatus(callback: (status: SubscriptionStatus) => void): Unsubscribe;
+  subscribeToStatus(
+    callback: (status: SubscriptionStatus) => void,
+  ): Unsubscribe;
 }
 
 interface PaymentInitResult {
@@ -557,22 +581,22 @@ interface SubscriptionStatus {
 
 ### Application Error Codes
 
-| Code | Name | Description |
-|------|------|-------------|
-| E001 | AUTH_REQUIRED | User must be authenticated |
-| E002 | AUTH_FAILED | Authentication failed |
-| E003 | SUBSCRIPTION_REQUIRED | Active subscription required |
-| E004 | TRIAL_EXHAUSTED | Free trial scans used up |
-| E005 | PARSE_FAILED | Invoice parsing failed |
-| E006 | INVALID_IMAGE | Image is invalid or unreadable |
-| E007 | NETWORK_ERROR | Network connection error |
-| E008 | RATE_LIMITED | Too many requests |
-| E009 | PERMISSION_DENIED | Access denied |
-| E010 | NOT_FOUND | Resource not found |
-| E011 | VALIDATION_ERROR | Data validation failed |
-| E012 | PAYMENT_FAILED | Payment processing failed |
-| E013 | STORAGE_ERROR | File storage error |
-| E014 | UNKNOWN_ERROR | Unexpected error |
+| Code | Name                  | Description                    |
+| ---- | --------------------- | ------------------------------ |
+| E001 | AUTH_REQUIRED         | User must be authenticated     |
+| E002 | AUTH_FAILED           | Authentication failed          |
+| E003 | SUBSCRIPTION_REQUIRED | Active subscription required   |
+| E004 | TRIAL_EXHAUSTED       | Free trial scans used up       |
+| E005 | PARSE_FAILED          | Invoice parsing failed         |
+| E006 | INVALID_IMAGE         | Image is invalid or unreadable |
+| E007 | NETWORK_ERROR         | Network connection error       |
+| E008 | RATE_LIMITED          | Too many requests              |
+| E009 | PERMISSION_DENIED     | Access denied                  |
+| E010 | NOT_FOUND             | Resource not found             |
+| E011 | VALIDATION_ERROR      | Data validation failed         |
+| E012 | PAYMENT_FAILED        | Payment processing failed      |
+| E013 | STORAGE_ERROR         | File storage error             |
+| E014 | UNKNOWN_ERROR         | Unexpected error               |
 
 ### Error Response Format
 
@@ -600,14 +624,14 @@ interface AppError {
 
 ## 5. Rate Limits
 
-| Service | Limit | Window |
-|---------|-------|--------|
-| Gemini API | 60 requests | per minute |
-| Firestore reads | 50,000 | per day (free tier) |
-| Firestore writes | 20,000 | per day (free tier) |
-| Cloud Functions | 2 million | per month (free tier) |
-| Payment API | 100 requests | per minute |
+| Service          | Limit        | Window                |
+| ---------------- | ------------ | --------------------- |
+| Gemini API       | 60 requests  | per minute            |
+| Firestore reads  | 50,000       | per day (free tier)   |
+| Firestore writes | 20,000       | per day (free tier)   |
+| Cloud Functions  | 2 million    | per month (free tier) |
+| Payment API      | 100 requests | per minute            |
 
 ---
 
-*Next: [Gemini Integration](./GEMINI_INTEGRATION.md)*
+_Next: [Gemini Integration](./GEMINI_INTEGRATION.md)_

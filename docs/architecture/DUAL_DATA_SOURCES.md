@@ -4,10 +4,10 @@
 
 Invoice Intelligence has **two distinct data sources** with different purposes, visibility, and insertion methods:
 
-| Source | Who Inserts | Data Type | Purpose | Visibility |
-|--------|-------------|-----------|---------|------------|
-| **User Scan** | Consumer (app user) | Private Invoice | Personal tracking, budgeting, reports | Only the user who scanned |
-| **Shop Upload** | Merchant/Store | Public Prices | Price comparison database | All authenticated users |
+| Source          | Who Inserts         | Data Type       | Purpose                               | Visibility                |
+| --------------- | ------------------- | --------------- | ------------------------------------- | ------------------------- |
+| **User Scan**   | Consumer (app user) | Private Invoice | Personal tracking, budgeting, reports | Only the user who scanned |
+| **Shop Upload** | Merchant/Store      | Public Prices   | Price comparison database             | All authenticated users   |
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -50,6 +50,7 @@ Invoice Intelligence has **two distinct data sources** with different purposes, 
 ## Part 1: User Data Flow (Private)
 
 ### Purpose
+
 - **Personal spending tracking**
 - **Monthly/weekly reports**
 - **Price history for individual user**
@@ -57,6 +58,7 @@ Invoice Intelligence has **two distinct data sources** with different purposes, 
 - **Receipt archival** (no more lost receipts!)
 
 ### Who Inserts
+
 - End consumers via the mobile app
 - Data is scanned from physical receipts using AI
 
@@ -66,23 +68,23 @@ Invoice Intelligence has **two distinct data sources** with different purposes, 
 // Collection: /artifacts/{appId}/users/{userId}/invoices/{invoiceId}
 interface UserInvoice {
   id: string;
-  userId: string;              // Owner of this data
-  
+  userId: string; // Owner of this data
+
   // Invoice Details
-  shopName: string;            // Where they shopped
+  shopName: string; // Where they shopped
   shopAddress?: string;
-  date: string;                // Date of purchase
+  date: string; // Date of purchase
   total: number;
   currency: 'USD' | 'CDF';
-  
+
   // Line Items
   items: UserInvoiceItem[];
-  
+
   // Metadata
-  timestamp: Timestamp;        // When scanned
-  imageUrl?: string;           // Receipt photo backup
+  timestamp: Timestamp; // When scanned
+  imageUrl?: string; // Receipt photo backup
   scanMethod: 'camera' | 'gallery' | 'manual';
-  
+
   // Privacy: This data is NEVER shared with other users
 }
 
@@ -109,12 +111,14 @@ match /users/{userId}/invoices/{invoiceId} {
 ## Part 2: Shop Data Flow (Public)
 
 ### Purpose
+
 - **Public price comparison database**
 - **Help consumers find best prices**
 - **Store discovery**
 - **Market price intelligence**
 
 ### Who Inserts
+
 - **Merchants/Store owners** via dedicated portal
 - **System admin** for data quality control
 - **NOT inserted by regular users**
@@ -122,6 +126,7 @@ match /users/{userId}/invoices/{invoiceId} {
 ### Insertion Methods
 
 #### Method A: Merchant Web Portal
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    MERCHANT PORTAL                               │
@@ -145,6 +150,7 @@ match /users/{userId}/invoices/{invoiceId} {
 ```
 
 #### Method B: Bulk CSV Upload
+
 ```csv
 item_name,price,currency,unit,category
 Cooking Oil (5L),11.50,USD,5L,Groceries
@@ -155,6 +161,7 @@ Bread (loaf),2.00,USD,piece,Groceries
 ```
 
 #### Method C: API Integration (Future)
+
 - Stores with POS systems can auto-sync prices
 - Real-time price updates via webhook
 
@@ -164,30 +171,30 @@ Bread (loaf),2.00,USD,piece,Groceries
 // Collection: /artifacts/{appId}/public/data/storePrices/{priceId}
 interface PublicStorePrice {
   id: string;
-  
+
   // Item Info
   itemName: string;
-  itemNameNormalized: string;  // For search
+  itemNameNormalized: string; // For search
   category: string;
   unit: string;
-  
+
   // Price Info
   price: number;
   currency: 'USD' | 'CDF';
-  
+
   // Store Info
   storeId: string;
   storeName: string;
   storeLocation?: string;
-  
+
   // Metadata
   uploadDate: Timestamp;
   validUntil?: Timestamp;
   sourceType: 'merchant_portal' | 'csv_upload' | 'api_sync' | 'admin_entry';
-  uploadedBy: string;          // Merchant user ID
-  isVerified: boolean;         // Admin verified
+  uploadedBy: string; // Merchant user ID
+  isVerified: boolean; // Admin verified
   isActive: boolean;
-  
+
   // This data is visible to ALL authenticated users
 }
 ```
@@ -302,25 +309,25 @@ When a user views price comparison, data comes from **BOTH sources**:
 // Collection: /artifacts/{appId}/merchants/{merchantId}
 interface Merchant {
   id: string;
-  userId: string;              // Firebase Auth UID
-  
+  userId: string; // Firebase Auth UID
+
   // Business Info
   businessName: string;
   businessType: 'supermarket' | 'market' | 'pharmacy' | 'electronics' | 'other';
   registrationNumber?: string;
-  
+
   // Store Locations
   stores: MerchantStore[];
-  
+
   // Status
   isActive: boolean;
   isVerified: boolean;
   verifiedDate?: Timestamp;
-  
+
   // Contact
   email: string;
   phone: string;
-  
+
   // Metadata
   createdAt: Timestamp;
   lastPriceUpdate?: Timestamp;
@@ -333,7 +340,7 @@ interface MerchantStore {
   address: string;
   city: string;
   neighborhood: string;
-  coordinates?: { lat: number; lng: number };
+  coordinates?: {lat: number; lng: number};
   isActive: boolean;
 }
 ```
@@ -341,6 +348,7 @@ interface MerchantStore {
 ### Merchant Portal Screens
 
 #### Dashboard
+
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │  🏪 Shoprite Merchant Portal                      [Logout]     │
@@ -368,6 +376,7 @@ interface MerchantStore {
 ```
 
 #### Price Management
+
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │  Price Management                    Store: [Shoprite Gombe ▼] │
@@ -395,6 +404,7 @@ interface MerchantStore {
 ```
 
 #### CSV Upload
+
 ```
 ┌────────────────────────────────────────────────────────────────┐
 │  Upload Price List                                              │
@@ -435,34 +445,37 @@ interface MerchantStore {
 
 ## Part 5: Key Differences Summary
 
-| Aspect | User Scan (Private) | Shop Upload (Public) |
-|--------|---------------------|----------------------|
-| **Who inserts** | Consumer via app | Merchant via portal |
-| **Method** | Camera scan + AI | Web form / CSV upload |
-| **Data stored** | Full invoice + items | Item prices only |
-| **Visibility** | Only owner | All users |
-| **Purpose** | Personal tracking | Price comparison |
-| **Update frequency** | Per shopping trip | Periodic (weekly/monthly) |
-| **Verification** | None needed | Admin can verify |
-| **Collection path** | `/users/{uid}/invoices` | `/public/data/storePrices` |
+| Aspect               | User Scan (Private)     | Shop Upload (Public)       |
+| -------------------- | ----------------------- | -------------------------- |
+| **Who inserts**      | Consumer via app        | Merchant via portal        |
+| **Method**           | Camera scan + AI        | Web form / CSV upload      |
+| **Data stored**      | Full invoice + items    | Item prices only           |
+| **Visibility**       | Only owner              | All users                  |
+| **Purpose**          | Personal tracking       | Price comparison           |
+| **Update frequency** | Per shopping trip       | Periodic (weekly/monthly)  |
+| **Verification**     | None needed             | Admin can verify           |
+| **Collection path**  | `/users/{uid}/invoices` | `/public/data/storePrices` |
 
 ---
 
 ## Part 6: Benefits of Dual Model
 
 ### For Consumers
+
 - ✅ Track their own spending accurately
 - ✅ Compare their prices to current market prices
 - ✅ Find best deals before shopping
 - ✅ Privacy - their purchase history stays private
 
 ### For Merchants
+
 - ✅ Attract price-conscious shoppers
 - ✅ Showcase competitive prices
 - ✅ Free advertising in the app
 - ✅ Market intelligence (see competitor prices)
 
 ### For the Platform
+
 - ✅ Clean, verified public price data
 - ✅ Rich private usage data (engagement)
 - ✅ Two-sided marketplace potential
@@ -470,4 +483,4 @@ interface MerchantStore {
 
 ---
 
-*Next: [Long Receipt Handling](./LONG_RECEIPTS.md)*
+_Next: [Long Receipt Handling](./LONG_RECEIPTS.md)_

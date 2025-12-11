@@ -78,7 +78,10 @@ export interface LeaderboardEntry {
 }
 
 // Achievement definitions
-const ACHIEVEMENTS: Omit<Achievement, 'progress' | 'isUnlocked' | 'unlockedAt'>[] = [
+const ACHIEVEMENTS: Omit<
+  Achievement,
+  'progress' | 'isUnlocked' | 'unlockedAt'
+>[] = [
   {
     id: 'first_scan',
     type: 'first_scan',
@@ -241,24 +244,24 @@ class SavingsTrackerService {
     const savingsRef = firestore()
       .collection(SAVINGS_COLLECTION(userId))
       .doc(receiptId);
-    
+
     const record: Omit<SavingsRecord, 'id'> = {
       receiptId,
       date: new Date(),
       ...data,
     };
-    
+
     await savingsRef.set({
       ...record,
       date: firestore.FieldValue.serverTimestamp(),
     });
-    
+
     // Update user stats
     await this.updateStats(userId, data);
-    
+
     // Check for new achievements
     await this.checkAchievements(userId);
-    
+
     return {
       ...record,
       id: receiptId,
@@ -277,7 +280,9 @@ class SavingsTrackerService {
         const stats = JSON.parse(cached);
         return {
           ...stats,
-          lastScanDate: stats.lastScanDate ? new Date(stats.lastScanDate) : undefined,
+          lastScanDate: stats.lastScanDate
+            ? new Date(stats.lastScanDate)
+            : undefined,
         };
       }
 
@@ -285,10 +290,13 @@ class SavingsTrackerService {
       const stats = await this.calculateStatsFromReceipts(userId);
 
       // Cache the stats
-      await AsyncStorage.setItem(`${USER_STATS_KEY}_${userId}`, JSON.stringify({
-        ...stats,
-        lastScanDate: stats.lastScanDate?.toISOString(),
-      }));
+      await AsyncStorage.setItem(
+        `${USER_STATS_KEY}_${userId}`,
+        JSON.stringify({
+          ...stats,
+          lastScanDate: stats.lastScanDate?.toISOString(),
+        }),
+      );
 
       return stats;
     } catch (error) {
@@ -368,7 +376,10 @@ class SavingsTrackerService {
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
 
-        if (mostRecent.getTime() === today.getTime() || mostRecent.getTime() === yesterday.getTime()) {
+        if (
+          mostRecent.getTime() === today.getTime() ||
+          mostRecent.getTime() === yesterday.getTime()
+        ) {
           currentStreak = 1;
 
           // Count consecutive days
@@ -393,9 +404,10 @@ class SavingsTrackerService {
       }
 
       // Calculate level and XP
-      const xp = totalScans * 10 + Math.floor(totalSavings) * 5 + shopsVisited.size * 15;
+      const xp =
+        totalScans * 10 + Math.floor(totalSavings) * 5 + shopsVisited.size * 15;
       const level = Math.floor(xp / 100) + 1;
-      const xpToNextLevel = (level * 100) - (xp % 100);
+      const xpToNextLevel = level * 100 - (xp % 100);
 
       return {
         totalScans,
@@ -481,17 +493,17 @@ class SavingsTrackerService {
     const stats = await this.getStats(userId);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     // Calculate streak
     let newStreak = stats.currentStreak;
     if (stats.lastScanDate) {
       const lastScan = new Date(stats.lastScanDate);
       lastScan.setHours(0, 0, 0, 0);
-      
+
       const diffDays = Math.floor(
         (today.getTime() - lastScan.getTime()) / (1000 * 60 * 60 * 24),
       );
-      
+
       if (diffDays === 1) {
         newStreak++;
       } else if (diffDays > 1) {
@@ -501,7 +513,7 @@ class SavingsTrackerService {
     } else {
       newStreak = 1;
     }
-    
+
     // Update stats
     const updatedStats: UserStats = {
       ...stats,
@@ -514,18 +526,18 @@ class SavingsTrackerService {
       itemsScanned: stats.itemsScanned + data.itemCount,
       bestPricesFound: stats.bestPricesFound + data.bestPricesFound,
     };
-    
+
     // Calculate XP and level
     const xpEarned = this.calculateXP(data);
     updatedStats.xp = stats.xp + xpEarned;
-    
+
     // Level up check
     while (updatedStats.xp >= updatedStats.xpToNextLevel) {
       updatedStats.xp -= updatedStats.xpToNextLevel;
       updatedStats.level++;
       updatedStats.xpToNextLevel = this.getXPForLevel(updatedStats.level);
     }
-    
+
     // Save to Firestore
     await firestore()
       .collection('artifacts')
@@ -533,7 +545,7 @@ class SavingsTrackerService {
       .collection('users')
       .doc(userId)
       .set({stats: updatedStats}, {merge: true});
-    
+
     // Cache locally
     await AsyncStorage.setItem(
       `${USER_STATS_KEY}_${userId}`,
@@ -551,18 +563,18 @@ class SavingsTrackerService {
     bestPricesFound: number;
   }): number {
     let xp = 5; // Base XP for scan
-    
+
     // Bonus for items
     xp += Math.min(data.itemCount, 10);
-    
+
     // Bonus for savings
     if (data.actualSavings > 0) {
       xp += Math.min(Math.floor(data.actualSavings), 20);
     }
-    
+
     // Bonus for best prices
     xp += data.bestPricesFound * 2;
-    
+
     return xp;
   }
 
@@ -600,10 +612,13 @@ class SavingsTrackerService {
             try {
               await pushNotificationService.triggerAchievementNotification(
                 achievement.title,
-                'fr'
+                'fr',
               );
             } catch (error) {
-              console.warn('[SavingsTracker] Failed to send achievement notification:', error);
+              console.warn(
+                '[SavingsTracker] Failed to send achievement notification:',
+                error,
+              );
             }
           }
         }
@@ -628,7 +643,9 @@ class SavingsTrackerService {
         });
 
         await batch.commit();
-        console.log(`[SavingsTracker] Unlocked ${newlyUnlocked.length} achievements for user ${userId}`);
+        console.log(
+          `[SavingsTracker] Unlocked ${newlyUnlocked.length} achievements for user ${userId}`,
+        );
       }
     } catch (error) {
       console.error('[SavingsTracker] Check achievements error:', error);
@@ -640,11 +657,11 @@ class SavingsTrackerService {
    */
   async getAchievements(userId: string): Promise<Achievement[]> {
     const stats = await this.getStats(userId);
-    
+
     return ACHIEVEMENTS.map(achievement => {
       const progress = this.getAchievementProgress(achievement.type, stats);
       const isUnlocked = progress >= achievement.target;
-      
+
       return {
         ...achievement,
         progress,
@@ -657,7 +674,10 @@ class SavingsTrackerService {
   /**
    * Get progress for an achievement type
    */
-  private getAchievementProgress(type: AchievementType, stats: UserStats): number {
+  private getAchievementProgress(
+    type: AchievementType,
+    stats: UserStats,
+  ): number {
     switch (type) {
       case 'first_scan':
         return stats.totalScans > 0 ? 1 : 0;
@@ -698,19 +718,19 @@ class SavingsTrackerService {
   private async checkAchievements(userId: string): Promise<Achievement[]> {
     const stats = await this.getStats(userId);
     const newlyUnlocked: Achievement[] = [];
-    
+
     // Get previously unlocked achievements
     const unlockedSnapshot = await firestore()
       .collection(ACHIEVEMENTS_COLLECTION(userId))
       .get();
-    
+
     const unlockedIds = new Set(unlockedSnapshot.docs.map(d => d.id));
-    
+
     for (const achievement of ACHIEVEMENTS) {
       if (unlockedIds.has(achievement.id)) continue;
-      
+
       const progress = this.getAchievementProgress(achievement.type, stats);
-      
+
       if (progress >= achievement.target) {
         // Unlock achievement
         await firestore()
@@ -722,10 +742,10 @@ class SavingsTrackerService {
             isUnlocked: true,
             unlockedAt: firestore.FieldValue.serverTimestamp(),
           });
-        
+
         // Add XP reward
         await this.addXP(userId, achievement.xpReward);
-        
+
         newlyUnlocked.push({
           ...achievement,
           progress,
@@ -734,7 +754,7 @@ class SavingsTrackerService {
         });
       }
     }
-    
+
     return newlyUnlocked;
   }
 
@@ -743,24 +763,22 @@ class SavingsTrackerService {
    */
   private async addXP(userId: string, xp: number): Promise<void> {
     const stats = await this.getStats(userId);
-    
+
     let newXP = stats.xp + xp;
     let newLevel = stats.level;
     let xpToNext = stats.xpToNextLevel;
-    
+
     while (newXP >= xpToNext) {
       newXP -= xpToNext;
       newLevel++;
       xpToNext = this.getXPForLevel(newLevel);
     }
-    
-    await firestore()
-      .doc(`apps/${APP_ID}/users/${userId}`)
-      .update({
-        'stats.xp': newXP,
-        'stats.level': newLevel,
-        'stats.xpToNextLevel': xpToNext,
-      });
+
+    await firestore().doc(`apps/${APP_ID}/users/${userId}`).update({
+      'stats.xp': newXP,
+      'stats.level': newLevel,
+      'stats.xpToNextLevel': xpToNext,
+    });
   }
 
   /**
@@ -778,7 +796,7 @@ class SavingsTrackerService {
   }> {
     const now = new Date();
     let startDate: Date;
-    
+
     switch (period) {
       case 'week':
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -790,12 +808,12 @@ class SavingsTrackerService {
         startDate = new Date(now.getFullYear(), 0, 1);
         break;
     }
-    
+
     const snapshot = await firestore()
       .collection(SAVINGS_COLLECTION(userId))
       .where('date', '>=', startDate)
       .get();
-    
+
     if (snapshot.empty) {
       return {
         totalSpent: 0,
@@ -805,16 +823,16 @@ class SavingsTrackerService {
         topCategories: [],
       };
     }
-    
+
     let totalSpent = 0;
     let totalSavings = 0;
-    
+
     snapshot.docs.forEach(doc => {
       const data = doc.data();
       totalSpent += data.totalSpent || 0;
       totalSavings += data.actualSavings || 0;
     });
-    
+
     return {
       totalSpent,
       totalSavings,
@@ -834,8 +852,18 @@ class SavingsTrackerService {
     color: string;
   } {
     const levels = [
-      {title: 'Débutant', titleLingala: 'Mobandi', icon: '🌱', color: '#10b981'},
-      {title: 'Apprenti', titleLingala: 'Mwana école', icon: '🌿', color: '#22c55e'},
+      {
+        title: 'Débutant',
+        titleLingala: 'Mobandi',
+        icon: '🌱',
+        color: '#10b981',
+      },
+      {
+        title: 'Apprenti',
+        titleLingala: 'Mwana école',
+        icon: '🌿',
+        color: '#22c55e',
+      },
       {title: 'Amateur', titleLingala: 'Molandi', icon: '🌳', color: '#84cc16'},
       {title: 'Confirmé', titleLingala: 'Moyebi', icon: '⭐', color: '#eab308'},
       {title: 'Expert', titleLingala: 'Mokonzi', icon: '🌟', color: '#f59e0b'},
@@ -843,7 +871,7 @@ class SavingsTrackerService {
       {title: 'Champion', titleLingala: 'Molong', icon: '👑', color: '#ef4444'},
       {title: 'Légende', titleLingala: 'Likambo', icon: '🏆', color: '#dc2626'},
     ];
-    
+
     const levelIndex = Math.min(level - 1, levels.length - 1);
     return levels[Math.max(0, levelIndex)];
   }

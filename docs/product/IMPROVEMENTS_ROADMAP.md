@@ -13,6 +13,7 @@ This document outlines planned improvements for Invoice Intelligence (Prix Track
 **Description:** Notify users when items they care about drop in price.
 
 **User Stories:**
+
 - As a user, I want to set a price alert for sugar so I know when it's cheap
 - As a user, I want to see all my active alerts in one place
 - As a user, I want to be notified even when the app is closed
@@ -39,26 +40,28 @@ interface PriceAlert {
 ```
 
 **Cloud Function for Alert Checking:**
+
 ```typescript
 // Triggered when storePrices collection updates
 exports.checkPriceAlerts = functions.firestore
   .document('storePrices/{priceId}')
   .onWrite(async (change, context) => {
     const newPrice = change.after.data();
-    
+
     // Find all alerts for this item
-    const alerts = await db.collectionGroup('priceAlerts')
+    const alerts = await db
+      .collectionGroup('priceAlerts')
       .where('itemNameNormalized', '==', newPrice.itemNameNormalized)
       .where('isActive', '==', true)
       .where('targetPrice', '>=', newPrice.price)
       .get();
-    
+
     // Send push notifications
     for (const alert of alerts.docs) {
       await sendPushNotification(alert.data().userId, {
         title: '💰 Price Drop Alert!',
         body: `${newPrice.itemName} is now ${newPrice.price} ${newPrice.currency} at ${newPrice.storeName}`,
-        data: { type: 'price_alert', itemId: newPrice.itemId }
+        data: {type: 'price_alert', itemId: newPrice.itemId},
       });
     }
   });
@@ -110,14 +113,14 @@ exports.checkPriceAlerts = functions.firestore
 
 **Acceptance Criteria:**
 
-| ID | Criteria | Priority |
-|----|----------|----------|
-| PA-1 | User can create alert from item detail screen | Must |
-| PA-2 | User can view all active alerts | Must |
-| PA-3 | User can delete alerts | Must |
-| PA-4 | Push notification sent when price drops | Must |
-| PA-5 | Maximum 10 alerts per free user, unlimited for premium | Should |
-| PA-6 | Alert auto-deactivates after triggering (optional re-enable) | Should |
+| ID   | Criteria                                                     | Priority |
+| ---- | ------------------------------------------------------------ | -------- |
+| PA-1 | User can create alert from item detail screen                | Must     |
+| PA-2 | User can view all active alerts                              | Must     |
+| PA-3 | User can delete alerts                                       | Must     |
+| PA-4 | Push notification sent when price drops                      | Must     |
+| PA-5 | Maximum 10 alerts per free user, unlimited for premium       | Should   |
+| PA-6 | Alert auto-deactivates after triggering (optional re-enable) | Should   |
 
 ---
 
@@ -126,6 +129,7 @@ exports.checkPriceAlerts = functions.firestore
 **Description:** Allow users to take photos of receipts offline, queue them, and process when connection returns.
 
 **User Stories:**
+
 - As a user in an area with poor connectivity, I want to scan receipts offline
 - As a user, I want to see queued scans waiting to process
 - As a user, I want queued scans to auto-process when I'm back online
@@ -136,10 +140,10 @@ exports.checkPriceAlerts = functions.firestore
 // Offline Queue Data Model
 interface QueuedScan {
   queueId: string;
-  imageUri: string;         // Local file path
-  imageBase64?: string;     // Cached for upload
+  imageUri: string; // Local file path
+  imageBase64?: string; // Cached for upload
   status: 'queued' | 'processing' | 'complete' | 'failed';
-  createdAt: number;        // Unix timestamp
+  createdAt: number; // Unix timestamp
   processedAt?: number;
   errorMessage?: string;
   resultInvoiceId?: string;
@@ -154,11 +158,11 @@ const QUEUE_KEY = '@scan_queue';
 ```typescript
 class OfflineScanQueue {
   private queue: QueuedScan[] = [];
-  
+
   async addToQueue(imageUri: string): Promise<string> {
     const queueId = generateId();
     const base64 = await imageToBase64(imageUri);
-    
+
     const scan: QueuedScan = {
       queueId,
       imageUri,
@@ -166,29 +170,29 @@ class OfflineScanQueue {
       status: 'queued',
       createdAt: Date.now(),
     };
-    
+
     this.queue.push(scan);
     await this.persistQueue();
-    
+
     // Try to process if online
     this.processQueue();
-    
+
     return queueId;
   }
-  
+
   async processQueue(): Promise<void> {
-    if (!await isOnline()) return;
-    
+    if (!(await isOnline())) return;
+
     const pending = this.queue.filter(s => s.status === 'queued');
-    
+
     for (const scan of pending) {
       scan.status = 'processing';
       await this.persistQueue();
-      
+
       try {
         const result = await geminiClient.parseInvoice(scan.imageBase64);
         const invoiceId = await saveInvoice(result);
-        
+
         scan.status = 'complete';
         scan.processedAt = Date.now();
         scan.resultInvoiceId = invoiceId;
@@ -196,11 +200,11 @@ class OfflineScanQueue {
         scan.status = 'failed';
         scan.errorMessage = error.message;
       }
-      
+
       await this.persistQueue();
     }
   }
-  
+
   // Listen for network changes
   setupNetworkListener(): void {
     NetInfo.addEventListener(state => {
@@ -261,15 +265,15 @@ class OfflineScanQueue {
 
 **Acceptance Criteria:**
 
-| ID | Criteria | Priority |
-|----|----------|----------|
-| OQ-1 | User can capture receipt photo while offline | Must |
-| OQ-2 | Photo saved locally with queue status | Must |
-| OQ-3 | Queue badge shows pending count | Must |
-| OQ-4 | Auto-process when connection restored | Must |
-| OQ-5 | User can view queue and delete pending items | Must |
-| OQ-6 | Failed scans can be retried | Should |
-| OQ-7 | Queue persists across app restarts | Must |
+| ID   | Criteria                                     | Priority |
+| ---- | -------------------------------------------- | -------- |
+| OQ-1 | User can capture receipt photo while offline | Must     |
+| OQ-2 | Photo saved locally with queue status        | Must     |
+| OQ-3 | Queue badge shows pending count              | Must     |
+| OQ-4 | Auto-process when connection restored        | Must     |
+| OQ-5 | User can view queue and delete pending items | Must     |
+| OQ-6 | Failed scans can be retried                  | Should   |
+| OQ-7 | Queue persists across app restarts           | Must     |
 
 ---
 
@@ -279,13 +283,13 @@ class OfflineScanQueue {
 
 **Notification Types:**
 
-| Type | Trigger | Example |
-|------|---------|---------|
-| Price Alert | Price drops below target | "Sugar is now $1.20 at Shoprite!" |
-| Weekly Summary | Every Sunday | "You spent $85 this week, saved $12" |
-| Scan Reminder | No scan in 7 days | "Don't forget to track your spending!" |
-| Queue Processed | Offline queue done | "3 receipts processed successfully" |
-| Subscription | Trial ending, renewal | "Your trial ends in 2 days" |
+| Type            | Trigger                  | Example                                |
+| --------------- | ------------------------ | -------------------------------------- |
+| Price Alert     | Price drops below target | "Sugar is now $1.20 at Shoprite!"      |
+| Weekly Summary  | Every Sunday             | "You spent $85 this week, saved $12"   |
+| Scan Reminder   | No scan in 7 days        | "Don't forget to track your spending!" |
+| Queue Processed | Offline queue done       | "3 receipts processed successfully"    |
+| Subscription    | Trial ending, renewal    | "Your trial ends in 2 days"            |
 
 **Technical Implementation:**
 
@@ -297,23 +301,20 @@ async function setupNotifications(): Promise<void> {
   // Request permission
   const authStatus = await messaging().requestPermission();
   const enabled = authStatus === messaging.AuthorizationStatus.AUTHORIZED;
-  
+
   if (enabled) {
     // Get FCM token
     const token = await messaging().getToken();
-    
+
     // Save to user profile
-    await firestore()
-      .collection('users')
-      .doc(userId)
-      .update({ fcmToken: token });
+    await firestore().collection('users').doc(userId).update({fcmToken: token});
   }
-  
+
   // Handle foreground messages
   messaging().onMessage(async remoteMessage => {
     showLocalNotification(remoteMessage);
   });
-  
+
   // Handle background/quit messages
   messaging().setBackgroundMessageHandler(async remoteMessage => {
     console.log('Background message:', remoteMessage);
@@ -378,19 +379,22 @@ interface SavedItem {
   date: Timestamp;
 }
 
-async function calculateSavings(userId: string, period: 'week' | 'month' | 'all'): Promise<SavingsReport> {
+async function calculateSavings(
+  userId: string,
+  period: 'week' | 'month' | 'all',
+): Promise<SavingsReport> {
   const invoices = await getUserInvoices(userId, period);
   let totalSavings = 0;
   const itemsSaved: SavedItem[] = [];
-  
+
   for (const invoice of invoices) {
     for (const item of invoice.items) {
       const bestPrice = await getBestPrice(item.itemNameNormalized);
-      
+
       if (bestPrice && item.unitPrice > bestPrice.price) {
         const savings = (item.unitPrice - bestPrice.price) * item.quantity;
         totalSavings += savings;
-        
+
         itemsSaved.push({
           itemName: item.name,
           paidPrice: item.unitPrice,
@@ -402,8 +406,8 @@ async function calculateSavings(userId: string, period: 'week' | 'month' | 'all'
       }
     }
   }
-  
-  return { totalSavings, itemsSaved, /* ... */ };
+
+  return {totalSavings, itemsSaved /* ... */};
 }
 ```
 
@@ -425,42 +429,42 @@ const ACHIEVEMENTS: Achievement[] = [
     title: 'First Scan',
     description: 'Scanned your first receipt',
     icon: '📷',
-    requirement: { type: 'scan_count', value: 1 }
+    requirement: {type: 'scan_count', value: 1},
   },
   {
     id: 'scan_streak_7',
     title: 'Week Warrior',
     description: 'Scanned receipts 7 days in a row',
     icon: '🔥',
-    requirement: { type: 'scan_streak', value: 7 }
+    requirement: {type: 'scan_streak', value: 7},
   },
   {
     id: 'saved_10',
     title: 'Saver Starter',
     description: 'Saved $10 using price comparisons',
     icon: '💰',
-    requirement: { type: 'total_savings', value: 10 }
+    requirement: {type: 'total_savings', value: 10},
   },
   {
     id: 'saved_100',
     title: 'Super Saver',
     description: 'Saved $100 total',
     icon: '🏆',
-    requirement: { type: 'total_savings', value: 100 }
+    requirement: {type: 'total_savings', value: 100},
   },
   {
     id: 'invoices_50',
     title: 'Dedicated Tracker',
     description: 'Tracked 50 invoices',
     icon: '📊',
-    requirement: { type: 'invoice_count', value: 50 }
+    requirement: {type: 'invoice_count', value: 50},
   },
   {
     id: 'categories_all',
     title: 'Diverse Shopper',
     description: 'Purchased from all categories',
     icon: '🌈',
-    requirement: { type: 'category_count', value: 10 }
+    requirement: {type: 'category_count', value: 10},
   },
 ];
 ```
@@ -535,6 +539,7 @@ const ACHIEVEMENTS: Achievement[] = [
 **Description:** Implement usage tracking, limits, and cost optimizations to ensure business profitability.
 
 **User Stories:**
+
 - As a business owner, I want to track user scan volumes to understand usage patterns
 - As a business owner, I want to prevent excessive AI costs from heavy users
 - As a user, I want clear visibility of my remaining scans
@@ -554,14 +559,17 @@ interface UsageMetrics {
 export const trackScan = async (userId: string, aiCost: number) => {
   const month = new Date().toISOString().slice(0, 7);
   const docRef = db.collection('usage_metrics').doc(`${userId}_${month}`);
-  
-  await docRef.set({
-    userId,
-    month,
-    scans: FieldValue.increment(1),
-    aiCost: FieldValue.increment(aiCost),
-    lastScan: FieldValue.serverTimestamp()
-  }, { merge: true });
+
+  await docRef.set(
+    {
+      userId,
+      month,
+      scans: FieldValue.increment(1),
+      aiCost: FieldValue.increment(aiCost),
+      lastScan: FieldValue.serverTimestamp(),
+    },
+    {merge: true},
+  );
 };
 ```
 
@@ -571,23 +579,24 @@ export const trackScan = async (userId: string, aiCost: number) => {
 // Admin dashboard to monitor costs
 export const getMonthlyUsageReport = async () => {
   const month = new Date().toISOString().slice(0, 7);
-  
-  const snapshot = await db.collection('usage_metrics')
+
+  const snapshot = await db
+    .collection('usage_metrics')
     .where('month', '==', month)
     .get();
-  
+
   let totalScans = 0;
   let totalCost = 0;
   let activeUsers = 0;
-  
+
   snapshot.forEach(doc => {
     const data = doc.data();
     totalScans += data.scans;
     totalCost += data.aiCost;
     activeUsers++;
   });
-  
-  return { totalScans, totalCost, activeUsers };
+
+  return {totalScans, totalCost, activeUsers};
 };
 ```
 
@@ -598,10 +607,10 @@ export const getMonthlyUsageReport = async () => {
 export const canUserScan = async (userId: string): Promise<boolean> => {
   const subscription = await getUserSubscription(userId);
   if (subscription.plan === 'premium') return true;
-  
+
   const currentUsage = await getCurrentMonthUsage(userId);
-  const limits = { basic: 25, standard: 100 };
-  
+  const limits = {basic: 25, standard: 100};
+
   return currentUsage < limits[subscription.plan];
 };
 ```
@@ -609,15 +618,17 @@ export const canUserScan = async (userId: string): Promise<boolean> => {
 **Cost Optimization Features:**
 
 1. **Model Selection Based on Complexity**
+
 ```typescript
 const selectAIModel = (receiptComplexity: 'simple' | 'complex') => {
-  return receiptComplexity === 'simple' 
+  return receiptComplexity === 'simple'
     ? 'gemini-2.5-flash-lite' // Cheaper for basic receipts
-    : 'gemini-2.5-flash';    // Full model for complex receipts
+    : 'gemini-2.5-flash'; // Full model for complex receipts
 };
 ```
 
 2. **Price Caching**
+
 ```typescript
 // Cache price comparisons for 24 hours
 const PRICE_CACHE_DURATION = 24 * 60 * 60 * 1000;
@@ -625,20 +636,23 @@ const PRICE_CACHE_DURATION = 24 * 60 * 60 * 1000;
 export const getCachedPriceComparison = async (itemName: string) => {
   const cacheKey = `price_${normalizeItemName(itemName)}`;
   const cached = await AsyncStorage.getItem(cacheKey);
-  
+
   if (cached) {
-    const { data, timestamp } = JSON.parse(cached);
+    const {data, timestamp} = JSON.parse(cached);
     if (Date.now() - timestamp < PRICE_CACHE_DURATION) {
       return data;
     }
   }
-  
+
   const freshData = await fetchPriceData(itemName);
-  await AsyncStorage.setItem(cacheKey, JSON.stringify({
-    data: freshData,
-    timestamp: Date.now()
-  }));
-  
+  await AsyncStorage.setItem(
+    cacheKey,
+    JSON.stringify({
+      data: freshData,
+      timestamp: Date.now(),
+    }),
+  );
+
   return freshData;
 };
 ```
@@ -646,6 +660,7 @@ export const getCachedPriceComparison = async (itemName: string) => {
 **UI Updates:**
 
 **Trial User:**
+
 ```
 ┌────────────────────────┐
 │ [←]   Account          │
@@ -666,6 +681,7 @@ export const getCachedPriceComparison = async (itemName: string) => {
 ```
 
 **Paid User:**
+
 ```
 ┌────────────────────────┐
 │ [←]   Account          │
@@ -688,17 +704,17 @@ export const getCachedPriceComparison = async (itemName: string) => {
 
 **Acceptance Criteria:**
 
-| ID | Criteria | Priority |
-|----|----------|----------|
-| UM-1 | Usage counter displayed in account screen | Must |
-| UM-2 | Scan blocked when limit reached | Must |
-| UM-3 | Clear upgrade prompts shown | Must |
-| UM-4 | Monthly usage resets on schedule | Must |
-| UM-5 | 2-month free trial with unlimited access | Must |
-| UM-6 | Trial expiration warnings (7 days before) | Must |
-| UM-7 | One-time trial extension (1 month) available | Should |
-| UM-8 | Admin dashboard for cost monitoring | Should |
-| UM-9 | Cost optimizations reduce expenses by 20% | Should |
+| ID   | Criteria                                     | Priority |
+| ---- | -------------------------------------------- | -------- |
+| UM-1 | Usage counter displayed in account screen    | Must     |
+| UM-2 | Scan blocked when limit reached              | Must     |
+| UM-3 | Clear upgrade prompts shown                  | Must     |
+| UM-4 | Monthly usage resets on schedule             | Must     |
+| UM-5 | 2-month free trial with unlimited access     | Must     |
+| UM-6 | Trial expiration warnings (7 days before)    | Must     |
+| UM-7 | One-time trial extension (1 month) available | Should   |
+| UM-8 | Admin dashboard for cost monitoring          | Should   |
+| UM-9 | Cost optimizations reduce expenses by 20%    | Should   |
 
 ---
 
@@ -780,7 +796,7 @@ interface ShoppingItem {
 interface StoreOption {
   storeId: string;
   storeName: string;
-  items: { item: ShoppingItem; price: number }[];
+  items: {item: ShoppingItem; price: number}[];
   total: number;
 }
 
@@ -792,36 +808,40 @@ interface OptimizationResult {
   singleStoreBest: StoreOption; // Best single store fallback
 }
 
-async function optimizeShoppingList(items: ShoppingItem[]): Promise<OptimizationResult> {
+async function optimizeShoppingList(
+  items: ShoppingItem[],
+): Promise<OptimizationResult> {
   // 1. Get all prices for all items
   const priceMatrix: Map<string, Map<string, number>> = new Map();
-  
+
   for (const item of items) {
     const prices = await getItemPrices(item.nameNormalized);
     priceMatrix.set(item.nameNormalized, prices);
   }
-  
+
   // 2. Find all unique stores
   const stores = getUniqueStores(priceMatrix);
-  
+
   // 3. Calculate single-store totals
-  const singleStoreOptions: StoreOption[] = stores.map(store => ({
-    storeId: store.id,
-    storeName: store.name,
-    items: items.map(item => ({
-      item,
-      price: priceMatrix.get(item.nameNormalized)?.get(store.id) || Infinity
-    })),
-    total: calculateTotal(items, priceMatrix, store.id)
-  })).filter(o => o.total < Infinity)
+  const singleStoreOptions: StoreOption[] = stores
+    .map(store => ({
+      storeId: store.id,
+      storeName: store.name,
+      items: items.map(item => ({
+        item,
+        price: priceMatrix.get(item.nameNormalized)?.get(store.id) || Infinity,
+      })),
+      total: calculateTotal(items, priceMatrix, store.id),
+    }))
+    .filter(o => o.total < Infinity)
     .sort((a, b) => a.total - b.total);
-  
+
   // 4. Find optimal multi-store combination
   const multiStoreResult = findOptimalCombination(items, priceMatrix, stores);
-  
+
   // 5. Compare and return best strategy
   const singleStoreBest = singleStoreOptions[0];
-  
+
   if (multiStoreResult.total < singleStoreBest.total * 0.9) {
     // Multi-store is at least 10% cheaper
     return {
@@ -829,16 +849,16 @@ async function optimizeShoppingList(items: ShoppingItem[]): Promise<Optimization
       stores: multiStoreResult.stores,
       totalCost: multiStoreResult.total,
       savings: singleStoreBest.total - multiStoreResult.total,
-      singleStoreBest
+      singleStoreBest,
     };
   }
-  
+
   return {
     strategy: 'single_store',
     stores: [singleStoreBest],
     totalCost: singleStoreBest.total,
     savings: 0,
-    singleStoreBest
+    singleStoreBest,
   };
 }
 ```
@@ -850,6 +870,7 @@ async function optimizeShoppingList(items: ShoppingItem[]): Promise<Optimization
 **Description:** Let users ask questions about their spending in natural language.
 
 **Examples:**
+
 - "How much did I spend on food last month?"
 - "What's my most expensive purchase this year?"
 - "Show me all receipts from Shoprite"
@@ -878,10 +899,10 @@ Convert this to a JSON query:
 async function processNaturalQuery(question: string): Promise<QueryResult> {
   // 1. Parse question with Gemini
   const structuredQuery = await geminiClient.query(QUERY_PROMPT, question);
-  
+
   // 2. Execute Firestore query
   const data = await executeQuery(structuredQuery);
-  
+
   // 3. Format response
   return formatResponse(structuredQuery.type, data);
 }
@@ -936,6 +957,7 @@ async function processNaturalQuery(question: string): Promise<QueryResult> {
 **Description:** Provide merchants with insights about their pricing competitiveness.
 
 **Features:**
+
 - Price position vs competitors
 - Most viewed items
 - Price update reminders
@@ -1029,11 +1051,11 @@ async function processNaturalQuery(question: string): Promise<QueryResult> {
 // When saving an invoice (if user opted in)
 async function saveInvoiceWithContribution(
   invoice: Invoice,
-  contributeToPublic: boolean
+  contributeToPublic: boolean,
 ): Promise<void> {
   // 1. Always save to private collection
   await savePrivateInvoice(invoice);
-  
+
   // 2. Optionally contribute to public (anonymized)
   if (contributeToPublic) {
     for (const item of invoice.items) {
@@ -1045,11 +1067,11 @@ async function saveInvoiceWithContribution(
         storeId: invoice.storeId,
         storeName: invoice.storeName,
         date: invoice.date,
-        source: 'community',  // vs 'merchant'
+        source: 'community', // vs 'merchant'
         // NO user ID or personal info
       });
     }
-    
+
     // Track contribution (for gamification)
     await incrementUserContribution(userId, invoice.items.length);
   }
@@ -1063,6 +1085,7 @@ async function saveInvoiceWithContribution(
 **Description:** Let users set spending budgets and predict future spending.
 
 **Features:**
+
 - Monthly budget by category
 - Spending forecasts
 - Budget alerts
@@ -1176,7 +1199,7 @@ Best price at Shoprite!
 ```
 SMS to: PRIX (7749)
 
-"price sugar" 
+"price sugar"
 → "Sugar 1kg: Shoprite $1.50 (best), Carrefour $1.75, Metro $1.80"
 
 "spent"
@@ -1190,31 +1213,31 @@ SMS to: PRIX (7749)
 
 ## Priority Summary
 
-| Phase | Feature | Impact | Effort | Status |
-|-------|---------|--------|--------|--------|
-| **1.1** | Price Alerts | High | Low | Planned |
-| **1.1** | Offline Queue | High | Medium | Planned |
-| **1.1** | Push Notifications | High | Low | Planned |
-| **1.1** | Savings Gamification | Medium | Low | Planned |
-| **1.2** | Shopping List Optimizer | High | Medium | Planned |
+| Phase   | Feature                  | Impact | Effort | Status  |
+| ------- | ------------------------ | ------ | ------ | ------- |
+| **1.1** | Price Alerts             | High   | Low    | Planned |
+| **1.1** | Offline Queue            | High   | Medium | Planned |
+| **1.1** | Push Notifications       | High   | Low    | Planned |
+| **1.1** | Savings Gamification     | Medium | Low    | Planned |
+| **1.2** | Shopping List Optimizer  | High   | Medium | Planned |
 | **1.2** | Natural Language Queries | Medium | Medium | Planned |
-| **1.2** | Merchant Analytics | High | Medium | Planned |
-| **2.0** | Crowd-Sourced Prices | High | High | Planned |
-| **2.0** | Budget Goals | Medium | Medium | Planned |
-| **2.0** | USSD/SMS Fallback | Medium | High | Planned |
+| **1.2** | Merchant Analytics       | High   | Medium | Planned |
+| **2.0** | Crowd-Sourced Prices     | High   | High   | Planned |
+| **2.0** | Budget Goals             | Medium | Medium | Planned |
+| **2.0** | USSD/SMS Fallback        | Medium | High   | Planned |
 
 ---
 
 ## Success Metrics
 
-| Metric | Current | Phase 1.1 Target | Phase 2.0 Target |
-|--------|---------|------------------|------------------|
-| DAU | - | 1,000 | 10,000 |
-| Retention (D7) | - | 30% | 45% |
-| Scans/User/Week | - | 3 | 5 |
-| Conversion Rate | - | 5% | 8% |
-| NPS | - | 40 | 60 |
+| Metric          | Current | Phase 1.1 Target | Phase 2.0 Target |
+| --------------- | ------- | ---------------- | ---------------- |
+| DAU             | -       | 1,000            | 10,000           |
+| Retention (D7)  | -       | 30%              | 45%              |
+| Scans/User/Week | -       | 3                | 5                |
+| Conversion Rate | -       | 5%               | 8%               |
+| NPS             | -       | 40               | 60               |
 
 ---
 
-*See also: [Features Specification](./FEATURES.md) | [User Flows](./USER_FLOWS.md)*
+_See also: [Features Specification](./FEATURES.md) | [User Flows](./USER_FLOWS.md)_

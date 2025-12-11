@@ -14,12 +14,12 @@ Hermes is a JavaScript engine optimized for React Native, developed by Meta. It 
 
 ### Benefits
 
-| Metric | Without Hermes | With Hermes | Improvement |
-|--------|----------------|-------------|-------------|
-| App startup time | 4.5s | 2.1s | **53% faster** |
-| Bundle size | 18MB | 12MB | **33% smaller** |
-| Memory usage | 185MB | 136MB | **27% less** |
-| TTI (Time to Interactive) | 3.2s | 1.5s | **53% faster** |
+| Metric                    | Without Hermes | With Hermes | Improvement     |
+| ------------------------- | -------------- | ----------- | --------------- |
+| App startup time          | 4.5s           | 2.1s        | **53% faster**  |
+| Bundle size               | 18MB           | 12MB        | **33% smaller** |
+| Memory usage              | 185MB          | 136MB       | **27% less**    |
+| TTI (Time to Interactive) | 3.2s           | 1.5s        | **53% faster**  |
 
 ### Implementation
 
@@ -99,26 +99,26 @@ import ImageResizer from 'react-native-image-resizer';
 interface CompressionOptions {
   maxWidth: number;
   maxHeight: number;
-  quality: number;  // 0-100
+  quality: number; // 0-100
   format: 'JPEG' | 'PNG';
 }
 
 const DEFAULT_OPTIONS: CompressionOptions = {
   maxWidth: 1024,
-  maxHeight: 1536,  // 2:3 ratio for receipts
+  maxHeight: 1536, // 2:3 ratio for receipts
   quality: 80,
   format: 'JPEG',
 };
 
 export async function compressReceiptImage(
   imageUri: string,
-  options: Partial<CompressionOptions> = {}
+  options: Partial<CompressionOptions> = {},
 ): Promise<CompressedImage> {
-  const config = { ...DEFAULT_OPTIONS, ...options };
-  
+  const config = {...DEFAULT_OPTIONS, ...options};
+
   // Get original file size
   const originalSize = await getFileSize(imageUri);
-  
+
   // Compress
   const result = await ImageResizer.createResizedImage(
     imageUri,
@@ -126,17 +126,24 @@ export async function compressReceiptImage(
     config.maxHeight,
     config.format,
     config.quality,
-    0,  // rotation
-    undefined,  // output path (temp)
-    false,  // keep meta
-    { mode: 'contain', onlyScaleDown: true }
+    0, // rotation
+    undefined, // output path (temp)
+    false, // keep meta
+    {mode: 'contain', onlyScaleDown: true},
   );
-  
+
   const compressedSize = await getFileSize(result.uri);
-  const savings = ((originalSize - compressedSize) / originalSize * 100).toFixed(1);
-  
-  console.log(`Image compressed: ${formatBytes(originalSize)} → ${formatBytes(compressedSize)} (${savings}% saved)`);
-  
+  const savings = (
+    ((originalSize - compressedSize) / originalSize) *
+    100
+  ).toFixed(1);
+
+  console.log(
+    `Image compressed: ${formatBytes(originalSize)} → ${formatBytes(
+      compressedSize,
+    )} (${savings}% saved)`,
+  );
+
   return {
     uri: result.uri,
     width: result.width,
@@ -181,21 +188,21 @@ export const COMPRESSION_PRESETS = {
     maxHeight: 2048,
     quality: 90,
   },
-  
+
   // Default - balanced
   medium: {
     maxWidth: 1024,
     maxHeight: 1536,
     quality: 80,
   },
-  
+
   // For poor connectivity - aggressive compression
   low: {
     maxWidth: 768,
     maxHeight: 1024,
     quality: 60,
   },
-  
+
   // Automatic based on connection
   auto: async () => {
     const connectionType = await getConnectionType();
@@ -211,50 +218,50 @@ export const COMPRESSION_PRESETS = {
 ```typescript
 // src/features/scanning/hooks/useScanReceipt.ts
 
-import { compressReceiptImage } from '@/services/image/compression';
-import { COMPRESSION_PRESETS } from '@/services/image/presets';
+import {compressReceiptImage} from '@/services/image/compression';
+import {COMPRESSION_PRESETS} from '@/services/image/presets';
 
 export function useScanReceipt() {
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   const processReceipt = async (rawImageUri: string) => {
     setIsProcessing(true);
-    
+
     try {
       // Step 1: Compress image
       const preset = await COMPRESSION_PRESETS.auto();
       const compressed = await compressReceiptImage(rawImageUri, preset);
-      
+
       // Log savings for analytics
       analytics.logEvent('image_compressed', {
         original_size: compressed.originalSize,
         compressed_size: compressed.compressedSize,
         savings_percent: compressed.savingsPercent,
       });
-      
+
       // Step 2: Convert to base64
       const base64 = await imageToBase64(compressed.uri);
-      
+
       // Step 3: Send to Gemini (via proxy)
       const result = await geminiProxy.parseReceipt(base64);
-      
+
       return result;
     } finally {
       setIsProcessing(false);
     }
   };
-  
-  return { processReceipt, isProcessing };
+
+  return {processReceipt, isProcessing};
 }
 ```
 
 ### Expected Savings
 
-| Original Size | Compressed Size | User Data Savings |
-|---------------|-----------------|-------------------|
-| 3MB | 300KB | 90% ($0.014 saved) |
-| 2MB | 250KB | 88% ($0.009 saved) |
-| 4MB | 400KB | 90% ($0.018 saved) |
+| Original Size | Compressed Size | User Data Savings  |
+| ------------- | --------------- | ------------------ |
+| 3MB           | 300KB           | 90% ($0.014 saved) |
+| 2MB           | 250KB           | 88% ($0.009 saved) |
+| 4MB           | 400KB           | 90% ($0.018 saved) |
 
 **At 20 scans/month:** User saves ~$0.25/month in data costs
 
@@ -265,6 +272,7 @@ export function useScanReceipt() {
 ### Problem
 
 Direct client-to-Gemini calls have issues:
+
 1. **Security**: API key exposed in app bundle
 2. **No caching**: Same item parsed repeatedly
 3. **No rate limiting**: One user could exhaust quota
@@ -297,7 +305,7 @@ Route all Gemini calls through a Firebase Cloud Function.
 // functions/src/gemini/parseReceipt.ts
 
 import * as functions from 'firebase-functions';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import {GoogleGenerativeAI} from '@google/generative-ai';
 import * as admin from 'firebase-admin';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
@@ -306,7 +314,7 @@ const db = admin.firestore();
 // Rate limiting config
 const RATE_LIMIT = {
   maxRequestsPerMinute: 10,
-  maxRequestsPerDay: 50,  // Free tier
+  maxRequestsPerDay: 50, // Free tier
   maxRequestsPerDayPremium: 500,
 };
 
@@ -318,7 +326,7 @@ interface ParseReceiptRequest {
 
 export const parseReceipt = functions
   .region('europe-west1')
-  .runWith({ 
+  .runWith({
     memory: '1GB',
     timeoutSeconds: 60,
     secrets: ['GEMINI_API_KEY'],
@@ -326,17 +334,20 @@ export const parseReceipt = functions
   .https.onCall(async (data: ParseReceiptRequest, context) => {
     // 1. Verify authentication
     if (!context.auth) {
-      throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'Must be logged in',
+      );
     }
-    
+
     const userId = context.auth.uid;
-    
+
     // 2. Check rate limits
     await checkRateLimit(userId, data.isPremium);
-    
+
     // 3. Call Gemini API
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    
+    const model = genAI.getGenerativeModel({model: 'gemini-2.5-flash'});
+
     const prompt = `
     Analyze this receipt image and extract the following information in JSON format:
     {
@@ -365,7 +376,7 @@ export const parseReceipt = functions
     - If $ or USD, use "USD"
     - Guess category based on item name
     `;
-    
+
     const result = await model.generateContent([
       prompt,
       {
@@ -375,80 +386,90 @@ export const parseReceipt = functions
         },
       },
     ]);
-    
+
     const responseText = result.response.text();
-    
+
     // 4. Parse and validate response
     const parsed = parseGeminiResponse(responseText);
-    
+
     // 5. Cache common items for future reference
     await cacheItems(parsed.items);
-    
+
     // 6. Log usage
     await logUsage(userId, data.isPremium);
-    
+
     return {
       success: true,
       data: parsed,
     };
   });
 
-async function checkRateLimit(userId: string, isPremium: boolean): Promise<void> {
+async function checkRateLimit(
+  userId: string,
+  isPremium: boolean,
+): Promise<void> {
   const userRef = db.collection('rateLimits').doc(userId);
   const userDoc = await userRef.get();
-  
+
   const now = Date.now();
   const minuteAgo = now - 60 * 1000;
   const dayStart = new Date().setHours(0, 0, 0, 0);
-  
-  const limits = userDoc.data() || { requests: [] };
+
+  const limits = userDoc.data() || {requests: []};
   const recentRequests = limits.requests.filter((t: number) => t > minuteAgo);
   const todayRequests = limits.requests.filter((t: number) => t > dayStart);
-  
+
   // Check minute limit
   if (recentRequests.length >= RATE_LIMIT.maxRequestsPerMinute) {
     throw new functions.https.HttpsError(
       'resource-exhausted',
-      'Too many requests. Please wait a minute.'
+      'Too many requests. Please wait a minute.',
     );
   }
-  
+
   // Check daily limit
-  const dailyLimit = isPremium 
-    ? RATE_LIMIT.maxRequestsPerDayPremium 
+  const dailyLimit = isPremium
+    ? RATE_LIMIT.maxRequestsPerDayPremium
     : RATE_LIMIT.maxRequestsPerDay;
-    
+
   if (todayRequests.length >= dailyLimit) {
     throw new functions.https.HttpsError(
       'resource-exhausted',
-      isPremium 
+      isPremium
         ? 'Daily limit reached. Try again tomorrow.'
-        : 'Free daily limit reached. Upgrade for more scans!'
+        : 'Free daily limit reached. Upgrade for more scans!',
     );
   }
-  
+
   // Record this request
-  await userRef.set({
-    requests: [...todayRequests, now],
-    lastRequest: now,
-  }, { merge: true });
+  await userRef.set(
+    {
+      requests: [...todayRequests, now],
+      lastRequest: now,
+    },
+    {merge: true},
+  );
 }
 
 async function cacheItems(items: ParsedItem[]): Promise<void> {
   const batch = db.batch();
-  
+
   for (const item of items) {
     const normalized = normalizeItemName(item.name);
     const cacheRef = db.collection('itemCache').doc(normalized);
-    
-    batch.set(cacheRef, {
-      displayName: item.name,
-      category: item.category,
-      lastSeen: admin.firestore.FieldValue.serverTimestamp(),
-      occurrences: admin.firestore.FieldValue.increment(1),
-    }, { merge: true });
+
+    batch.set(
+      cacheRef,
+      {
+        displayName: item.name,
+        category: item.category,
+        lastSeen: admin.firestore.FieldValue.serverTimestamp(),
+        occurrences: admin.firestore.FieldValue.increment(1),
+      },
+      {merge: true},
+    );
   }
-  
+
   await batch.commit();
 }
 
@@ -464,13 +485,19 @@ function parseGeminiResponse(text: string): ParsedReceipt {
   // Extract JSON from response (may have markdown wrapper)
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new functions.https.HttpsError('internal', 'Invalid AI response format');
+    throw new functions.https.HttpsError(
+      'internal',
+      'Invalid AI response format',
+    );
   }
-  
+
   try {
     return JSON.parse(jsonMatch[0]);
   } catch (e) {
-    throw new functions.https.HttpsError('internal', 'Failed to parse AI response');
+    throw new functions.https.HttpsError(
+      'internal',
+      'Failed to parse AI response',
+    );
   }
 }
 
@@ -503,14 +530,14 @@ export interface ParseReceiptResult {
 
 export async function parseReceiptViaProxy(
   imageBase64: string,
-  isPremium: boolean
+  isPremium: boolean,
 ): Promise<ParseReceiptResult> {
   try {
     const result = await functionsInstance({
       imageBase64,
       isPremium,
     });
-    
+
     return result.data as ParseReceiptResult;
   } catch (error: any) {
     // Handle specific errors
@@ -520,7 +547,7 @@ export async function parseReceiptViaProxy(
         error: error.message,
       };
     }
-    
+
     throw error;
   }
 }
@@ -528,13 +555,13 @@ export async function parseReceiptViaProxy(
 
 ### Benefits
 
-| Aspect | Before (Direct) | After (Proxy) |
-|--------|-----------------|---------------|
-| API Key Security | ❌ In app bundle | ✅ Server-side only |
-| Rate Limiting | ❌ None | ✅ Per-user limits |
-| Usage Analytics | ❌ None | ✅ Full tracking |
-| Caching Potential | ❌ None | ✅ Common items cached |
-| Error Handling | Basic | Standardized |
+| Aspect            | Before (Direct)  | After (Proxy)          |
+| ----------------- | ---------------- | ---------------------- |
+| API Key Security  | ❌ In app bundle | ✅ Server-side only    |
+| Rate Limiting     | ❌ None          | ✅ Per-user limits     |
+| Usage Analytics   | ❌ None          | ✅ Full tracking       |
+| Caching Potential | ❌ None          | ✅ Common items cached |
+| Error Handling    | Basic            | Standardized           |
 
 ---
 
@@ -543,6 +570,7 @@ export async function parseReceiptViaProxy(
 ### Problem
 
 Firestore offline persistence is good but limited:
+
 - No complex queries offline
 - Sync can be slow with many documents
 - No lazy loading of related data
@@ -553,13 +581,13 @@ Use WatermelonDB as local database with Firestore sync.
 
 ### When to Use
 
-| Scenario | Use Firestore | Use WatermelonDB |
-|----------|---------------|------------------|
-| Real-time data (prices) | ✅ | |
-| User's invoice history | ✅ | ✅ |
-| Complex local queries | | ✅ |
-| Offline-first features | | ✅ |
-| Shopping list | | ✅ |
+| Scenario                | Use Firestore | Use WatermelonDB |
+| ----------------------- | ------------- | ---------------- |
+| Real-time data (prices) | ✅            |                  |
+| User's invoice history  | ✅            | ✅               |
+| Complex local queries   |               | ✅               |
+| Offline-first features  |               | ✅               |
+| Shopping list           |               | ✅               |
 
 ### Implementation
 
@@ -578,7 +606,7 @@ npx pod-install
 ```typescript
 // src/database/schema.ts
 
-import { appSchema, tableSchema } from '@nozbe/watermelondb';
+import {appSchema, tableSchema} from '@nozbe/watermelondb';
 
 export const schema = appSchema({
   version: 1,
@@ -586,37 +614,37 @@ export const schema = appSchema({
     tableSchema({
       name: 'invoices',
       columns: [
-        { name: 'firebase_id', type: 'string', isOptional: true },
-        { name: 'shop_name', type: 'string' },
-        { name: 'shop_address', type: 'string', isOptional: true },
-        { name: 'date', type: 'number' },  // timestamp
-        { name: 'total', type: 'number' },
-        { name: 'currency', type: 'string' },
-        { name: 'synced', type: 'boolean' },
-        { name: 'created_at', type: 'number' },
-        { name: 'updated_at', type: 'number' },
+        {name: 'firebase_id', type: 'string', isOptional: true},
+        {name: 'shop_name', type: 'string'},
+        {name: 'shop_address', type: 'string', isOptional: true},
+        {name: 'date', type: 'number'}, // timestamp
+        {name: 'total', type: 'number'},
+        {name: 'currency', type: 'string'},
+        {name: 'synced', type: 'boolean'},
+        {name: 'created_at', type: 'number'},
+        {name: 'updated_at', type: 'number'},
       ],
     }),
     tableSchema({
       name: 'invoice_items',
       columns: [
-        { name: 'invoice_id', type: 'string', isIndexed: true },
-        { name: 'name', type: 'string' },
-        { name: 'name_normalized', type: 'string', isIndexed: true },
-        { name: 'quantity', type: 'number' },
-        { name: 'unit_price', type: 'number' },
-        { name: 'total_price', type: 'number' },
-        { name: 'category', type: 'string', isIndexed: true },
+        {name: 'invoice_id', type: 'string', isIndexed: true},
+        {name: 'name', type: 'string'},
+        {name: 'name_normalized', type: 'string', isIndexed: true},
+        {name: 'quantity', type: 'number'},
+        {name: 'unit_price', type: 'number'},
+        {name: 'total_price', type: 'number'},
+        {name: 'category', type: 'string', isIndexed: true},
       ],
     }),
     tableSchema({
       name: 'shopping_list_items',
       columns: [
-        { name: 'name', type: 'string' },
-        { name: 'name_normalized', type: 'string', isIndexed: true },
-        { name: 'quantity', type: 'number' },
-        { name: 'checked', type: 'boolean' },
-        { name: 'created_at', type: 'number' },
+        {name: 'name', type: 'string'},
+        {name: 'name_normalized', type: 'string', isIndexed: true},
+        {name: 'quantity', type: 'number'},
+        {name: 'checked', type: 'boolean'},
+        {name: 'created_at', type: 'number'},
       ],
     }),
   ],
@@ -628,15 +656,15 @@ export const schema = appSchema({
 ```typescript
 // src/database/models/Invoice.ts
 
-import { Model } from '@nozbe/watermelondb';
-import { field, date, children, readonly } from '@nozbe/watermelondb/decorators';
+import {Model} from '@nozbe/watermelondb';
+import {field, date, children, readonly} from '@nozbe/watermelondb/decorators';
 
 export class Invoice extends Model {
   static table = 'invoices';
   static associations = {
-    invoice_items: { type: 'has_many', foreignKey: 'invoice_id' },
+    invoice_items: {type: 'has_many', foreignKey: 'invoice_id'},
   };
-  
+
   @field('firebase_id') firebaseId!: string | null;
   @field('shop_name') shopName!: string;
   @field('shop_address') shopAddress!: string | null;
@@ -646,21 +674,21 @@ export class Invoice extends Model {
   @field('synced') synced!: boolean;
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;
-  
+
   @children('invoice_items') items!: any;
 }
 
 // src/database/models/InvoiceItem.ts
 
-import { Model } from '@nozbe/watermelondb';
-import { field, relation } from '@nozbe/watermelondb/decorators';
+import {Model} from '@nozbe/watermelondb';
+import {field, relation} from '@nozbe/watermelondb/decorators';
 
 export class InvoiceItem extends Model {
   static table = 'invoice_items';
   static associations = {
-    invoices: { type: 'belongs_to', key: 'invoice_id' },
+    invoices: {type: 'belongs_to', key: 'invoice_id'},
   };
-  
+
   @field('invoice_id') invoiceId!: string;
   @field('name') name!: string;
   @field('name_normalized') nameNormalized!: string;
@@ -668,7 +696,7 @@ export class InvoiceItem extends Model {
   @field('unit_price') unitPrice!: number;
   @field('total_price') totalPrice!: number;
   @field('category') category!: string;
-  
+
   @relation('invoices', 'invoice_id') invoice!: any;
 }
 ```
@@ -678,26 +706,26 @@ export class InvoiceItem extends Model {
 ```typescript
 // src/database/sync.ts
 
-import { synchronize } from '@nozbe/watermelondb/sync';
+import {synchronize} from '@nozbe/watermelondb/sync';
 import firestore from '@react-native-firebase/firestore';
-import { database } from './index';
+import {database} from './index';
 
 export async function syncWithFirestore(userId: string): Promise<void> {
   await synchronize({
     database,
-    pullChanges: async ({ lastPulledAt }) => {
+    pullChanges: async ({lastPulledAt}) => {
       // Fetch changes from Firestore since last sync
       const invoicesRef = firestore()
         .collection('users')
         .doc(userId)
         .collection('invoices');
-      
+
       const query = lastPulledAt
         ? invoicesRef.where('updatedAt', '>', new Date(lastPulledAt))
         : invoicesRef;
-      
+
       const snapshot = await query.get();
-      
+
       const changes = {
         invoices: {
           created: [] as any[],
@@ -710,7 +738,7 @@ export async function syncWithFirestore(userId: string): Promise<void> {
           deleted: [] as string[],
         },
       };
-      
+
       for (const doc of snapshot.docs) {
         const data = doc.data();
         const invoice = {
@@ -725,25 +753,25 @@ export async function syncWithFirestore(userId: string): Promise<void> {
           created_at: data.createdAt.toDate().getTime(),
           updated_at: data.updatedAt.toDate().getTime(),
         };
-        
+
         if (lastPulledAt && data.createdAt.toDate().getTime() < lastPulledAt) {
           changes.invoices.updated.push(invoice);
         } else {
           changes.invoices.created.push(invoice);
         }
-        
+
         // Also pull items...
       }
-      
+
       return {
         changes,
         timestamp: Date.now(),
       };
     },
-    pushChanges: async ({ changes, lastPulledAt }) => {
+    pushChanges: async ({changes, lastPulledAt}) => {
       // Push local changes to Firestore
       const batch = firestore().batch();
-      
+
       for (const invoice of changes.invoices.created) {
         if (!invoice.synced) {
           const ref = firestore()
@@ -751,7 +779,7 @@ export async function syncWithFirestore(userId: string): Promise<void> {
             .doc(userId)
             .collection('invoices')
             .doc();
-          
+
           batch.set(ref, {
             shopName: invoice.shop_name,
             shopAddress: invoice.shop_address,
@@ -763,7 +791,7 @@ export async function syncWithFirestore(userId: string): Promise<void> {
           });
         }
       }
-      
+
       await batch.commit();
     },
   });
@@ -784,7 +812,7 @@ const thisMonth = await database
   .get('invoices')
   .query(
     Q.where('date', Q.gte(startOfMonth.getTime())),
-    Q.where('date', Q.lte(endOfMonth.getTime()))
+    Q.where('date', Q.lte(endOfMonth.getTime())),
   )
   .fetch();
 
@@ -828,11 +856,11 @@ interface OcrResult {
 export async function performOnDeviceOcr(imageUri: string): Promise<OcrResult> {
   try {
     const result = await TextRecognition.recognize(imageUri);
-    
+
     const lines = result.blocks
       .flatMap(block => block.lines)
       .map(line => line.text);
-    
+
     return {
       success: true,
       rawText: result.text,
@@ -852,12 +880,12 @@ export async function performOnDeviceOcr(imageUri: string): Promise<OcrResult> {
 function calculateConfidence(result: any): number {
   // Average confidence of recognized blocks
   if (!result.blocks.length) return 0;
-  
+
   const totalConfidence = result.blocks.reduce(
     (sum: number, block: any) => sum + (block.confidence || 0.5),
-    0
+    0,
   );
-  
+
   return totalConfidence / result.blocks.length;
 }
 ```
@@ -883,13 +911,13 @@ export function parseReceiptTextBasic(lines: string[]): BasicParseResult {
     possibleDate: null,
     needsManualReview: true,
   };
-  
+
   // Try to find store name (usually first non-empty line)
   const firstLines = lines.slice(0, 3).filter(l => l.trim().length > 3);
   if (firstLines.length > 0) {
     result.possibleStoreName = firstLines[0];
   }
-  
+
   // Try to find total (look for patterns like "TOTAL", "MONTANT")
   const totalPatterns = [
     /total[:\s]*[\$]?([\d,]+\.?\d*)/i,
@@ -897,7 +925,7 @@ export function parseReceiptTextBasic(lines: string[]): BasicParseResult {
     /amount[:\s]*[\$]?([\d,]+\.?\d*)/i,
     /grand\s*total[:\s]*[\$]?([\d,]+\.?\d*)/i,
   ];
-  
+
   for (const line of lines) {
     for (const pattern of totalPatterns) {
       const match = line.match(pattern);
@@ -907,13 +935,13 @@ export function parseReceiptTextBasic(lines: string[]): BasicParseResult {
       }
     }
   }
-  
+
   // Try to find date
   const datePatterns = [
     /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/,
     /(\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/,
   ];
-  
+
   for (const line of lines) {
     for (const pattern of datePatterns) {
       const match = line.match(pattern);
@@ -923,16 +951,16 @@ export function parseReceiptTextBasic(lines: string[]): BasicParseResult {
       }
     }
   }
-  
+
   // Extract possible items (lines with prices)
   const pricePattern = /[\$]?([\d,]+\.?\d{0,2})\s*$/;
-  
+
   for (const line of lines) {
     if (pricePattern.test(line) && !line.toLowerCase().includes('total')) {
       result.possibleItems.push(line.trim());
     }
   }
-  
+
   return result;
 }
 ```
@@ -942,10 +970,10 @@ export function parseReceiptTextBasic(lines: string[]): BasicParseResult {
 ```typescript
 // src/services/scanning/hybridScanner.ts
 
-import { isOnline } from '@/utils/network';
-import { parseReceiptViaProxy } from '@/services/gemini/client';
-import { performOnDeviceOcr, parseReceiptTextBasic } from '@/services/ocr';
-import { compressReceiptImage } from '@/services/image/compression';
+import {isOnline} from '@/utils/network';
+import {parseReceiptViaProxy} from '@/services/gemini/client';
+import {performOnDeviceOcr, parseReceiptTextBasic} from '@/services/ocr';
+import {compressReceiptImage} from '@/services/image/compression';
 
 export interface ScanResult {
   method: 'gemini' | 'offline_ocr' | 'manual';
@@ -956,17 +984,17 @@ export interface ScanResult {
 
 export async function scanReceipt(
   imageUri: string,
-  isPremium: boolean
+  isPremium: boolean,
 ): Promise<ScanResult> {
   const online = await isOnline();
-  
+
   if (online) {
     // Best path: Gemini via proxy
     try {
       const compressed = await compressReceiptImage(imageUri);
       const base64 = await imageToBase64(compressed.uri);
       const result = await parseReceiptViaProxy(base64, isPremium);
-      
+
       if (result.success) {
         return {
           method: 'gemini',
@@ -979,13 +1007,13 @@ export async function scanReceipt(
       console.warn('Gemini parsing failed, falling back to OCR');
     }
   }
-  
+
   // Fallback: On-device OCR
   const ocrResult = await performOnDeviceOcr(imageUri);
-  
+
   if (ocrResult.success && ocrResult.confidence > 0.6) {
     const parsed = parseReceiptTextBasic(ocrResult.lines);
-    
+
     return {
       method: 'offline_ocr',
       confidence: ocrResult.confidence > 0.8 ? 'medium' : 'low',
@@ -993,12 +1021,12 @@ export async function scanReceipt(
         shopName: parsed.possibleStoreName || '',
         date: parsed.possibleDate || new Date().toISOString().split('T')[0],
         total: parsed.possibleTotal || 0,
-        items: [],  // User will need to add manually
+        items: [], // User will need to add manually
       },
       needsReview: true,
     };
   }
-  
+
   // Last resort: Manual entry
   return {
     method: 'manual',
@@ -1064,43 +1092,45 @@ Implement usage limits, tiered pricing, and cost optimizations to maintain profi
 // src/shared/services/subscription/usageService.ts
 
 interface UsageLimits {
-  basic: 25;      // $1.99/month
-  standard: 100;  // $2.99/month  
-  premium: -1;    // $4.99/month (unlimited)
+  basic: 25; // $1.99/month
+  standard: 100; // $2.99/month
+  premium: -1; // $4.99/month (unlimited)
 }
 
 export const checkUsageLimit = async (userId: string): Promise<boolean> => {
   const subscription = await getUserSubscription(userId);
   const currentUsage = await getCurrentMonthUsage(userId);
-  
+
   if (subscription.plan === 'premium') return true;
-  
-  const limits = { basic: 25, standard: 100 };
+
+  const limits = {basic: 25, standard: 100};
   return currentUsage < limits[subscription.plan];
 };
 ```
 
 #### Tiered Pricing Structure
 
-| Plan | Price | Scan Limit | Features |
-|------|-------|------------|----------|
-| **Basic** | $1.99/month | 25 scans | Core scanning + basic comparison |
-| **Standard** | $2.99/month | 100 scans | All features + priority support |
-| **Premium** | $4.99/month | Unlimited | Everything + advanced analytics |
+| Plan         | Price       | Scan Limit | Features                         |
+| ------------ | ----------- | ---------- | -------------------------------- |
+| **Basic**    | $1.99/month | 25 scans   | Core scanning + basic comparison |
+| **Standard** | $2.99/month | 100 scans  | All features + priority support  |
+| **Premium**  | $4.99/month | Unlimited  | Everything + advanced analytics  |
 
 #### Cost Optimizations
 
 ##### 1. Model Selection
+
 ```typescript
 // Use cheaper model for simple receipts
 const selectModel = (imageComplexity: 'simple' | 'complex'): string => {
-  return imageComplexity === 'simple' 
-    ? 'gemini-2.5-flash-lite'  // $0.10 input, $0.40 output
-    : 'gemini-2.5-flash';     // $0.30 input, $2.50 output
+  return imageComplexity === 'simple'
+    ? 'gemini-2.5-flash-lite' // $0.10 input, $0.40 output
+    : 'gemini-2.5-flash'; // $0.30 input, $2.50 output
 };
 ```
 
 ##### 2. Response Caching
+
 ```typescript
 // Cache price lookups for 24 hours
 const PRICE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
@@ -1108,57 +1138,65 @@ const PRICE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 export const getCachedPrices = async (itemName: string) => {
   const cacheKey = `prices_${normalizeItemName(itemName)}`;
   const cached = await AsyncStorage.getItem(cacheKey);
-  
+
   if (cached) {
-    const { data, timestamp } = JSON.parse(cached);
+    const {data, timestamp} = JSON.parse(cached);
     if (Date.now() - timestamp < PRICE_CACHE_TTL) {
       return data;
     }
   }
-  
+
   // Fetch fresh data
   const freshData = await fetchPricesFromFirestore(itemName);
-  await AsyncStorage.setItem(cacheKey, JSON.stringify({
-    data: freshData,
-    timestamp: Date.now()
-  }));
-  
+  await AsyncStorage.setItem(
+    cacheKey,
+    JSON.stringify({
+      data: freshData,
+      timestamp: Date.now(),
+    }),
+  );
+
   return freshData;
 };
 ```
 
 ##### 3. Aggressive Image Compression
+
 ```typescript
 // Compress to 50% quality for AI processing
 const compressForAI = async (imageUri: string): Promise<string> => {
   return await ImageResizer.createResizedImage(
     imageUri,
-    1024,  // max width
-    1536,  // max height
+    1024, // max width
+    1536, // max height
     'JPEG',
-    50,    // quality (reduced from 80%)
-    0,     // rotation
+    50, // quality (reduced from 80%)
+    0, // rotation
     undefined, // output path
     false, // keep metadata
-    { mode: 'contain' }
+    {mode: 'contain'},
   );
 };
 ```
 
 ##### 4. Automatic Storage Cleanup
+
 ```typescript
 // Delete original image after successful AI processing
-export const cleanupProcessedImage = async (imagePath: string, invoiceId: string) => {
+export const cleanupProcessedImage = async (
+  imagePath: string,
+  invoiceId: string,
+) => {
   try {
     // Verify invoice was saved successfully
     const invoiceRef = db.collection('invoices').doc(invoiceId);
     const invoice = await invoiceRef.get();
-    
+
     if (invoice.exists) {
       // Delete the original image from storage
       const imageRef = storage.refFromURL(imagePath);
       await imageRef.delete();
-      
+
       console.log(`Cleaned up processed image: ${imagePath}`);
     }
   } catch (error) {
@@ -1169,12 +1207,12 @@ export const cleanupProcessedImage = async (imagePath: string, invoiceId: string
 
 // Usage in parseReceipt Cloud Function
 export const parseReceipt = functions.https.onCall(async (data, context) => {
-  const { imagePath, userId } = data;
-  
+  const {imagePath, userId} = data;
+
   try {
     // Process the image with Gemini AI
     const extractedData = await processWithGemini(imagePath);
-    
+
     // Save the invoice data
     const invoiceRef = db.collection('invoices').doc();
     await invoiceRef.set({
@@ -1183,11 +1221,11 @@ export const parseReceipt = functions.https.onCall(async (data, context) => {
       processedAt: FieldValue.serverTimestamp(),
       // No imagePath stored - we delete it
     });
-    
+
     // Cleanup the original image
     await cleanupProcessedImage(imagePath, invoiceRef.id);
-    
-    return { success: true, invoiceId: invoiceRef.id };
+
+    return {success: true, invoiceId: invoiceRef.id};
   } catch (error) {
     // On failure, keep the image for retry/debugging
     throw error;
@@ -1200,28 +1238,34 @@ export const parseReceipt = functions.https.onCall(async (data, context) => {
 ```typescript
 // Cloud Function to track usage
 export const trackScanUsage = functions.https.onCall(async (data, context) => {
-  const { userId } = data;
+  const {userId} = data;
   const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM
-  
-  await db.collection('usage').doc(`${userId}_${monthKey}`).set({
-    userId,
-    month: monthKey,
-    scans: FieldValue.increment(1),
-    lastScan: FieldValue.serverTimestamp()
-  }, { merge: true });
+
+  await db
+    .collection('usage')
+    .doc(`${userId}_${monthKey}`)
+    .set(
+      {
+        userId,
+        month: monthKey,
+        scans: FieldValue.increment(1),
+        lastScan: FieldValue.serverTimestamp(),
+      },
+      {merge: true},
+    );
 });
 ```
 
 ### Cost Projections
 
-| Scenario | Scans/Month | AI Cost | Hosting | Storage* | Transaction | Total Cost | Revenue | Profit |
-|----------|-------------|---------|---------|----------|-------------|------------|---------|--------|
-| Light (20) | 20 | $0.026 | $0.003 | $0.000 | $0.105 | $0.134 | $2.99 | $2.856 |
-| Standard (100) | 100 | $0.130 | $0.016 | $0.000 | $0.105 | $0.251 | $2.99 | $2.739 |
-| Heavy (500) | 500 | $0.650 | $0.080 | $0.000 | $0.105 | $0.835 | $2.99 | $2.155 |
-| Extreme (1000) | 1000 | $1.300 | $0.160 | $0.000 | $0.105 | $1.565 | $2.99 | $1.425 |
+| Scenario       | Scans/Month | AI Cost | Hosting | Storage\* | Transaction | Total Cost | Revenue | Profit |
+| -------------- | ----------- | ------- | ------- | --------- | ----------- | ---------- | ------- | ------ |
+| Light (20)     | 20          | $0.026  | $0.003  | $0.000    | $0.105      | $0.134     | $2.99   | $2.856 |
+| Standard (100) | 100         | $0.130  | $0.016  | $0.000    | $0.105      | $0.251     | $2.99   | $2.739 |
+| Heavy (500)    | 500         | $0.650  | $0.080  | $0.000    | $0.105      | $0.835     | $2.99   | $2.155 |
+| Extreme (1000) | 1000        | $1.300  | $0.160  | $0.000    | $0.105      | $1.565     | $2.99   | $1.425 |
 
-*Storage costs eliminated through automatic cleanup after processing
+\*Storage costs eliminated through automatic cleanup after processing
 
 ### Benefits
 
@@ -1235,15 +1279,15 @@ export const trackScanUsage = functions.https.onCall(async (data, context) => {
 
 ## Summary
 
-| Optimization | Effort | Impact | Priority |
-|--------------|--------|--------|----------|
-| **Hermes Engine** | Low (config only) | High (2x startup) | P0 |
-| **Image Compression** | Low | High (save user $) | P0 |
-| **Gemini Proxy** | Medium | High (security) | P0 |
-| **Storage Cleanup** | Low | High (zero storage costs) | P0 |
-| **Cost Management** | Medium | High (usage limits) | P0 |
-| **WatermelonDB** | High | Medium (better offline) | P1 |
-| **On-Device OCR** | Medium | Medium (offline scan) | P1 |
+| Optimization          | Effort            | Impact                    | Priority |
+| --------------------- | ----------------- | ------------------------- | -------- |
+| **Hermes Engine**     | Low (config only) | High (2x startup)         | P0       |
+| **Image Compression** | Low               | High (save user $)        | P0       |
+| **Gemini Proxy**      | Medium            | High (security)           | P0       |
+| **Storage Cleanup**   | Low               | High (zero storage costs) | P0       |
+| **Cost Management**   | Medium            | High (usage limits)       | P0       |
+| **WatermelonDB**      | High              | Medium (better offline)   | P1       |
+| **On-Device OCR**     | Medium            | Medium (offline scan)     | P1       |
 
 ### Implementation Order
 
@@ -1254,4 +1298,4 @@ export const trackScanUsage = functions.https.onCall(async (data, context) => {
 
 ---
 
-*See also: [System Architecture](./SYSTEM_ARCHITECTURE.md) | [Infrastructure](./INFRASTRUCTURE.md)*
+_See also: [System Architecture](./SYSTEM_ARCHITECTURE.md) | [Infrastructure](./INFRASTRUCTURE.md)_

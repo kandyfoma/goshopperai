@@ -26,13 +26,19 @@ const MAX_RETRY_ATTEMPTS = 3;
 
 export function ScannerScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const {canScan, recordScan, scansRemaining, isTrialActive, trialDaysRemaining} = useSubscription();
-  
+  const {
+    canScan,
+    recordScan,
+    scansRemaining,
+    isTrialActive,
+    trialDaysRemaining,
+  } = useSubscription();
+
   const [state, setState] = useState<ScanState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [processingProgress, setProcessingProgress] = useState<string>('');
-  
+
   const retryCountRef = useRef(0);
   const currentImageRef = useRef<string | null>(null);
 
@@ -47,13 +53,16 @@ export function ScannerScreen() {
       analyticsService.logCustomEvent('scan_blocked_subscription');
       Alert.alert(
         'Limite atteinte',
-        isTrialActive 
+        isTrialActive
           ? 'Une erreur est survenue. Veuillez réessayer.'
           : 'Vous avez atteint votre limite de scans. Passez à un plan supérieur pour continuer.',
         [
           {text: 'Annuler', style: 'cancel'},
-          {text: 'Voir les plans', onPress: () => navigation.navigate('Subscription')},
-        ]
+          {
+            text: 'Voir les plans',
+            onPress: () => navigation.navigate('Subscription'),
+          },
+        ],
       );
       return;
     }
@@ -68,7 +77,7 @@ export function ScannerScreen() {
     if (!result.success || !result.base64) {
       analyticsService.logCustomEvent('scan_failed', {
         method: 'camera',
-        reason: result.error || 'unknown'
+        reason: result.error || 'unknown',
       });
       setState('idle');
       if (result.error && result.error !== 'Capture annulée') {
@@ -87,13 +96,16 @@ export function ScannerScreen() {
       analyticsService.logCustomEvent('scan_blocked_subscription');
       Alert.alert(
         'Limite atteinte',
-        isTrialActive 
+        isTrialActive
           ? 'Une erreur est survenue. Veuillez réessayer.'
           : 'Vous avez atteint votre limite de scans. Passez à un plan supérieur pour continuer.',
         [
           {text: 'Annuler', style: 'cancel'},
-          {text: 'Voir les plans', onPress: () => navigation.navigate('Subscription')},
-        ]
+          {
+            text: 'Voir les plans',
+            onPress: () => navigation.navigate('Subscription'),
+          },
+        ],
       );
       return;
     }
@@ -108,7 +120,7 @@ export function ScannerScreen() {
     if (!result.success || !result.base64) {
       analyticsService.logCustomEvent('scan_failed', {
         method: 'gallery',
-        reason: result.error || 'unknown'
+        reason: result.error || 'unknown',
       });
       setState('idle');
       if (result.error && result.error !== 'Capture annulée') {
@@ -122,13 +134,19 @@ export function ScannerScreen() {
     await processImage(result.base64);
   }, [canScan, navigation, isTrialActive]);
 
-  const processImage = async (base64Data: string, isRetry: boolean = false): Promise<void> => {
+  const processImage = async (
+    base64Data: string,
+    isRetry: boolean = false,
+  ): Promise<void> => {
     setState('processing');
     setProcessingProgress('Analyse en cours...');
 
     try {
       // Parse receipt with Gemini AI using base64 directly (no compression needed)
-      const result = await geminiService.parseReceipt(base64Data, 'current-user');
+      const result = await geminiService.parseReceipt(
+        base64Data,
+        'current-user',
+      );
 
       if (result.success && result.receipt) {
         // Record scan usage only on success and not retry
@@ -146,20 +164,20 @@ export function ScannerScreen() {
           retry_count: retryCountRef.current,
           items_count: result.receipt.items?.length || 0,
           total_amount: result.receipt.total || 0,
-          currency: result.receipt.currency || 'unknown'
+          currency: result.receipt.currency || 'unknown',
         });
 
         setReceipt(result.receipt);
         setState('success');
         setProcessingProgress('');
       } else {
-        throw new Error(result.error || 'Échec de l\'analyse');
+        throw new Error(result.error || "Échec de l'analyse");
       }
     } catch (err: any) {
       console.error('Processing error:', err);
-      
+
       // Auto-retry logic for transient errors
-      const isRetryableError = 
+      const isRetryableError =
         err.message?.includes('timeout') ||
         err.message?.includes('network') ||
         err.message?.includes('503') ||
@@ -167,21 +185,31 @@ export function ScannerScreen() {
 
       if (isRetryableError && retryCountRef.current < MAX_RETRY_ATTEMPTS) {
         retryCountRef.current += 1;
-        setProcessingProgress(`Nouvelle tentative (${retryCountRef.current}/${MAX_RETRY_ATTEMPTS})...`);
-        
+        setProcessingProgress(
+          `Nouvelle tentative (${retryCountRef.current}/${MAX_RETRY_ATTEMPTS})...`,
+        );
+
         // Exponential backoff
-        await new Promise<void>(resolve => setTimeout(resolve, 1000 * retryCountRef.current));
+        await new Promise<void>(resolve =>
+          setTimeout(resolve, 1000 * retryCountRef.current),
+        );
         return processImage(base64Data, true);
       }
 
       // Format user-friendly error message
-      let userMessage = 'Une erreur est survenue lors de l\'analyse.';
+      let userMessage = "Une erreur est survenue lors de l'analyse.";
       if (err.message?.includes('Unable to detect receipt')) {
-        userMessage = 'Impossible de détecter une facture dans cette image. Veuillez réessayer avec une photo plus claire.';
-      } else if (err.message?.includes('network') || err.message?.includes('offline')) {
-        userMessage = 'Pas de connexion internet. Veuillez vérifier votre connexion et réessayer.';
+        userMessage =
+          'Impossible de détecter une facture dans cette image. Veuillez réessayer avec une photo plus claire.';
+      } else if (
+        err.message?.includes('network') ||
+        err.message?.includes('offline')
+      ) {
+        userMessage =
+          'Pas de connexion internet. Veuillez vérifier votre connexion et réessayer.';
       } else if (err.message?.includes('rate limit')) {
-        userMessage = 'Trop de requêtes. Veuillez patienter quelques secondes et réessayer.';
+        userMessage =
+          'Trop de requêtes. Veuillez patienter quelques secondes et réessayer.';
       } else if (err.message) {
         userMessage = err.message;
       }
@@ -194,10 +222,14 @@ export function ScannerScreen() {
         success: false,
         retry: isRetry,
         retry_count: retryCountRef.current,
-        error_type: err.message?.includes('Unable to detect receipt') ? 'detection_failed' :
-                   err.message?.includes('network') ? 'network_error' :
-                   err.message?.includes('rate limit') ? 'rate_limit' : 'processing_error',
-        error_message: err.message || 'unknown'
+        error_type: err.message?.includes('Unable to detect receipt')
+          ? 'detection_failed'
+          : err.message?.includes('network')
+          ? 'network_error'
+          : err.message?.includes('rate limit')
+          ? 'rate_limit'
+          : 'processing_error',
+        error_message: err.message || 'unknown',
       });
       setProcessingProgress('');
     }
@@ -214,8 +246,8 @@ export function ScannerScreen() {
     // Since we don't store images anymore, just show error that retry isn't available
     Alert.alert(
       'Nouvelle tentative impossible',
-      'L\'image n\'est plus disponible. Veuillez prendre une nouvelle photo.',
-      [{text: 'OK', onPress: handleRetry}]
+      "L'image n'est plus disponible. Veuillez prendre une nouvelle photo.",
+      [{text: 'OK', onPress: handleRetry}],
     );
   };
 
@@ -313,11 +345,13 @@ export function ScannerScreen() {
           <View style={styles.successContainer}>
             <Text style={styles.successIcon}>✅</Text>
             <Text style={styles.successTitle}>Facture analysée !</Text>
-            
+
             <View style={styles.summaryCard}>
               <Text style={styles.storeName}>{receipt.storeName}</Text>
               <Text style={styles.itemCount}>
-                {receipt.items.length} article{receipt.items.length > 1 ? 's' : ''} détecté{receipt.items.length > 1 ? 's' : ''}
+                {receipt.items.length} article
+                {receipt.items.length > 1 ? 's' : ''} détecté
+                {receipt.items.length > 1 ? 's' : ''}
               </Text>
               <Text style={styles.totalAmount}>
                 Total: ${receipt.total.toFixed(2)}
