@@ -66,7 +66,7 @@ Analyze this receipt image and extract the following information in JSON format:
   "storePhone": "Phone number if visible",
   "receiptNumber": "Receipt/invoice number if visible",
   "date": "Date in YYYY-MM-DD format",
-  "currency": "USD or CDF (Congolese Franc)",
+  "currency": "USD or CDF (Congolese Franc) - primary currency",
   "items": [
     {
       "name": "Product name in original language",
@@ -79,18 +79,22 @@ Analyze this receipt image and extract the following information in JSON format:
   ],
   "subtotal": 0.00,
   "tax": 0.00,
-  "total": 0.00
+  "total": 0.00,
+  "totalUSD": 0.00,
+  "totalCDF": 0.00
 }
 
 Important rules:
 1. Currency detection: If prices are large numbers (thousands+), it's likely CDF. Small decimals suggest USD.
-2. Common DRC stores: Shoprite, Carrefour, Peloustore, Hasson & Frères, City Market
-3. Keep product names in original language (French/Lingala)
-4. If quantity is not specified, assume 1
-5. Calculate totalPrice = quantity × unitPrice
-6. Categories: Alimentation (food), Boissons (drinks), Hygiène (personal care), Ménage (household), Bébé (baby), Autres (other)
-7. If date format is unclear, use current date
-8. Always return valid JSON
+2. Many DRC receipts show BOTH USD and CDF totals - extract both if present
+3. If only one currency total is shown, put it in both totalUSD and totalCDF (converted if needed)
+4. Common DRC stores: Shoprite, Carrefour, Peloustore, Hasson & Frères, City Market
+5. Keep product names in original language (French/Lingala)
+6. If quantity is not specified, assume 1
+7. Calculate totalPrice = quantity × unitPrice
+8. Categories: Alimentation (food), Boissons (drinks), Hygiène (personal care), Ménage (household), Bébé (baby), Autres (other)
+9. If date format is unclear, use current date
+10. Always return valid JSON
 
 Respond ONLY with the JSON object, no additional text.`;
 /**
@@ -185,6 +189,8 @@ async function parseWithGemini(imageBase64, mimeType) {
         subtotal: parsed.subtotal,
         tax: parsed.tax,
         total: parsed.total || items.reduce((sum, item) => sum + item.totalPrice, 0),
+        totalUSD: parsed.totalUSD,
+        totalCDF: parsed.totalCDF,
     };
     return receipt;
 }
@@ -259,6 +265,8 @@ exports.parseReceipt = functions
             trialScansUsed: admin.firestore.FieldValue.increment(1),
             updatedAt: now,
         });
+        // Update user stats for achievements
+        await updateUserStats(userId, parsedReceipt);
         return {
             success: true,
             receiptId: receiptRef.id,
@@ -357,4 +365,58 @@ exports.parseReceiptV2 = functions
         throw new functions.https.HttpsError('internal', 'Failed to parse receipt');
     }
 });
+/**
+ * Update user stats for achievements
+ */
+async function updateUserStats(userId, receipt) {
+    var _a, _b, _c;
+    try {
+        const userRef = db.collection('artifacts').doc('goshopperai').collection('users').doc(userId);
+        // Get current stats
+        const userDoc = await userRef.get();
+        let stats = userDoc.exists && ((_a = userDoc.data()) === null || _a === void 0 ? void 0 : _a.stats) ? userDoc.data().stats : {
+            totalScans: 0,
+            totalSpent: 0,
+            totalSavings: 0,
+            currentStreak: 0,
+            longestStreak: 0,
+            level: 1,
+            xp: 0,
+            xpToNextLevel: 100,
+            shopsVisited: new Set(),
+            itemsScanned: 0,
+            bestPricesFound: 0,
+        };
+        // Update stats
+        stats.totalScans = (stats.totalScans || 0) + 1;
+        stats.totalSpent = (stats.totalSpent || 0) + (receipt.total || 0);
+        stats.totalSavings = (stats.totalSavings || 0) + 0; // TODO: Calculate actual savings from price comparisons
+        stats.itemsScanned = (stats.itemsScanned || 0) + (((_b = receipt.items) === null || _b === void 0 ? void 0 : _b.length) || 0);
+        // Calculate XP
+        const xpEarned = 10 + Math.min(((_c = receipt.items) === null || _c === void 0 ? void 0 : _c.length) || 0, 10); // Base XP + items bonus
+        stats.xp = (stats.xp || 0) + xpEarned;
+        // Level up logic
+        while (stats.xp >= stats.xpToNextLevel) {
+            stats.xp -= stats.xpToNextLevel;
+            stats.level = (stats.level || 1) + 1;
+            stats.xpToNextLevel = Math.floor(100 * Math.pow(1.5, stats.level - 1));
+        }
+        // Convert Set to array for Firestore
+        if (stats.shopsVisited instanceof Set) {
+            stats.shopsVisited = Array.from(stats.shopsVisited);
+        }
+        if (!Array.isArray(stats.shopsVisited)) {
+            stats.shopsVisited = [];
+        }
+        if (receipt.storeName && !stats.shopsVisited.includes(receipt.storeName)) {
+            stats.shopsVisited.push(receipt.storeName);
+        }
+        // Save updated stats
+        await userRef.set({ stats }, { merge: true });
+        console.log(`[Stats] Updated stats for user ${userId}: ${stats.totalScans} scans, level ${stats.level}`);
+    }
+    catch (error) {
+        console.error('[Stats] Failed to update user stats:', error);
+    }
+}
 //# sourceMappingURL=parseReceipt.js.map

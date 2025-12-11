@@ -3,9 +3,9 @@ import firestore from '@react-native-firebase/firestore';
 import {APP_ID} from './config';
 
 const ALERTS_COLLECTION = (userId: string) =>
-  `apps/${APP_ID}/users/${userId}/priceAlerts`;
+  `artifacts/goshopperai/users/${userId}/priceAlerts`;
 
-const PRICES_COLLECTION = `apps/${APP_ID}/prices`;
+const PRICES_COLLECTION = `artifacts/goshopperai/prices`;
 
 export interface PriceAlert {
   id: string;

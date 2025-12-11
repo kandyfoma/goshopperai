@@ -9,6 +9,9 @@ export type {Shop} from './receiptStorage';
 export {priceAlertsService} from './priceAlerts';
 export type {PriceAlert, PriceAlertInput} from './priceAlerts';
 
+export {naturalLanguageService} from './naturalLanguage';
+export type {QueryResult, ConversationMessage, ChartData, QueryResultType} from './naturalLanguage';
+
 export {offlineQueueService} from './offlineQueue';
 export type {QueuedReceipt, QueuedImage} from './offlineQueue';
 
@@ -21,6 +24,3 @@ export type {SavingsRecord, Achievement, UserStats} from './savingsTracker';
 // Phase 1.2 Services
 export {shoppingListService} from './shoppingList';
 export type {ShoppingList, ShoppingListItem, OptimizationResult, StoreRecommendation} from './shoppingList';
-
-export {naturalLanguageService} from './naturalLanguage';
-export type {QueryResult, ConversationMessage, ChartData} from './naturalLanguage';

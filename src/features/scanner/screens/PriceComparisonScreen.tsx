@@ -37,16 +37,29 @@ export function PriceComparisonScreen() {
 
       // Call Cloud Function to get price comparisons
       const functionsInstance = functions();
-      functionsInstance.useFunctionsEmulator('http://localhost:5001'); // For development
       
+      // Only use emulator in development
+      if (__DEV__) {
+        functionsInstance.useFunctionsEmulator('http://localhost:5001');
+      }
+      
+type PriceComparisonResponse = {
+  success: boolean;
+  comparisons?: PriceComparison[];
+  totalPotentialSavings?: number;
+  error?: string;
+};
+
       const result = await functionsInstance
         .httpsCallable('getPriceComparison')({
           receiptId,
         });
 
-      if (result.data.success && result.data.comparisons) {
-        setComparisons(result.data.comparisons);
-        setTotalSavings(result.data.totalSavings || 0);
+      const data = result.data as PriceComparisonResponse;
+
+      if (data.success && data.comparisons) {
+        setComparisons(data.comparisons);
+        setTotalSavings(data.totalPotentialSavings || 0);
       } else {
         setError('Aucune comparaison de prix disponible');
         setComparisons([]);
@@ -54,7 +67,20 @@ export function PriceComparisonScreen() {
       }
     } catch (err: any) {
       console.error('Error loading price comparisons:', err);
-      setError('Erreur lors du chargement des comparaisons');
+      
+      let errorMessage = 'Erreur lors du chargement des comparaisons';
+      
+      if (err.code === 'functions/deadline-exceeded') {
+        errorMessage = 'La comparaison prend trop de temps. Réessayez plus tard.';
+      } else if (err.code === 'functions/cancelled') {
+        errorMessage = 'Comparaison annulée. Veuillez réessayer.';
+      } else if (err.code === 'functions/failed-precondition') {
+        errorMessage = 'Service temporairement indisponible. Réessayez plus tard.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
       setComparisons([]);
       setTotalSavings(0);
     } finally {

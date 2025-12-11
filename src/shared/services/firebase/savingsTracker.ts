@@ -5,10 +5,10 @@ import {APP_ID} from './config';
 import {pushNotificationService} from './pushNotifications';
 
 const SAVINGS_COLLECTION = (userId: string) =>
-  `apps/${APP_ID}/users/${userId}/savings`;
+  `artifacts/goshopperai/users/${userId}/savings`;
 
 const ACHIEVEMENTS_COLLECTION = (userId: string) =>
-  `apps/${APP_ID}/users/${userId}/achievements`;
+  `artifacts/goshopperai/users/${userId}/achievements`;
 
 const USER_STATS_KEY = '@goshopperai/user_stats';
 
@@ -272,7 +272,7 @@ class SavingsTrackerService {
     try {
       // Try local cache first
       const cached = await AsyncStorage.getItem(`${USER_STATS_KEY}_${userId}`);
-      
+
       if (cached) {
         const stats = JSON.parse(cached);
         return {
@@ -280,24 +280,139 @@ class SavingsTrackerService {
           lastScanDate: stats.lastScanDate ? new Date(stats.lastScanDate) : undefined,
         };
       }
-      
-      // Fetch from Firestore
-      const doc = await firestore()
-        .doc(`apps/${APP_ID}/users/${userId}`)
-        .get();
-      
-      if (doc.exists && doc.data()?.stats) {
-        const stats = doc.data()!.stats;
-        return {
-          ...stats,
-          lastScanDate: stats.lastScanDate?.toDate(),
-        };
-      }
-      
-      // Return default stats
-      return this.getDefaultStats();
+
+      // Calculate real stats from receipts
+      const stats = await this.calculateStatsFromReceipts(userId);
+
+      // Cache the stats
+      await AsyncStorage.setItem(`${USER_STATS_KEY}_${userId}`, JSON.stringify({
+        ...stats,
+        lastScanDate: stats.lastScanDate?.toISOString(),
+      }));
+
+      return stats;
     } catch (error) {
       console.error('[SavingsTracker] Get stats error:', error);
+      return this.getDefaultStats();
+    }
+  }
+
+  /**
+   * Calculate stats from user's receipts
+   */
+  private async calculateStatsFromReceipts(userId: string): Promise<UserStats> {
+    try {
+      const receiptsRef = firestore()
+        .collection('artifacts')
+        .doc('goshopperai')
+        .collection('users')
+        .doc(userId)
+        .collection('receipts');
+
+      const receiptsSnapshot = await receiptsRef
+        .orderBy('scannedAt', 'desc')
+        .get();
+
+      let totalScans = 0;
+      let totalSpent = 0;
+      let totalSavings = 0;
+      let currentStreak = 0;
+      let longestStreak = 0;
+      let lastScanDate: Date | undefined;
+      const shopsVisited = new Set<string>();
+      let itemsScanned = 0;
+      let bestPricesFound = 0;
+
+      // Process receipts
+      const scanDates: Date[] = [];
+      receiptsSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        totalScans++;
+
+        if (data.total) totalSpent += data.total;
+        if (data.savings) totalSavings += data.savings;
+
+        if (data.storeName) shopsVisited.add(data.storeName);
+
+        if (data.items && Array.isArray(data.items)) {
+          itemsScanned += data.items.length;
+          // Count items where price was found (simplified logic)
+          data.items.forEach((item: any) => {
+            if (item.price && item.price > 0) {
+              bestPricesFound++;
+            }
+          });
+        }
+
+        if (data.scannedAt) {
+          const scanDate = data.scannedAt.toDate();
+          scanDates.push(scanDate);
+          if (!lastScanDate || scanDate > lastScanDate) {
+            lastScanDate = scanDate;
+          }
+        }
+      });
+
+      // Calculate streak
+      if (scanDates.length > 0) {
+        scanDates.sort((a, b) => b.getTime() - a.getTime()); // Most recent first
+
+        let streak = 1;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Check if scanned today or yesterday
+        const mostRecent = new Date(scanDates[0]);
+        mostRecent.setHours(0, 0, 0, 0);
+
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        if (mostRecent.getTime() === today.getTime() || mostRecent.getTime() === yesterday.getTime()) {
+          currentStreak = 1;
+
+          // Count consecutive days
+          for (let i = 1; i < scanDates.length; i++) {
+            const current = new Date(scanDates[i - 1]);
+            current.setHours(0, 0, 0, 0);
+            const previous = new Date(scanDates[i]);
+            previous.setHours(0, 0, 0, 0);
+
+            const diffTime = current.getTime() - previous.getTime();
+            const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+            if (diffDays === 1) {
+              currentStreak++;
+            } else {
+              break;
+            }
+          }
+        }
+
+        longestStreak = Math.max(currentStreak, longestStreak);
+      }
+
+      // Calculate level and XP
+      const xp = totalScans * 10 + Math.floor(totalSavings) * 5 + shopsVisited.size * 15;
+      const level = Math.floor(xp / 100) + 1;
+      const xpToNextLevel = (level * 100) - (xp % 100);
+
+      return {
+        totalScans,
+        totalSpent,
+        totalSavings,
+        currentStreak,
+        longestStreak,
+        lastScanDate,
+        level,
+        xp,
+        xpToNextLevel,
+        shopsVisited: shopsVisited.size,
+        itemsScanned,
+        bestPricesFound,
+      };
+    } catch (error) {
+      console.error('[SavingsTracker] Calculate stats error:', error);
       return this.getDefaultStats();
     }
   }
@@ -319,6 +434,35 @@ class SavingsTrackerService {
       itemsScanned: 0,
       bestPricesFound: 0,
     };
+  }
+
+  /**
+   * Record a receipt scan and update stats
+   */
+  async recordReceiptScan(
+    userId: string,
+    receiptData: {
+      total: number;
+      savings: number;
+      itemCount: number;
+      storeName: string;
+      bestPricesFound: number;
+    },
+  ): Promise<void> {
+    try {
+      await this.updateStats(userId, {
+        totalSpent: receiptData.total,
+        actualSavings: receiptData.savings,
+        itemCount: receiptData.itemCount,
+        storeName: receiptData.storeName,
+        bestPricesFound: receiptData.bestPricesFound,
+      });
+
+      // Check for new achievements
+      await this.checkAndUnlockAchievements(userId);
+    } catch (error) {
+      console.error('[SavingsTracker] Record receipt scan error:', error);
+    }
   }
 
   /**
@@ -384,7 +528,10 @@ class SavingsTrackerService {
     
     // Save to Firestore
     await firestore()
-      .doc(`apps/${APP_ID}/users/${userId}`)
+      .collection('artifacts')
+      .doc('goshopperai')
+      .collection('users')
+      .doc(userId)
       .set({stats: updatedStats}, {merge: true});
     
     // Cache locally
@@ -420,10 +567,65 @@ class SavingsTrackerService {
   }
 
   /**
-   * Get XP required for a level
+   * Check and unlock achievements
    */
-  private getXPForLevel(level: number): number {
-    return Math.floor(100 * Math.pow(1.5, level - 1));
+  private async checkAndUnlockAchievements(userId: string): Promise<void> {
+    try {
+      const stats = await this.getStats(userId);
+      const currentAchievements = await this.getAchievements(userId);
+
+      const newlyUnlocked: Achievement[] = [];
+
+      for (const achievement of ACHIEVEMENTS) {
+        const existing = currentAchievements.find(a => a.id === achievement.id);
+        if (!existing || !existing.isUnlocked) {
+          const progress = this.getAchievementProgress(achievement.type, stats);
+          if (progress >= achievement.target) {
+            newlyUnlocked.push({
+              ...achievement,
+              progress,
+              isUnlocked: true,
+              unlockedAt: new Date(),
+            });
+
+            // Send notification for newly unlocked achievement
+            try {
+              await pushNotificationService.sendAchievementNotification(
+                userId,
+                achievement.title,
+                achievement.description
+              );
+            } catch (error) {
+              console.warn('[SavingsTracker] Failed to send achievement notification:', error);
+            }
+          }
+        }
+      }
+
+      // Save unlocked achievements to Firestore
+      if (newlyUnlocked.length > 0) {
+        const batch = firestore().batch();
+        newlyUnlocked.forEach(achievement => {
+          const achievementRef = firestore()
+            .collection('artifacts')
+            .doc('goshopperai')
+            .collection('users')
+            .doc(userId)
+            .collection('achievements')
+            .doc(achievement.id);
+
+          batch.set(achievementRef, {
+            ...achievement,
+            unlockedAt: firestore.FieldValue.serverTimestamp(),
+          });
+        });
+
+        await batch.commit();
+        console.log(`[SavingsTracker] Unlocked ${newlyUnlocked.length} achievements for user ${userId}`);
+      }
+    } catch (error) {
+      console.error('[SavingsTracker] Check achievements error:', error);
+    }
   }
 
   /**

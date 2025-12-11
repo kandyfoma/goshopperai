@@ -252,7 +252,7 @@ export function LoginScreen() {
                 <Text style={styles.label}>Email</Text>
                 <View style={[
                   styles.inputWrapper,
-                  emailError && styles.inputError,
+                  emailError ? styles.inputError : null,
                   loading && styles.inputDisabled
                 ]}>
                   <Text style={styles.inputIcon}>📧</Text>
@@ -282,7 +282,7 @@ export function LoginScreen() {
                 <Text style={styles.label}>Mot de passe</Text>
                 <View style={[
                   styles.inputWrapper,
-                  passwordError && styles.inputError,
+                  passwordError ? styles.inputError : null,
                   loading && styles.inputDisabled
                 ]}>
                   <Text style={styles.inputIcon}>🔒</Text>

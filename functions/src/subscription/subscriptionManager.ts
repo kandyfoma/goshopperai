@@ -729,6 +729,7 @@ export const checkExpiredSubscriptions = functions
   });
 
 export const getUserStats = functions
+  .region(config.app.region)
   .runWith({
     enforceAppCheck: false,
     timeoutSeconds: 60,
@@ -758,38 +759,43 @@ export const getUserStats = functions
         const receipt = doc.data();
         totalReceipts++;
 
-        // Calculate total spent from items
+        // Calculate total spent from items using totalPrice
         if (receipt.items && Array.isArray(receipt.items)) {
           receipt.items.forEach((item: any) => {
-            if (item.price && typeof item.price === 'number') {
-              totalSpent += item.price;
+            if (item.totalPrice && typeof item.totalPrice === 'number') {
+              totalSpent += item.totalPrice;
             }
           });
         }
 
-        // Add savings if available
-        if (receipt.savings && typeof receipt.savings === 'number') {
-          totalSavings += receipt.savings;
+        // Use total amount if available (preferring USD, then CDF, then calculated)
+        if (receipt.totalUSD && typeof receipt.totalUSD === 'number') {
+          totalSpent = receipt.totalUSD;
+        } else if (receipt.totalCDF && typeof receipt.totalCDF === 'number') {
+          // Convert CDF to approximate USD (rough conversion rate)
+          totalSpent = receipt.totalCDF / 2800; // Approximate USD to CDF rate
+        } else if (receipt.total && typeof receipt.total === 'number') {
+          totalSpent = receipt.total;
         }
       });
 
-      // Get subscription status for additional stats
-      const subscriptionRef = db.collection('artifacts/goshopperai/users').doc(userId).collection('subscriptions').doc('current');
+      // Get subscription status using the correct collection path
+      const subscriptionRef = db.doc(collections.subscription(userId));
       const subscriptionDoc = await subscriptionRef.get();
       let subscriptionStatus = 'free';
       let monthlyScansUsed = 0;
       let monthlyScansLimit = 5; // Default free tier
 
       if (subscriptionDoc.exists) {
-        const subscription = subscriptionDoc.data();
-        subscriptionStatus = subscription?.status || 'free';
-        monthlyScansUsed = subscription?.monthlyScansUsed || 0;
-        monthlyScansLimit = subscription?.monthlyScansLimit || 5;
+        const subscription = subscriptionDoc.data() as Subscription;
+        subscriptionStatus = subscription.status || 'free';
+        monthlyScansUsed = subscription.monthlyScansUsed || 0;
+        monthlyScansLimit = PLAN_SCAN_LIMITS[subscription.planId || 'free'] || 5;
       }
 
       return {
         totalReceipts,
-        totalSavings,
+        totalSavings, // This will be 0 for now since we don't have savings calculation
         totalSpent,
         subscriptionStatus,
         monthlyScansUsed,

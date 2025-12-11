@@ -38,6 +38,10 @@ export interface Receipt {
   total: number;
   totalAmount?: number; // Alias for total
   
+  // Multi-currency support
+  totalUSD?: number; // USD amount if receipt has both currencies
+  totalCDF?: number; // CDF amount if receipt has both currencies
+  
   // Status
   status?: 'pending' | 'processing' | 'processed' | 'error';
   processingStatus: 'pending' | 'processing' | 'completed' | 'failed';

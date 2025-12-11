@@ -9,6 +9,7 @@ import {COLORS} from '@/shared/utils/constants';
 import {HomeScreen} from '@/features/home/screens';
 import {HistoryScreen} from '@/features/history/screens';
 import {StatsScreen} from '@/features/stats/screens';
+import {ItemsScreen} from '@/features/items';
 import {ProfileScreen} from '@/features/profile/screens';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -64,6 +65,15 @@ export function MainTabNavigator() {
         options={{
           tabBarIcon: ({focused}) => (
             <TabIcon focused={focused} icon="📊" label="Stats" />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Items"
+        component={ItemsScreen}
+        options={{
+          tabBarIcon: ({focused}) => (
+            <TabIcon focused={focused} icon="🛒" label="Articles" />
           ),
         }}
       />

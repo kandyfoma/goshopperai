@@ -20,10 +20,10 @@ export interface CaptureResult {
 
 const DEFAULT_CAMERA_OPTIONS: CameraOptions = {
   mediaType: 'photo',
-  quality: 0.9,
+  quality: 0.8,
   maxWidth: 2000,
   maxHeight: 2500,
-  includeBase64: false, // We'll compress first
+  includeBase64: true, // Get base64 directly to avoid saving files
   saveToPhotos: false,
 };
 

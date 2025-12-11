@@ -79,6 +79,8 @@ export function HistoryScreen() {
           subtotal: data.subtotal,
           tax: data.tax,
           total: data.total || 0,
+          totalUSD: data.totalUSD,
+          totalCDF: data.totalCDF,
           processingStatus: data.processingStatus || 'completed',
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate() || new Date(),
@@ -168,9 +170,24 @@ export function HistoryScreen() {
       </View>
       
       <View style={styles.receiptRight}>
-        <Text style={styles.totalAmount}>
-          {formatCurrency(item.totalAmount || item.total, item.currency)}
-        </Text>
+        <View style={styles.totalContainer}>
+          {item.totalUSD !== undefined && item.totalCDF !== undefined ? (
+            // Show both currencies if available
+            <>
+              <Text style={styles.totalAmount}>
+                {formatCurrency(item.totalUSD)}
+              </Text>
+              <Text style={styles.totalAmountSecondary}>
+                {formatCurrency(item.totalCDF, 'CDF')}
+              </Text>
+            </>
+          ) : (
+            // Show single currency
+            <Text style={styles.totalAmount}>
+              {formatCurrency(item.totalAmount || item.total, item.currency)}
+            </Text>
+          )}
+        </View>
         <View style={[
           styles.statusBadge,
           {backgroundColor: getStatusColor(item.status) + '15'}
@@ -243,19 +260,37 @@ export function HistoryScreen() {
       {receipts.length > 0 && (
         <View style={styles.statsBar}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{receipts.length}</Text>
+            <Text style={styles.statValue}>{filteredReceipts.length}</Text>
             <Text style={styles.statLabel}>Factures</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>
               {formatCurrency(
-                receipts
-                  .filter(r => r.currency === 'USD')
-                  .reduce((sum, r) => sum + (r.totalAmount || r.total), 0)
+                filteredReceipts.reduce((sum, r) => {
+                  // Use totalUSD if available, otherwise fall back to total if currency is USD
+                  if (r.totalUSD !== undefined) return sum + r.totalUSD;
+                  if (r.currency === 'USD') return sum + (r.totalAmount || r.total);
+                  return sum;
+                }, 0)
               )}
             </Text>
             <Text style={styles.statLabel}>Total USD</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>
+              {formatCurrency(
+                filteredReceipts.reduce((sum, r) => {
+                  // Use totalCDF if available, otherwise fall back to total if currency is CDF
+                  if (r.totalCDF !== undefined) return sum + r.totalCDF;
+                  if (r.currency === 'CDF') return sum + (r.totalAmount || r.total);
+                  return sum;
+                }, 0),
+                'CDF'
+              )}
+            </Text>
+            <Text style={styles.statLabel}>Total CDF</Text>
           </View>
         </View>
       )}
@@ -397,11 +432,19 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     marginLeft: 12,
   },
+  totalContainer: {
+    alignItems: 'flex-end',
+  },
   totalAmount: {
     fontSize: 16,
     fontWeight: 'bold',
     color: COLORS.gray[900],
-    marginBottom: 4,
+    marginBottom: 2,
+  },
+  totalAmountSecondary: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.gray[600],
   },
   statusBadge: {
     paddingVertical: 3,

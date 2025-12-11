@@ -77,18 +77,32 @@ async function gatherSpendingContext(userId: string): Promise<string> {
   const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   
-  // Get this month's receipts
-  const thisMonthReceipts = await db
-    .collection(collections.receipts(userId))
-    .where('date', '>=', thisMonth)
-    .get();
+  // Get receipts from the last 2 months to avoid complex queries
+  let recentReceipts;
+  try {
+    const twoMonthsAgo = new Date(now);
+    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+    
+    recentReceipts = await db
+      .collection(collections.receipts(userId))
+      .where('scannedAt', '>=', twoMonthsAgo)
+      .orderBy('scannedAt', 'desc')
+      .get();
+  } catch (error) {
+    console.warn('Failed to query recent receipts:', error);
+    recentReceipts = { docs: [] };
+  }
   
-  // Get last month's receipts
-  const lastMonthReceipts = await db
-    .collection(collections.receipts(userId))
-    .where('date', '>=', lastMonth)
-    .where('date', '<', thisMonth)
-    .get();
+  // Filter receipts by date ranges in memory
+  const thisMonthReceipts = recentReceipts.docs.filter(doc => {
+    const scannedAt = doc.data().scannedAt?.toDate();
+    return scannedAt && scannedAt >= thisMonth;
+  });
+  
+  const lastMonthReceipts = recentReceipts.docs.filter(doc => {
+    const scannedAt = doc.data().scannedAt?.toDate();
+    return scannedAt && scannedAt >= lastMonth && scannedAt < thisMonth;
+  });
   
   // Calculate statistics
   let thisMonthTotal = 0;
@@ -97,7 +111,7 @@ async function gatherSpendingContext(userId: string): Promise<string> {
   const storeTotals: { [key: string]: number } = {};
   const items: { name: string; price: number; store: string }[] = [];
   
-  thisMonthReceipts.docs.forEach(doc => {
+  thisMonthReceipts.forEach(doc => {
     const data = doc.data();
     thisMonthTotal += data.total || 0;
     storeTotals[data.storeName] = (storeTotals[data.storeName] || 0) + data.total;
@@ -113,7 +127,7 @@ async function gatherSpendingContext(userId: string): Promise<string> {
     });
   });
   
-  lastMonthReceipts.docs.forEach(doc => {
+  lastMonthReceipts.forEach(doc => {
     lastMonthTotal += doc.data().total || 0;
   });
   
@@ -125,8 +139,8 @@ Période: ${thisMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeri
 
 RÉSUMÉ CE MOIS:
 - Total dépensé: $${thisMonthTotal.toFixed(2)}
-- Nombre de factures: ${thisMonthReceipts.size}
-- Moyenne par facture: $${(thisMonthTotal / Math.max(thisMonthReceipts.size, 1)).toFixed(2)}
+- Nombre de factures: ${thisMonthReceipts.length}
+- Moyenne par facture: $${(thisMonthTotal / Math.max(thisMonthReceipts.length, 1)).toFixed(2)}
 
 COMPARAISON:
 - Mois dernier: $${lastMonthTotal.toFixed(2)}

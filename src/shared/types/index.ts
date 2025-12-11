@@ -28,6 +28,7 @@ export type MainTabParamList = {
   Home: undefined;
   History: undefined;
   Stats: undefined;
+  Items: undefined;
   Profile: undefined;
 };
 

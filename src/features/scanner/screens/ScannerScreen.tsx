@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   Alert,
   SafeAreaView,
@@ -14,7 +13,7 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList, Receipt} from '@/shared/types';
 import {useSubscription} from '@/shared/contexts';
-import {cameraService, imageCompressionService} from '@/shared/services/camera';
+import {cameraService} from '@/shared/services/camera';
 import {geminiService} from '@/shared/services/ai/gemini';
 import {COLORS} from '@/shared/utils/constants';
 
@@ -29,7 +28,6 @@ export function ScannerScreen() {
   const {canScan, recordScan, scansRemaining, isTrialActive, trialDaysRemaining} = useSubscription();
   
   const [state, setState] = useState<ScanState>('idle');
-  const [imageUri, setImageUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [processingProgress, setProcessingProgress] = useState<string>('');
@@ -59,7 +57,7 @@ export function ScannerScreen() {
 
     const result = await cameraService.captureFromCamera();
 
-    if (!result.success || !result.uri) {
+    if (!result.success || !result.base64) {
       setState('idle');
       if (result.error && result.error !== 'Capture annulée') {
         setError(result.error);
@@ -67,9 +65,9 @@ export function ScannerScreen() {
       return;
     }
 
-    setImageUri(result.uri);
-    currentImageRef.current = result.uri;
-    await processImage(result.uri);
+    // Don't store image URI to avoid keeping file on device
+    currentImageRef.current = null;
+    await processImage(result.base64);
   }, [canScan, navigation, isTrialActive]);
 
   const handleGallery = useCallback(async () => {
@@ -93,7 +91,7 @@ export function ScannerScreen() {
 
     const result = await cameraService.selectFromGallery();
 
-    if (!result.success || !result.uri) {
+    if (!result.success || !result.base64) {
       setState('idle');
       if (result.error && result.error !== 'Capture annulée') {
         setError(result.error);
@@ -101,23 +99,18 @@ export function ScannerScreen() {
       return;
     }
 
-    setImageUri(result.uri);
-    currentImageRef.current = result.uri;
-    await processImage(result.uri);
+    // Don't store image URI to avoid keeping file on device
+    currentImageRef.current = null;
+    await processImage(result.base64);
   }, [canScan, navigation, isTrialActive]);
 
-  const processImage = async (uri: string, isRetry: boolean = false) => {
+  const processImage = async (base64Data: string, isRetry: boolean = false): Promise<void> => {
     setState('processing');
-    setProcessingProgress('Compression de l\'image...');
+    setProcessingProgress('Analyse en cours...');
 
     try {
-      // Compress image before sending to AI
-      const base64 = await imageCompressionService.compressToBase64(uri);
-      
-      setProcessingProgress('Analyse en cours...');
-
-      // Parse receipt with Gemini AI (includes built-in retry logic)
-      const result = await geminiService.parseReceipt(base64, 'current-user');
+      // Parse receipt with Gemini AI using base64 directly (no compression needed)
+      const result = await geminiService.parseReceipt(base64Data, 'current-user');
 
       if (result.success && result.receipt) {
         // Record scan usage only on success and not retry
@@ -150,7 +143,7 @@ export function ScannerScreen() {
         
         // Exponential backoff
         await new Promise<void>(resolve => setTimeout(resolve, 1000 * retryCountRef.current));
-        return processImage(uri, true);
+        return processImage(base64Data, true);
       }
 
       // Format user-friendly error message
@@ -173,19 +166,18 @@ export function ScannerScreen() {
 
   const handleRetry = () => {
     setState('idle');
-    setImageUri(null);
     setError(null);
     setReceipt(null);
     retryCountRef.current = 0;
   };
 
   const handleRetryWithSameImage = async () => {
-    if (currentImageRef.current) {
-      retryCountRef.current = 0;
-      await processImage(currentImageRef.current);
-    } else {
-      handleRetry();
-    }
+    // Since we don't store images anymore, just show error that retry isn't available
+    Alert.alert(
+      'Nouvelle tentative impossible',
+      'L\'image n\'est plus disponible. Veuillez prendre une nouvelle photo.',
+      [{text: 'OK', onPress: handleRetry}]
+    );
   };
 
   const handleViewResults = () => {
@@ -266,9 +258,6 @@ export function ScannerScreen() {
 
         {state === 'processing' && (
           <View style={styles.loadingContainer}>
-            {imageUri && (
-              <Image source={{uri: imageUri}} style={styles.previewImage} />
-            )}
             <View style={styles.processingOverlay}>
               <ActivityIndicator size="large" color="#ffffff" />
               <Text style={styles.processingText}>
@@ -453,12 +442,6 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     color: COLORS.gray[600],
-  },
-  previewImage: {
-    width: 300,
-    height: 400,
-    borderRadius: 12,
-    marginBottom: 20,
   },
   processingOverlay: {
     position: 'absolute',

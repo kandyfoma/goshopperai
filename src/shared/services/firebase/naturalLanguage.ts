@@ -274,23 +274,32 @@ class NaturalLanguageService {
     userId: string,
     period: {start: Date; end: Date; label: string},
   ): Promise<QueryResult> {
+    // Get receipts from a broader range and filter in memory to avoid index requirements
+    const broaderStart = new Date(period.start);
+    broaderStart.setMonth(broaderStart.getMonth() - 1); // Get one month earlier
+    
     const snapshot = await firestore()
       .collection(RECEIPTS_COLLECTION(userId))
-      .where('date', '>=', period.start)
-      .where('date', '<=', period.end)
+      .where('scannedAt', '>=', broaderStart)
+      .orderBy('scannedAt', 'desc')
       .get();
     
     let totalSpent = 0;
     let receiptCount = 0;
     const byStore: {[key: string]: number} = {};
     
+    // Filter results in memory
     snapshot.docs.forEach(doc => {
       const data = doc.data();
-      totalSpent += data.total || 0;
-      receiptCount++;
+      const scannedAt = data.scannedAt?.toDate?.() || new Date(data.scannedAt);
       
-      const store = data.storeName || 'Inconnu';
-      byStore[store] = (byStore[store] || 0) + (data.total || 0);
+      if (scannedAt >= period.start && scannedAt <= period.end) {
+        totalSpent += data.total || 0;
+        receiptCount++;
+        
+        const store = data.storeName || 'Inconnu';
+        byStore[store] = (byStore[store] || 0) + (data.total || 0);
+      }
     });
     
     const topStore = Object.entries(byStore)
@@ -333,18 +342,26 @@ class NaturalLanguageService {
     period: {start: Date; end: Date; label: string},
     filterCategory: string | null,
   ): Promise<QueryResult> {
+    // Get receipts from a broader range and filter in memory
+    const broaderStart = new Date(period.start);
+    broaderStart.setMonth(broaderStart.getMonth() - 1);
+    
     const snapshot = await firestore()
       .collection(RECEIPTS_COLLECTION(userId))
-      .where('date', '>=', period.start)
-      .where('date', '<=', period.end)
+      .where('scannedAt', '>=', broaderStart)
+      .orderBy('scannedAt', 'desc')
       .get();
     
     const byCategory: {[key: string]: number} = {};
     let totalSpent = 0;
     let filteredTotal = 0;
     
+    // Filter results in memory
     snapshot.docs.forEach(doc => {
       const data = doc.data();
+      const scannedAt = data.scannedAt?.toDate?.() || new Date(data.scannedAt);
+      
+      if (scannedAt >= period.start && scannedAt <= period.end) {
       const items = data.items || [];
       
       items.forEach((item: any) => {
@@ -357,6 +374,7 @@ class NaturalLanguageService {
           filteredTotal += amount;
         }
       });
+      }
     });
     
     const sortedCategories = Object.entries(byCategory)
@@ -412,32 +430,41 @@ class NaturalLanguageService {
     userId: string,
     period: {start: Date; end: Date; label: string},
   ): Promise<QueryResult> {
+    // Get receipts from a broader range and filter in memory
+    const broaderStart = new Date(period.start);
+    broaderStart.setMonth(broaderStart.getMonth() - 1);
+    
     const snapshot = await firestore()
       .collection(RECEIPTS_COLLECTION(userId))
-      .where('date', '>=', period.start)
-      .where('date', '<=', period.end)
+      .where('scannedAt', '>=', broaderStart)
+      .orderBy('scannedAt', 'desc')
       .get();
     
-    const storeData: {[key: string]: {total: number; visits: number; items: number}} = {};
+    const byStore: {[key: string]: {total: number; count: number}} = {};
     
+    // Filter results in memory
     snapshot.docs.forEach(doc => {
       const data = doc.data();
-      const store = data.storeName || 'Inconnu';
+      const scannedAt = data.scannedAt?.toDate?.() || new Date(data.scannedAt);
       
-      if (!storeData[store]) {
-        storeData[store] = {total: 0, visits: 0, items: 0};
+      if (scannedAt >= period.start && scannedAt <= period.end) {
+        const store = data.storeName || 'Inconnu';
+        
+        if (!byStore[store]) {
+          byStore[store] = {total: 0, count: 0};
+        }
+        
+        byStore[store].total += data.total || 0;
+        byStore[store].count++;
       }
-      
-      storeData[store].total += data.total || 0;
-      storeData[store].visits++;
-      storeData[store].items += (data.items || []).length;
     });
     
-    const sortedStores = Object.entries(storeData)
+    const sortedStores = Object.entries(byStore)
       .map(([name, data]) => ({
         name,
-        ...data,
-        avgPerVisit: data.total / data.visits,
+        total: data.total,
+        count: data.count,
+        avgPerVisit: data.total / data.count,
       }))
       .sort((a, b) => b.total - a.total);
     
@@ -448,7 +475,7 @@ class NaturalLanguageService {
     const mostVisited = sortedStores[0];
     
     return {
-      answer: `${period.label}, vous avez visité ${sortedStores.length} magasins. ${mostVisited ? `Le plus fréquenté est ${mostVisited.name} (${mostVisited.visits} visites, $${mostVisited.total.toFixed(2)} au total).` : ''} ${cheapest ? `${cheapest.name} a la moyenne la plus basse ($${cheapest.avgPerVisit.toFixed(2)}/visite).` : ''}`,
+      answer: `${period.label}, vous avez visité ${sortedStores.length} magasins. ${mostVisited ? `Le plus fréquenté est ${mostVisited.name} (${mostVisited.count} visites, $${mostVisited.total.toFixed(2)} au total).` : ''} ${cheapest ? `${cheapest.name} a la moyenne la plus basse ($${cheapest.avgPerVisit.toFixed(2)}/visite).` : ''}`,
       answerLingala: `Na ${period.label}, okei na magazini ${sortedStores.length}. ${mostVisited ? `Magazini oyo okendaka mingi ezali ${mostVisited.name}.` : ''} ${cheapest ? `${cheapest.name} ezali na ntalo ya nse ($${cheapest.avgPerVisit.toFixed(2)}).` : ''}`,
       data: {stores: sortedStores, cheapest},
       chartData: {

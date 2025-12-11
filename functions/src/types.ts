@@ -27,6 +27,8 @@ export interface ParsedReceipt {
   subtotal?: number;
   tax?: number;
   total: number;
+  totalUSD?: number;
+  totalCDF?: number;
   rawText?: string;
 }
 

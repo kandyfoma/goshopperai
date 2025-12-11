@@ -103,6 +103,10 @@ exports.savePriceData = functions
  */
 exports.getPriceComparison = functions
     .region(config_1.config.app.region)
+    .runWith({
+    timeoutSeconds: 300, // 5 minutes timeout
+    memory: '1GB',
+})
     .https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
@@ -133,17 +137,35 @@ exports.getPriceComparison = functions
             currentStoreName = data.storeName || '';
         }
         const comparisons = [];
-        // Get comparisons for each item
-        for (const item of receiptItems) {
-            const normalizedName = item.nameNormalized || normalizeProductName(item.name);
-            // Query price history for this product
+        // Collect all normalized product names
+        const normalizedNames = receiptItems.map(item => item.nameNormalized || normalizeProductName(item.name));
+        // Remove duplicates to avoid unnecessary queries
+        const uniqueNormalizedNames = [...new Set(normalizedNames)];
+        // Query all price data for these products in batches (Firestore 'in' limit is 10)
+        const batchSize = 10;
+        const priceDataMap = new Map();
+        for (let i = 0; i < uniqueNormalizedNames.length; i += batchSize) {
+            const batch = uniqueNormalizedNames.slice(i, i + batchSize);
             const priceQuery = await db
                 .collection(config_1.collections.prices)
-                .where('productNameNormalized', '==', normalizedName)
+                .where('productNameNormalized', 'in', batch)
                 .orderBy('recordedAt', 'desc')
-                .limit(50)
                 .get();
-            if (priceQuery.empty) {
+            // Group prices by normalized name
+            priceQuery.docs.forEach(doc => {
+                const pricePoint = doc.data();
+                const key = pricePoint.productNameNormalized;
+                if (!priceDataMap.has(key)) {
+                    priceDataMap.set(key, []);
+                }
+                priceDataMap.get(key).push(pricePoint);
+            });
+        }
+        // Generate comparisons for each item
+        for (const item of receiptItems) {
+            const normalizedName = item.nameNormalized || normalizeProductName(item.name);
+            const prices = priceDataMap.get(normalizedName) || [];
+            if (prices.length === 0) {
                 // No comparison data available
                 comparisons.push({
                     productName: item.name,
@@ -158,7 +180,6 @@ exports.getPriceComparison = functions
                 });
                 continue;
             }
-            const prices = priceQuery.docs.map(doc => doc.data());
             // Calculate statistics
             const priceValues = prices.map(p => p.price);
             const minPrice = Math.min(...priceValues);

@@ -1,3 +1,5 @@
 // Camera services export
-export {cameraService, CaptureResult} from './camera';
-export {imageCompressionService, CompressionOptions} from './compression';
+export {cameraService} from './camera';
+export type {CaptureResult} from './camera';
+export {imageCompressionService} from './compression';
+export type {CompressionOptions} from './compression';
