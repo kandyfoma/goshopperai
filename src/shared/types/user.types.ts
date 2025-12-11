@@ -61,4 +61,3 @@ export interface VerificationState {
 }
 
 export type PaymentMethod = 'mobile_money' | 'card';
-export type MobileMoneyProvider = 'mpesa' | 'orange' | 'airtel' | 'afrimoney';

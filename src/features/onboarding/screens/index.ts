@@ -1,4 +1,4 @@
 // Onboarding screens barrel export
-export * from './WelcomeScreen';
-export * from './LoginScreen';
-export * from './RegisterScreen';
+export {WelcomeScreen} from './WelcomeScreen';
+export {LoginScreen} from './LoginScreen';
+export {RegisterScreen} from './RegisterScreen';

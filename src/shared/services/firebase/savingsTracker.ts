@@ -567,6 +567,14 @@ class SavingsTrackerService {
   }
 
   /**
+   * Get XP required for a level
+   */
+  private getXPForLevel(level: number): number {
+    // Exponential growth: base 100 XP, increases by 25% each level
+    return Math.floor(100 * Math.pow(1.25, level - 1));
+  }
+
+  /**
    * Check and unlock achievements
    */
   private async checkAndUnlockAchievements(userId: string): Promise<void> {
@@ -590,10 +598,9 @@ class SavingsTrackerService {
 
             // Send notification for newly unlocked achievement
             try {
-              await pushNotificationService.sendAchievementNotification(
-                userId,
+              await pushNotificationService.triggerAchievementNotification(
                 achievement.title,
-                achievement.description
+                'fr'
               );
             } catch (error) {
               console.warn('[SavingsTracker] Failed to send achievement notification:', error);
