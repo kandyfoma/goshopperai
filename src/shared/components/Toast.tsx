@@ -1,4 +1,4 @@
-// Modern Toast Component
+// Modern Toast Component - Urbanist Design
 import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
@@ -9,9 +9,28 @@ import {
   Dimensions,
 } from 'react-native';
 import Icon from './Icon';
-import {Colors} from '../theme/theme';
 
 const {width} = Dimensions.get('window');
+
+// Urbanist Design Colors
+const URBANIST_COLORS = {
+  cardBg: '#FFFFFF',
+  textPrimary: '#212121',
+  textSecondary: '#6B7280',
+  // Status colors with soft pastels
+  success: '#10B981',
+  successBg: '#ECFDF5',
+  successAccent: '#D1FAE5',
+  error: '#EF4444',
+  errorBg: '#FEF2F2',
+  errorAccent: '#FEE2E2',
+  warning: '#F59E0B',
+  warningBg: '#FFFBEB',
+  warningAccent: '#FEF3C7',
+  info: '#3B82F6',
+  infoBg: '#EFF6FF',
+  infoAccent: '#DBEAFE',
+};
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -31,18 +50,26 @@ export function Toast({
   const [visible, setVisible] = useState(true);
   const translateY = useRef(new Animated.Value(-100)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.9)).current;
 
   useEffect(() => {
-    // Animate in
+    // Animate in with spring
     Animated.parallel([
-      Animated.timing(translateY, {
+      Animated.spring(translateY, {
         toValue: 0,
-        duration: 300,
+        tension: 50,
+        friction: 8,
         useNativeDriver: true,
       }),
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 300,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scale, {
+        toValue: 1,
+        tension: 50,
+        friction: 8,
         useNativeDriver: true,
       }),
     ]).start();
@@ -59,12 +86,17 @@ export function Toast({
     Animated.parallel([
       Animated.timing(translateY, {
         toValue: -100,
-        duration: 300,
+        duration: 250,
         useNativeDriver: true,
       }),
       Animated.timing(opacity, {
         toValue: 0,
-        duration: 300,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 0.9,
+        duration: 200,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -79,31 +111,31 @@ export function Toast({
     switch (type) {
       case 'success':
         return {
-          backgroundColor: Colors.status.successLight,
-          borderColor: Colors.status.success,
-          icon: 'check-circle',
-          iconColor: Colors.status.success,
+          backgroundColor: URBANIST_COLORS.successBg,
+          accentColor: URBANIST_COLORS.successAccent,
+          iconColor: URBANIST_COLORS.success,
+          icon: 'checkbox-circle-fill',
         };
       case 'error':
         return {
-          backgroundColor: Colors.status.errorLight,
-          borderColor: Colors.status.error,
-          icon: 'alert-circle',
-          iconColor: Colors.status.error,
+          backgroundColor: URBANIST_COLORS.errorBg,
+          accentColor: URBANIST_COLORS.errorAccent,
+          iconColor: URBANIST_COLORS.error,
+          icon: 'error-warning-fill',
         };
       case 'warning':
         return {
-          backgroundColor: Colors.status.warningLight,
-          borderColor: Colors.status.warning,
-          icon: 'alert-triangle',
-          iconColor: Colors.status.warning,
+          backgroundColor: URBANIST_COLORS.warningBg,
+          accentColor: URBANIST_COLORS.warningAccent,
+          iconColor: URBANIST_COLORS.warning,
+          icon: 'alert-fill',
         };
       default:
         return {
-          backgroundColor: Colors.status.infoLight,
-          borderColor: Colors.status.info,
-          icon: 'info',
-          iconColor: Colors.status.info,
+          backgroundColor: URBANIST_COLORS.infoBg,
+          accentColor: URBANIST_COLORS.infoAccent,
+          iconColor: URBANIST_COLORS.info,
+          icon: 'information-fill',
         };
     }
   };
@@ -116,19 +148,25 @@ export function Toast({
         styles.container,
         {
           backgroundColor: config.backgroundColor,
-          borderColor: config.borderColor,
-          transform: [{translateY}],
+          transform: [{translateY}, {scale}],
           opacity,
         },
       ]}>
+      {/* Left accent bar */}
+      <View style={[styles.accentBar, {backgroundColor: config.iconColor}]} />
+      
       <View style={styles.content}>
-        <Icon name={config.icon} size="sm" color={config.iconColor} />
-        <Text style={[styles.message, {color: config.iconColor}]}>
-          {message}
-        </Text>
+        <View style={[styles.iconContainer, {backgroundColor: config.accentColor}]}>
+          <Icon name={config.icon} size="sm" color={config.iconColor} />
+        </View>
+        <Text style={styles.message}>{message}</Text>
       </View>
-      <TouchableOpacity onPress={dismiss} style={styles.closeButton}>
-        <Icon name="x" size="xs" color={config.iconColor} />
+      
+      <TouchableOpacity
+        onPress={dismiss}
+        style={styles.closeButton}
+        activeOpacity={0.7}>
+        <Icon name="close-line" size="sm" color={URBANIST_COLORS.textSecondary} />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -137,34 +175,60 @@ export function Toast({
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 50,
-    left: 16,
-    right: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+    top: 60,
+    left: 20,
+    right: 20,
+    borderRadius: 16,
     padding: 16,
+    paddingLeft: 20,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 8,
     zIndex: 1000,
+    overflow: 'hidden',
+  },
+  accentBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
   },
   content: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 14,
+  },
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   message: {
     fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 12,
+    fontWeight: '600',
+    color: URBANIST_COLORS.textPrimary,
     flex: 1,
+    lineHeight: 20,
+    letterSpacing: -0.1,
   },
   closeButton: {
-    padding: 4,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   toastContainer: {
     position: 'absolute',
