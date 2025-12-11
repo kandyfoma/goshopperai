@@ -1,4 +1,5 @@
 // Scanner Screen - Capture and process receipts
+// Styled with GoShopperAI Design System (Blue + Gold)
 import React, {useState, useCallback, useRef, useEffect} from 'react';
 import {
   View,
@@ -18,7 +19,8 @@ import {geminiService} from '@/shared/services/ai/gemini';
 import {analyticsService} from '@/shared/services/analytics';
 import {duplicateDetectionService} from '@/shared/services/duplicateDetection';
 import {offlineQueueService} from '@/shared/services/firebase';
-import {COLORS} from '@/shared/utils/constants';
+import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {Icon, FadeIn, SlideIn} from '@/shared/components';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -381,7 +383,7 @@ export function ScannerScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-          <Text style={styles.closeText}>✕</Text>
+          <Icon name="close" size="sm" color={Colors.text.secondary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Scanner</Text>
         <View style={styles.placeholder} />
@@ -389,17 +391,22 @@ export function ScannerScreen() {
 
       {/* Scans remaining badge */}
       {state === 'idle' && (
-        <View style={styles.scansBadge}>
-          <Text style={styles.scansBadgeText}>{getScansText()}</Text>
-        </View>
+        <FadeIn>
+          <View style={styles.scansBadge}>
+            <Icon name="camera" size="xs" color={Colors.primary} />
+            <Text style={styles.scansBadgeText}>{getScansText()}</Text>
+          </View>
+        </FadeIn>
       )}
 
       {/* Offline banner */}
       {(isOffline || queueCount > 0) && state === 'idle' && (
         <View style={styles.offlineBanner}>
-          <Text style={styles.offlineIcon}>
-            {isOffline ? '📶' : '⏳'}
-          </Text>
+          <Icon 
+            name={isOffline ? 'alert' : 'clock'} 
+            size="sm" 
+            color={Colors.status.warning} 
+          />
           <View style={styles.offlineTextContainer}>
             <Text style={styles.offlineTitle}>
               {isOffline ? 'Mode hors ligne' : 'File d\'attente active'}
@@ -416,36 +423,41 @@ export function ScannerScreen() {
       {/* Content */}
       <View style={styles.content}>
         {state === 'idle' && (
-          <View style={styles.idleContainer}>
-            <Text style={styles.idleIcon}>📸</Text>
-            <Text style={styles.idleTitle}>Scannez votre facture</Text>
-            <Text style={styles.idleDesc}>
-              Prenez en photo votre ticket de caisse ou sélectionnez une image
-            </Text>
+          <SlideIn>
+            <View style={styles.idleContainer}>
+              <View style={styles.scannerIconWrapper}>
+                <Icon name="camera" size="xl" color={Colors.primary} />
+              </View>
+              <Text style={styles.idleTitle}>Scannez votre facture</Text>
+              <Text style={styles.idleDesc}>
+                Prenez en photo votre ticket de caisse ou sélectionnez une image
+              </Text>
 
-            <View style={styles.buttonsContainer}>
-              <TouchableOpacity
-                style={styles.captureButton}
-                onPress={handleCapture}
-                activeOpacity={0.8}>
-                <Text style={styles.captureIcon}>📷</Text>
-                <Text style={styles.captureText}>Prendre une photo</Text>
-              </TouchableOpacity>
+              <View style={styles.buttonsContainer}>
+                <TouchableOpacity
+                  style={styles.captureButton}
+                  onPress={handleCapture}
+                  activeOpacity={0.8}>
+                  <View style={styles.captureButtonGlow} />
+                  <Icon name="camera" size="md" color={Colors.white} />
+                  <Text style={styles.captureText}>Prendre une photo</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.galleryButton}
-                onPress={handleGallery}
-                activeOpacity={0.8}>
-                <Text style={styles.galleryIcon}>🖼️</Text>
-                <Text style={styles.galleryText}>Galerie</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.galleryButton}
+                  onPress={handleGallery}
+                  activeOpacity={0.8}>
+                  <Icon name="image" size="md" color={Colors.primary} />
+                  <Text style={styles.galleryText}>Galerie</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </SlideIn>
         )}
 
         {state === 'capturing' && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary[500]} />
+            <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={styles.loadingText}>Capture en cours...</Text>
           </View>
         )}
@@ -453,7 +465,9 @@ export function ScannerScreen() {
         {state === 'processing' && (
           <View style={styles.loadingContainer}>
             <View style={styles.processingOverlay}>
-              <ActivityIndicator size="large" color="#ffffff" />
+              <View style={styles.processingIcon}>
+                <ActivityIndicator size="large" color={Colors.white} />
+              </View>
               <Text style={styles.processingText}>
                 {processingProgress || 'Analyse en cours...'}
               </Text>
@@ -465,66 +479,81 @@ export function ScannerScreen() {
         )}
 
         {state === 'success' && receipt && (
-          <View style={styles.successContainer}>
-            <Text style={styles.successIcon}>✅</Text>
-            <Text style={styles.successTitle}>Facture analysée !</Text>
+          <SlideIn>
+            <View style={styles.successContainer}>
+              <View style={styles.successIconWrapper}>
+                <Icon name="check" size="xl" color={Colors.status.success} />
+              </View>
+              <Text style={styles.successTitle}>Facture analysée !</Text>
 
-            <View style={styles.summaryCard}>
-              <Text style={styles.storeName}>{receipt.storeName}</Text>
-              <Text style={styles.itemCount}>
-                {receipt.items.length} article
-                {receipt.items.length > 1 ? 's' : ''} détecté
-                {receipt.items.length > 1 ? 's' : ''}
-              </Text>
-              <Text style={styles.totalAmount}>
-                Total: ${receipt.total.toFixed(2)}
-              </Text>
+              <View style={styles.summaryCard}>
+                <View style={styles.storeIconWrapper}>
+                  <Icon name="location" size="md" color={Colors.primary} />
+                </View>
+                <Text style={styles.storeName}>{receipt.storeName}</Text>
+                <Text style={styles.itemCount}>
+                  {receipt.items.length} article
+                  {receipt.items.length > 1 ? 's' : ''} détecté
+                  {receipt.items.length > 1 ? 's' : ''}
+                </Text>
+                <Text style={styles.totalAmount}>
+                  Total: ${receipt.total.toFixed(2)}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.viewResultsButton}
+                onPress={handleViewResults}
+                activeOpacity={0.8}>
+                <Text style={styles.viewResultsText}>
+                  Voir les détails & comparer
+                </Text>
+                <Icon name="arrow-right" size="sm" color={Colors.white} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.scanAnotherButton}
+                onPress={handleRetry}
+                activeOpacity={0.8}>
+                <Icon name="camera" size="sm" color={Colors.text.secondary} />
+                <Text style={styles.scanAnotherText}>
+                  Scanner une autre facture
+                </Text>
+              </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              style={styles.viewResultsButton}
-              onPress={handleViewResults}
-              activeOpacity={0.8}>
-              <Text style={styles.viewResultsText}>
-                Voir les détails & comparer
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.scanAnotherButton}
-              onPress={handleRetry}
-              activeOpacity={0.8}>
-              <Text style={styles.scanAnotherText}>
-                Scanner une autre facture
-              </Text>
-            </TouchableOpacity>
-          </View>
+          </SlideIn>
         )}
 
         {state === 'error' && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorIcon}>❌</Text>
-            <Text style={styles.errorTitle}>Échec de l'analyse</Text>
-            <Text style={styles.errorDesc}>{error}</Text>
+          <SlideIn>
+            <View style={styles.errorContainer}>
+              <View style={styles.errorIconWrapper}>
+                <Icon name="alert" size="xl" color={Colors.status.error} />
+              </View>
+              <Text style={styles.errorTitle}>Échec de l'analyse</Text>
+              <Text style={styles.errorDesc}>{error}</Text>
 
-            <View style={styles.errorButtons}>
-              {currentImageRef.current && (
+              <View style={styles.errorButtons}>
+                {currentImageRef.current && (
+                  <TouchableOpacity
+                    style={styles.retryButton}
+                    onPress={handleRetryWithSameImage}
+                    activeOpacity={0.8}>
+                    <Icon name="refresh" size="sm" color={Colors.white} />
+                    <Text style={styles.retryText}>Réessayer l'analyse</Text>
+                  </TouchableOpacity>
+                )}
+
                 <TouchableOpacity
-                  style={styles.retryButton}
-                  onPress={handleRetryWithSameImage}
+                  style={[styles.retryButton, styles.retryButtonSecondary]}
+                  onPress={handleRetry}
                   activeOpacity={0.8}>
-                  <Text style={styles.retryText}>Réessayer l'analyse</Text>
+                  <Icon name="camera" size="sm" color={Colors.primary} />
+                  <Text style={styles.retryTextSecondary}>Nouvelle photo</Text>
                 </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                style={[styles.retryButton, styles.retryButtonSecondary]}
-                onPress={handleRetry}
-                activeOpacity={0.8}>
-                <Text style={styles.retryTextSecondary}>Nouvelle photo</Text>
-              </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          </SlideIn>
         )}
       </View>
     </SafeAreaView>
@@ -534,100 +563,112 @@ export function ScannerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.background.primary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[200],
+    borderBottomColor: Colors.border.light,
   },
   closeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.gray[100],
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.background.secondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  closeText: {
-    fontSize: 20,
-    color: COLORS.gray[600],
-  },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.gray[900],
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
   },
   placeholder: {
-    width: 40,
+    width: 44,
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: Spacing.xl,
   },
   idleContainer: {
     alignItems: 'center',
+    width: '100%',
   },
-  idleIcon: {
-    fontSize: 80,
-    marginBottom: 24,
+  scannerIconWrapper: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
   },
   idleTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
-    marginBottom: 8,
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
   },
   idleDesc: {
-    fontSize: 16,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 40,
-    paddingHorizontal: 20,
+    marginBottom: Spacing['2xl'],
+    paddingHorizontal: Spacing.lg,
   },
   buttonsContainer: {
     width: '100%',
+    gap: Spacing.md,
   },
   captureButton: {
-    backgroundColor: COLORS.primary[500],
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    gap: Spacing.md,
+    overflow: 'hidden',
+    ...Shadows.lg,
   },
-  captureIcon: {
-    fontSize: 24,
-    marginRight: 12,
+  captureButtonGlow: {
+    position: 'absolute',
+    top: -30,
+    right: -30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: Colors.accent,
+    opacity: 0.2,
   },
   captureText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
+    color: Colors.white,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semiBold,
   },
   galleryButton: {
-    backgroundColor: COLORS.gray[100],
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  galleryIcon: {
-    fontSize: 24,
-    marginRight: 12,
+    gap: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    ...Shadows.sm,
   },
   galleryText: {
-    color: COLORS.gray[700],
-    fontSize: 18,
-    fontWeight: '600',
+    color: Colors.primary,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semiBold,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -635,129 +676,165 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: COLORS.gray[600],
+    marginTop: Spacing.lg,
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.secondary,
   },
   processingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 12,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing['2xl'],
     alignItems: 'center',
     justifyContent: 'center',
+    width: '100%',
+    ...Shadows.lg,
+  },
+  processingIcon: {
+    marginBottom: Spacing.lg,
   },
   processingText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
-    marginTop: 16,
+    color: Colors.white,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semiBold,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
   },
   processingSubtext: {
     color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-    marginTop: 8,
+    fontSize: Typography.fontSize.sm,
     textAlign: 'center',
   },
   successContainer: {
     alignItems: 'center',
     width: '100%',
   },
-  successIcon: {
-    fontSize: 64,
-    marginBottom: 16,
+  successIconWrapper: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.status.successLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
   },
   successTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
-    marginBottom: 24,
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xl,
   },
   summaryCard: {
-    backgroundColor: COLORS.gray[50],
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
     width: '100%',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
+    ...Shadows.md,
+  },
+  storeIconWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
   },
   storeName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.gray[900],
-    marginBottom: 8,
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
   },
   itemCount: {
-    fontSize: 14,
-    color: COLORS.gray[500],
-    marginBottom: 12,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.tertiary,
+    marginBottom: Spacing.md,
   },
   totalAmount: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.primary[500],
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.accent,
   },
   viewResultsButton: {
-    backgroundColor: COLORS.primary[500],
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
     width: '100%',
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+    ...Shadows.md,
   },
   viewResultsText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: Colors.white,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semiBold,
   },
   scanAnotherButton: {
-    padding: 16,
+    padding: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
   scanAnotherText: {
-    color: COLORS.gray[600],
-    fontSize: 14,
+    color: Colors.text.secondary,
+    fontSize: Typography.fontSize.sm,
   },
   errorContainer: {
     alignItems: 'center',
+    width: '100%',
   },
-  errorIcon: {
-    fontSize: 64,
-    marginBottom: 16,
+  errorIconWrapper: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.status.errorLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
   },
   errorTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
-    marginBottom: 8,
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
   },
   errorDesc: {
-    fontSize: 16,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
   },
   retryButton: {
-    backgroundColor: COLORS.primary[500],
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 48,
-    marginBottom: 12,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.xl,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing['2xl'],
+    marginBottom: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    ...Shadows.md,
   },
   retryButtonSecondary: {
-    backgroundColor: COLORS.gray[100],
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
   },
   retryText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: Colors.white,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semiBold,
   },
   retryTextSecondary: {
-    color: COLORS.gray[700],
-    fontSize: 16,
-    fontWeight: '600',
+    color: Colors.primary,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semiBold,
   },
   errorButtons: {
     width: '100%',
@@ -765,44 +842,44 @@ const styles = StyleSheet.create({
   },
   scansBadge: {
     alignSelf: 'center',
-    backgroundColor: COLORS.primary[50],
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    marginTop: Spacing.md,
   },
   scansBadgeText: {
-    color: COLORS.primary[700],
-    fontSize: 13,
-    fontWeight: '600',
+    color: Colors.primary,
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.semiBold,
   },
   offlineBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.warning[50],
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginHorizontal: 16,
-    marginTop: 8,
-    borderRadius: 8,
+    backgroundColor: Colors.status.warningLight,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+    borderRadius: BorderRadius.lg,
     borderLeftWidth: 4,
-    borderLeftColor: COLORS.warning[400],
-  },
-  offlineIcon: {
-    fontSize: 20,
-    marginRight: 12,
+    borderLeftColor: Colors.status.warning,
+    gap: Spacing.md,
   },
   offlineTextContainer: {
     flex: 1,
   },
   offlineTitle: {
-    color: COLORS.warning[800],
-    fontSize: 14,
-    fontWeight: '600',
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.semiBold,
     marginBottom: 2,
   },
   offlineDesc: {
-    color: COLORS.warning[700],
-    fontSize: 12,
+    color: Colors.text.secondary,
+    fontSize: Typography.fontSize.xs,
   },
 });

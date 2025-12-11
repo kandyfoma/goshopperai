@@ -5,12 +5,15 @@ import firestore, {
 import storage from '@react-native-firebase/storage';
 import {Receipt} from '@/shared/types';
 import {APP_ID} from './config';
+import {authService} from './auth';
 
 const RECEIPTS_COLLECTION = (userId: string) =>
   `apps/${APP_ID}/users/${userId}/receipts`;
 
 const SHOPS_COLLECTION = (userId: string) =>
   `apps/${APP_ID}/users/${userId}/shops`;
+
+const PUBLIC_STORES_COLLECTION = `apps/${APP_ID}/public/stores`;
 
 export interface Shop {
   id: string;
@@ -27,6 +30,48 @@ export interface Shop {
 }
 
 class ReceiptStorageService {
+  /**
+   * Detect city from store name by matching against public stores
+   */
+  async detectCityFromStore(storeName: string): Promise<string | null> {
+    try {
+      const normalizedStoreName = this.normalizeStoreName(storeName);
+
+      const storesSnapshot = await firestore()
+        .collection(PUBLIC_STORES_COLLECTION)
+        .where('nameNormalized', '==', normalizedStoreName)
+        .limit(1)
+        .get();
+
+      if (!storesSnapshot.empty) {
+        const storeData = storesSnapshot.docs[0].data();
+        return storeData.city || null;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error detecting city from store:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update receipt with city
+   */
+  async updateReceiptCity(
+    receiptId: string,
+    userId: string,
+    city: string,
+  ): Promise<void> {
+    const receiptRef = firestore()
+      .collection(RECEIPTS_COLLECTION(userId))
+      .doc(receiptId);
+
+    await receiptRef.update({
+      city,
+      updatedAt: firestore.FieldValue.serverTimestamp(),
+    });
+  }
   /**
    * Save a receipt and update/create the associated shop
    */

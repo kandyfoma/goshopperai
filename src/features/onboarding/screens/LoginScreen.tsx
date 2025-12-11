@@ -18,7 +18,8 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {authService} from '@/shared/services/firebase';
-import {COLORS} from '@/shared/utils/constants';
+import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {Icon} from '@/shared/components';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -232,7 +233,9 @@ export function LoginScreen() {
           <Animated.View style={[styles.content, {opacity: fadeAnim}]}>
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.logo}>🛒</Text>
+              <View style={styles.logoContainer}>
+                <Icon name="cart" size="2xl" color={Colors.white} variant="filled" />
+              </View>
               <Text style={styles.title}>GoShopperAI</Text>
               <Text style={styles.subtitle}>
                 Scannez vos reçus, économisez plus
@@ -242,7 +245,7 @@ export function LoginScreen() {
             {/* Success Message */}
             {successMessage && (
               <View style={styles.successBanner}>
-                <Text style={styles.successIcon}>✓</Text>
+                <Icon name="check-circle" size="md" color={Colors.status.success} />
                 <Text style={styles.successText}>{successMessage}</Text>
               </View>
             )}
@@ -254,7 +257,7 @@ export function LoginScreen() {
                   styles.errorBanner,
                   {transform: [{translateX: shakeAnimation}]},
                 ]}>
-                <Text style={styles.errorIcon}>⚠️</Text>
+                <Icon name="alert-circle" size="md" color={Colors.status.error} />
                 <Text style={styles.errorText}>{error}</Text>
               </Animated.View>
             )}
@@ -272,13 +275,13 @@ export function LoginScreen() {
                   style={[
                     styles.inputWrapper,
                     emailError ? styles.inputError : null,
-                    loading && styles.inputDisabled,
+                    loading ? styles.inputDisabled : null,
                   ]}>
-                  <Text style={styles.inputIcon}>📧</Text>
+                  <Icon name="mail" size="md" color={Colors.text.secondary} />
                   <TextInput
                     style={styles.input}
                     placeholder="votre@email.com"
-                    placeholderTextColor={COLORS.gray[400]}
+                    placeholderTextColor={Colors.text.tertiary}
                     value={email}
                     onChangeText={handleEmailChange}
                     onBlur={() => email && validateEmail(email)}
@@ -303,14 +306,14 @@ export function LoginScreen() {
                   style={[
                     styles.inputWrapper,
                     passwordError ? styles.inputError : null,
-                    loading && styles.inputDisabled,
+                    loading ? styles.inputDisabled : null,
                   ]}>
-                  <Text style={styles.inputIcon}>🔒</Text>
+                  <Icon name="lock" size="md" color={Colors.text.secondary} />
                   <TextInput
                     ref={passwordInputRef}
                     style={styles.input}
                     placeholder="••••••••"
-                    placeholderTextColor={COLORS.gray[400]}
+                    placeholderTextColor={Colors.text.tertiary}
                     value={password}
                     onChangeText={handlePasswordChange}
                     onBlur={() => password && validatePassword(password)}
@@ -325,9 +328,11 @@ export function LoginScreen() {
                     onPress={() => setShowPassword(!showPassword)}
                     style={styles.eyeButton}
                     disabled={loading}>
-                    <Text style={styles.eyeIcon}>
-                      {showPassword ? '👁️' : '👁️‍🗨️'}
-                    </Text>
+                    <Icon 
+                      name={showPassword ? 'eye' : 'eye-off'} 
+                      size="md" 
+                      color={Colors.text.secondary} 
+                    />
                   </TouchableOpacity>
                 </View>
                 {passwordError && (
@@ -346,7 +351,7 @@ export function LoginScreen() {
                       styles.checkbox,
                       rememberMe && styles.checkboxChecked,
                     ]}>
-                    {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+                    {rememberMe && <Icon name="check" size="sm" color={Colors.white} />}
                   </View>
                   <Text style={styles.rememberMeText}>Se souvenir de moi</Text>
                 </TouchableOpacity>
@@ -372,13 +377,16 @@ export function LoginScreen() {
                 activeOpacity={0.8}>
                 {loading ? (
                   <View style={styles.loadingContent}>
-                    <ActivityIndicator color="#fff" size="small" />
+                    <ActivityIndicator color={Colors.white} size="small" />
                     <Text style={styles.loadingText}>
                       Connexion en cours...
                     </Text>
                   </View>
                 ) : (
-                  <Text style={styles.buttonText}>Se connecter</Text>
+                  <View style={styles.buttonInner}>
+                    <Text style={styles.buttonText}>Se connecter</Text>
+                    <Icon name="arrow-right" size="md" color={Colors.white} />
+                  </View>
                 )}
               </TouchableOpacity>
 
@@ -413,7 +421,7 @@ export function LoginScreen() {
                     onPress={handleAppleSignIn}
                     disabled={loading}
                     activeOpacity={0.7}>
-                    <Text style={[styles.socialIcon, styles.appleIcon]}></Text>
+                    <Icon name="apple" size="md" color={Colors.white} />
                     <Text style={[styles.socialButtonText, styles.appleText]}>
                       Apple
                     </Text>
@@ -449,7 +457,7 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background.primary,
   },
   keyboardView: {
     flex: 1,
@@ -459,126 +467,118 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 24,
+    padding: Spacing.xl,
     justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: Spacing['2xl'],
   },
-  logo: {
-    fontSize: 72,
-    marginBottom: 12,
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: BorderRadius.xl,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.base,
+    ...Shadows.lg,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
-    marginBottom: 8,
+    fontSize: Typography.fontSize['3xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
     textAlign: 'center',
   },
   successBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#d4edda',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
+    backgroundColor: Colors.status.successLight,
+    borderRadius: BorderRadius.base,
+    padding: Spacing.base,
+    marginBottom: Spacing.lg,
     borderWidth: 1,
-    borderColor: '#c3e6cb',
-  },
-  successIcon: {
-    fontSize: 18,
-    color: '#155724',
-    marginRight: 12,
-    fontWeight: 'bold',
+    borderColor: Colors.status.success,
+    gap: Spacing.md,
   },
   successText: {
     flex: 1,
-    color: '#155724',
-    fontSize: 14,
-    fontWeight: '500',
+    color: Colors.status.success,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.medium,
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8d7da',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
+    backgroundColor: Colors.status.errorLight,
+    borderRadius: BorderRadius.base,
+    padding: Spacing.base,
+    marginBottom: Spacing.lg,
     borderWidth: 1,
-    borderColor: '#f5c6cb',
-  },
-  errorIcon: {
-    fontSize: 18,
-    marginRight: 12,
+    borderColor: Colors.status.error,
+    gap: Spacing.md,
   },
   errorText: {
     flex: 1,
-    color: '#721c24',
-    fontSize: 14,
-    fontWeight: '500',
+    color: Colors.status.error,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.medium,
   },
   form: {
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.gray[700],
-    marginBottom: 8,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: COLORS.gray[300],
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
+    borderColor: Colors.border.medium,
+    borderRadius: BorderRadius.base,
+    backgroundColor: Colors.background.primary,
+    paddingHorizontal: Spacing.base,
+    gap: Spacing.md,
   },
   inputError: {
-    borderColor: '#dc3545',
-    backgroundColor: '#fff5f5',
+    borderColor: Colors.status.error,
+    backgroundColor: Colors.status.errorLight,
   },
   inputDisabled: {
-    backgroundColor: COLORS.gray[100],
+    backgroundColor: Colors.background.secondary,
     opacity: 0.7,
-  },
-  inputIcon: {
-    fontSize: 18,
-    marginRight: 12,
   },
   input: {
     flex: 1,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: COLORS.gray[900],
+    paddingVertical: Spacing.base,
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
   },
   eyeButton: {
-    padding: 8,
-  },
-  eyeIcon: {
-    fontSize: 18,
+    padding: Spacing.sm,
   },
   fieldError: {
-    color: '#dc3545',
-    fontSize: 12,
-    marginTop: 6,
-    marginLeft: 4,
+    color: Colors.status.error,
+    fontSize: Typography.fontSize.sm,
+    marginTop: Spacing.xs,
+    marginLeft: Spacing.xs,
   },
   optionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
   },
   rememberMe: {
     flexDirection: 'row',
@@ -588,139 +588,132 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderWidth: 2,
-    borderColor: COLORS.gray[400],
-    borderRadius: 6,
-    marginRight: 10,
+    borderColor: Colors.border.dark,
+    borderRadius: BorderRadius.sm,
+    marginRight: Spacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: COLORS.primary[500],
-    borderColor: COLORS.primary[500],
-  },
-  checkmark: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   rememberMeText: {
-    color: COLORS.gray[600],
-    fontSize: 14,
+    color: Colors.text.secondary,
+    fontSize: Typography.fontSize.md,
   },
   forgotPassword: {
-    color: COLORS.primary[500],
-    fontSize: 14,
-    fontWeight: '600',
+    color: Colors.accent,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semiBold,
   },
   button: {
-    borderRadius: 12,
-    padding: 18,
+    borderRadius: BorderRadius.base,
+    padding: Spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   primaryButton: {
-    backgroundColor: COLORS.primary[500],
-    shadowColor: COLORS.primary[500],
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: Colors.primary,
+    ...Shadows.md,
   },
   buttonDisabled: {
     opacity: 0.7,
   },
+  buttonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
   buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
+    color: Colors.white,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
   },
   loadingContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   loadingText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 10,
+    color: Colors.white,
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semiBold,
+    marginLeft: Spacing.sm,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
+    marginVertical: Spacing.xl,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: COLORS.gray[200],
+    backgroundColor: Colors.border.light,
   },
   dividerText: {
-    marginHorizontal: 16,
-    color: COLORS.gray[500],
-    fontSize: 14,
+    marginHorizontal: Spacing.base,
+    color: Colors.text.tertiary,
+    fontSize: Typography.fontSize.md,
   },
   socialButtons: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 16,
+    gap: Spacing.base,
   },
   socialButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background.primary,
     borderWidth: 1.5,
-    borderColor: COLORS.gray[300],
-    borderRadius: 12,
-    padding: 14,
-    gap: 8,
+    borderColor: Colors.border.medium,
+    borderRadius: BorderRadius.base,
+    padding: Spacing.md,
+    gap: Spacing.sm,
   },
   socialIcon: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
     color: '#4285F4',
   },
   socialButtonText: {
-    color: COLORS.gray[700],
-    fontSize: 16,
-    fontWeight: '600',
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semiBold,
   },
   appleButton: {
-    backgroundColor: '#000',
-    borderColor: '#000',
-  },
-  appleIcon: {
-    color: '#fff',
+    backgroundColor: Colors.black,
+    borderColor: Colors.black,
   },
   appleText: {
-    color: '#fff',
+    color: Colors.white,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: Spacing.xl,
   },
   footerText: {
-    color: COLORS.gray[600],
-    fontSize: 15,
+    color: Colors.text.secondary,
+    fontSize: Typography.fontSize.base,
   },
   linkText: {
-    color: COLORS.primary[500],
-    fontSize: 15,
-    fontWeight: '700',
+    color: Colors.accent,
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.bold,
   },
   terms: {
     textAlign: 'center',
-    color: COLORS.gray[500],
-    fontSize: 12,
-    marginTop: 24,
+    color: Colors.text.tertiary,
+    fontSize: Typography.fontSize.sm,
+    marginTop: Spacing.xl,
     lineHeight: 18,
   },
   termsLink: {
-    color: COLORS.primary[500],
-    fontWeight: '500',
+    color: Colors.accent,
+    fontWeight: Typography.fontWeight.medium,
   },
 });

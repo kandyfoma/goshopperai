@@ -7,8 +7,12 @@ export * from './subscription.types';
 // Navigation types
 export type RootStackParamList = {
   Welcome: undefined;
-  Login: undefined;
+  SignIn: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
+  ResetPassword: {oobCode: string};
+  ChangePassword: undefined;
+  ProfileSetup: {firstName?: string; surname?: string};
   Main: undefined;
   Scanner: undefined;
   MultiPhotoScanner: undefined;

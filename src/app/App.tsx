@@ -14,6 +14,8 @@ import {AuthProvider} from '@/shared/contexts/AuthContext';
 import {UserProvider} from '@/shared/contexts/UserContext';
 import {SubscriptionProvider} from '@/shared/contexts/SubscriptionContext';
 import {ThemeProvider} from '@/shared/contexts/ThemeContext';
+import {ToastProvider} from '@/shared/contexts/ToastContext';
+import {NetworkBanner, useNetwork} from '@/shared/components';
 import {initializeFirebase} from '@/shared/services/firebase/config';
 import {analyticsService} from '@/shared/services';
 import {pushNotificationService} from '@/shared/services/firebase';
@@ -23,6 +25,36 @@ LogBox.ignoreLogs([
   'ViewPropTypes will be removed',
   'ColorPropType will be removed',
 ]);
+
+function NetworkAwareApp(): React.JSX.Element {
+  const networkState = useNetwork();
+
+  return (
+    <GestureHandlerRootView style={{flex: 1}}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <UserProvider>
+              <SubscriptionProvider>
+                <ToastProvider>
+                  <NavigationContainer>
+                    <NetworkBanner networkState={networkState} />
+                    <StatusBar
+                      barStyle="dark-content"
+                      backgroundColor="transparent"
+                      translucent
+                    />
+                    <RootNavigator />
+                  </NavigationContainer>
+                </ToastProvider>
+              </SubscriptionProvider>
+            </UserProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}
 
 function App(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
@@ -75,28 +107,7 @@ function App(): React.JSX.Element {
     );
   }
 
-  return (
-    <GestureHandlerRootView style={{flex: 1}}>
-      <SafeAreaProvider>
-        <ThemeProvider>
-          <AuthProvider>
-            <UserProvider>
-              <SubscriptionProvider>
-                <NavigationContainer>
-                  <StatusBar
-                    barStyle="dark-content"
-                    backgroundColor="transparent"
-                    translucent
-                  />
-                  <RootNavigator />
-                </NavigationContainer>
-              </SubscriptionProvider>
-            </UserProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
-  );
+  return <NetworkAwareApp />;
 }
 
 const styles = StyleSheet.create({

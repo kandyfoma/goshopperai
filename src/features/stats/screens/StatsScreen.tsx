@@ -1,4 +1,5 @@
 // Stats Screen - Spending analytics and insights
+// Styled with GoShopperAI Design System (Blue + Gold)
 import React, {useState, useEffect} from 'react';
 import {
   View,
@@ -10,7 +11,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
-import {COLORS} from '@/shared/utils/constants';
+import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {Icon, FadeIn, SlideIn} from '@/shared/components';
 import {formatCurrency} from '@/shared/utils/helpers';
 import {useAuth} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
@@ -116,21 +118,21 @@ export function StatsScreen() {
 
       // Convert to category array with percentages
       const categoryColors = {
-        Alimentation: COLORS.primary[500],
-        Boissons: '#10b981',
+        Alimentation: Colors.primary,
+        Boissons: Colors.status.success,
         Hygiène: '#8b5cf6',
-        Ménage: '#f59e0b',
+        Ménage: Colors.accent,
         Bébé: '#ec4899',
-        Autre: COLORS.gray[400],
+        Autre: Colors.text.tertiary,
       };
 
       const categoryIcons = {
-        Alimentation: '🛒',
-        Boissons: '🥤',
-        Hygiène: '🧴',
-        Ménage: '🏠',
-        Bébé: '👶',
-        Autre: '📦',
+        Alimentation: 'cart',
+        Boissons: 'trending-up',
+        Hygiène: 'star',
+        Ménage: 'home',
+        Bébé: 'heart',
+        Autre: 'grid',
       };
 
       const categoriesArray: SpendingCategory[] = Object.entries(categoryTotals)
@@ -141,8 +143,8 @@ export function StatsScreen() {
             totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0,
           color:
             categoryColors[name as keyof typeof categoryColors] ||
-            COLORS.gray[400],
-          icon: categoryIcons[name as keyof typeof categoryIcons] || '📦',
+            Colors.text.tertiary,
+          icon: categoryIcons[name as keyof typeof categoryIcons] || 'grid',
         }))
         .sort((a, b) => b.amount - a.amount);
 
@@ -222,7 +224,7 @@ export function StatsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loading}>
-          <ActivityIndicator size="large" color={COLORS.primary[500]} />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Chargement des statistiques...</Text>
         </View>
       </SafeAreaView>
@@ -231,136 +233,161 @@ export function StatsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        {/* Header */}
+      <FadeIn>
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Statistiques</Text>
           <Text style={styles.headerSubtitle}>Ce mois-ci</Text>
         </View>
-
+      </FadeIn>
+      
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
         {/* Summary Cards */}
-        <View style={styles.summaryRow}>
-          <View style={[styles.summaryCard, styles.spendingCard]}>
-            <Text style={styles.summaryIcon}>💰</Text>
-            <Text style={styles.summaryLabel}>Dépenses</Text>
-            <Text style={styles.summaryAmount}>
-              {formatCurrency(totalSpending, primaryCurrency)}
-            </Text>
-          </View>
+        <SlideIn delay={100}>
+          <View style={styles.summaryRow}>
+            <View style={[styles.summaryCard, styles.spendingCard]}>
+              <View style={styles.summaryIconWrapper}>
+                <Icon name="wallet" size="md" color={Colors.primary} />
+              </View>
+              <Text style={styles.summaryLabel}>Dépenses</Text>
+              <Text style={styles.summaryAmount}>
+                {formatCurrency(totalSpending, primaryCurrency)}
+              </Text>
+            </View>
 
-          <View style={[styles.summaryCard, styles.savingsCard]}>
-            <Text style={styles.summaryIcon}>🎉</Text>
-            <Text style={styles.summaryLabelWhite}>Économies</Text>
-            <Text style={styles.summaryAmountWhite}>
-              {formatCurrency(totalSavings, primaryCurrency)}
-            </Text>
+            <View style={[styles.summaryCard, styles.savingsCard]}>
+              <View style={styles.summaryGlow} />
+              <View style={styles.summaryIconWrapperAccent}>
+                <Icon name="trending-up" size="md" color={Colors.accent} />
+              </View>
+              <Text style={styles.summaryLabelWhite}>Économies</Text>
+              <Text style={styles.summaryAmountWhite}>
+                {formatCurrency(totalSavings, primaryCurrency)}
+              </Text>
+            </View>
           </View>
-        </View>
+        </SlideIn>
 
         {/* Monthly Trend */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tendance mensuelle</Text>
-          <View style={styles.chartCard}>
-            <View style={styles.barChart}>
-              {monthlyData.map((data, index) => (
-                <View key={index} style={styles.barColumn}>
-                  <View style={styles.barWrapper}>
-                    <View
-                      style={[
-                        styles.bar,
-                        {
-                          height: `${(data.amount / maxMonthlyAmount) * 100}%`,
-                          backgroundColor:
-                            index === monthlyData.length - 1
-                              ? COLORS.primary[500]
-                              : COLORS.primary[200],
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.barLabel}>{data.month}</Text>
-                  <Text style={styles.barAmount}>
-                    {formatCurrency(data.amount, primaryCurrency)}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-
-        {/* Categories Breakdown */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Répartition par catégorie</Text>
-          <View style={styles.categoriesCard}>
-            {categories.map((category, index) => (
-              <View key={index} style={styles.categoryRow}>
-                <View style={styles.categoryLeft}>
-                  <View
-                    style={[
-                      styles.categoryIcon,
-                      {backgroundColor: category.color + '20'},
-                    ]}>
-                    <Text style={styles.categoryEmoji}>{category.icon}</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.categoryName}>{category.name}</Text>
-                    <Text style={styles.categoryAmount}>
-                      {formatCurrency(category.amount, primaryCurrency)}
+        <SlideIn delay={200}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Tendance mensuelle</Text>
+            <View style={styles.chartCard}>
+              <View style={styles.barChart}>
+                {monthlyData.map((data, index) => (
+                  <View key={index} style={styles.barColumn}>
+                    <View style={styles.barWrapper}>
+                      <View
+                        style={[
+                          styles.bar,
+                          {
+                            height: `${maxMonthlyAmount > 0 ? (data.amount / maxMonthlyAmount) * 100 : 10}%`,
+                            backgroundColor:
+                              index === monthlyData.length - 1
+                                ? Colors.primary
+                                : Colors.primaryLight,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.barLabel}>{data.month}</Text>
+                    <Text style={styles.barAmount}>
+                      {formatCurrency(data.amount, primaryCurrency)}
                     </Text>
                   </View>
-                </View>
-                <View style={styles.categoryRight}>
-                  <Text style={styles.categoryPercentage}>
-                    {category.percentage}%
-                  </Text>
-                  <View style={styles.categoryBarBg}>
-                    <View
-                      style={[
-                        styles.categoryBar,
-                        {
-                          width: `${category.percentage}%`,
-                          backgroundColor: category.color,
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
+                ))}
               </View>
-            ))}
+            </View>
           </View>
-        </View>
+        </SlideIn>
+
+        {/* Categories Breakdown */}
+        <SlideIn delay={300}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Répartition par catégorie</Text>
+            <View style={styles.categoriesCard}>
+              {categories.length === 0 ? (
+                <View style={styles.emptyCategories}>
+                  <Icon name="chart" size="lg" color={Colors.text.tertiary} />
+                  <Text style={styles.emptyCategoriesText}>Aucune donnée disponible</Text>
+                </View>
+              ) : (
+                categories.map((category, index) => (
+                  <View key={index} style={styles.categoryRow}>
+                    <View style={styles.categoryLeft}>
+                      <View
+                        style={[
+                          styles.categoryIcon,
+                          {backgroundColor: category.color + '20'},
+                        ]}>
+                        <Icon name={category.icon} size="sm" color={category.color} />
+                      </View>
+                      <View>
+                        <Text style={styles.categoryName}>{category.name}</Text>
+                        <Text style={styles.categoryAmount}>
+                          {formatCurrency(category.amount, primaryCurrency)}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.categoryRight}>
+                      <Text style={styles.categoryPercentage}>
+                        {category.percentage}%
+                      </Text>
+                      <View style={styles.categoryBarBg}>
+                        <View
+                          style={[
+                            styles.categoryBar,
+                            {
+                              width: `${category.percentage}%`,
+                              backgroundColor: category.color,
+                            },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+          </View>
+        </SlideIn>
 
         {/* Insights */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Conseils</Text>
+        <SlideIn delay={400}>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Conseils</Text>
 
-          <View style={styles.insightCard}>
-            <Text style={styles.insightIcon}>💡</Text>
-            <View style={styles.insightContent}>
-              <Text style={styles.insightTitle}>
-                Économisez sur l'alimentation
-              </Text>
-              <Text style={styles.insightDesc}>
-                Vous pourriez économiser {formatCurrency(15.5, primaryCurrency)}{' '}
-                en achetant certains produits à Carrefour plutôt qu'à Shoprite.
-              </Text>
+            <View style={styles.insightCard}>
+              <View style={styles.insightIconWrapper}>
+                <Icon name="star" size="md" color={Colors.accent} />
+              </View>
+              <View style={styles.insightContent}>
+                <Text style={styles.insightTitle}>
+                  Économisez sur l'alimentation
+                </Text>
+                <Text style={styles.insightDesc}>
+                  Vous pourriez économiser {formatCurrency(15.5, primaryCurrency)}{' '}
+                  en achetant certains produits à Carrefour plutôt qu'à Shoprite.
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.insightCard}>
+              <View style={[styles.insightIconWrapper, styles.insightIconInfo]}>
+                <Icon name="trending-up" size="md" color={Colors.status.info} />
+              </View>
+              <View style={styles.insightContent}>
+                <Text style={styles.insightTitle}>Tendance en hausse</Text>
+                <Text style={styles.insightDesc}>
+                  Vos dépenses ont augmenté de 12% ce mois-ci par rapport au mois
+                  dernier.
+                </Text>
+              </View>
             </View>
           </View>
-
-          <View style={styles.insightCard}>
-            <Text style={styles.insightIcon}>📈</Text>
-            <View style={styles.insightContent}>
-              <Text style={styles.insightTitle}>Tendance en hausse</Text>
-              <Text style={styles.insightDesc}>
-                Vos dépenses ont augmenté de 12% ce mois-ci par rapport au mois
-                dernier.
-              </Text>
-            </View>
-          </View>
-        </View>
+        </SlideIn>
       </ScrollView>
     </SafeAreaView>
   );
@@ -369,84 +396,112 @@ export function StatsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: Colors.background.primary,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    padding: Spacing.lg,
+    paddingBottom: Spacing['3xl'],
   },
   header: {
-    marginBottom: 20,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
-    marginBottom: 4,
+    fontSize: Typography.fontSize['3xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   headerSubtitle: {
-    fontSize: 15,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.secondary,
   },
   summaryRow: {
     flexDirection: 'row',
-    marginBottom: 24,
-    gap: 12,
+    marginBottom: Spacing.xl,
+    gap: Spacing.md,
   },
   summaryCard: {
     flex: 1,
-    borderRadius: 16,
-    padding: 18,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
     alignItems: 'center',
   },
   spendingCard: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: COLORS.gray[200],
+    backgroundColor: Colors.white,
+    ...Shadows.md,
   },
   savingsCard: {
-    backgroundColor: COLORS.primary[500],
+    backgroundColor: Colors.primary,
+    overflow: 'hidden',
+    ...Shadows.lg,
   },
-  summaryIcon: {
-    fontSize: 32,
-    marginBottom: 8,
+  summaryGlow: {
+    position: 'absolute',
+    top: -30,
+    right: -30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: Colors.accent,
+    opacity: 0.2,
+  },
+  summaryIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  summaryIconWrapperAccent: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
   },
   summaryLabel: {
-    fontSize: 13,
-    color: COLORS.gray[500],
-    marginBottom: 4,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.xs,
   },
   summaryLabelWhite: {
-    fontSize: 13,
+    fontSize: Typography.fontSize.sm,
     color: 'rgba(255,255,255,0.8)',
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
   summaryAmount: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
   },
   summaryAmountWhite: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.white,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: COLORS.gray[900],
-    marginBottom: 12,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.md,
   },
   chartCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    ...Shadows.sm,
   },
   barChart: {
     flexDirection: 'row',
@@ -462,34 +517,44 @@ const styles = StyleSheet.create({
     height: 100,
     width: 40,
     justifyContent: 'flex-end',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   bar: {
     width: '100%',
-    borderRadius: 6,
+    borderRadius: BorderRadius.md,
     minHeight: 10,
   },
   barLabel: {
-    fontSize: 13,
-    color: COLORS.gray[600],
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
     marginBottom: 2,
   },
   barAmount: {
-    fontSize: 12,
-    color: COLORS.gray[400],
-    fontWeight: '500',
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
+    fontWeight: Typography.fontWeight.medium,
   },
   categoriesCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    ...Shadows.sm,
+  },
+  emptyCategories: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+  },
+  emptyCategoriesText: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.md,
   },
   categoryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[100],
+    borderBottomColor: Colors.border.light,
   },
   categoryLeft: {
     flexDirection: 'row',
@@ -497,71 +562,77 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   categoryIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-  },
-  categoryEmoji: {
-    fontSize: 20,
+    marginRight: Spacing.md,
   },
   categoryName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.gray[900],
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
     marginBottom: 2,
   },
   categoryAmount: {
-    fontSize: 13,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.tertiary,
   },
   categoryRight: {
     width: 100,
     alignItems: 'flex-end',
   },
   categoryPercentage: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.gray[700],
-    marginBottom: 4,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.xs,
   },
   categoryBarBg: {
     width: '100%',
     height: 6,
-    backgroundColor: COLORS.gray[100],
-    borderRadius: 3,
+    backgroundColor: Colors.border.light,
+    borderRadius: BorderRadius.full,
     overflow: 'hidden',
   },
   categoryBar: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: BorderRadius.full,
   },
   insightCard: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    marginBottom: Spacing.sm,
+    ...Shadows.sm,
   },
-  insightIcon: {
-    fontSize: 28,
-    marginRight: 12,
+  insightIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.accentLight + '30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  insightIconInfo: {
+    backgroundColor: Colors.status.infoLight,
   },
   insightContent: {
     flex: 1,
   },
   insightTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.gray[900],
-    marginBottom: 4,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   insightDesc: {
-    fontSize: 13,
-    color: COLORS.gray[600],
-    lineHeight: 18,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
+    lineHeight: Typography.fontSize.sm * Typography.lineHeight.relaxed,
   },
   loading: {
     flex: 1,
@@ -569,8 +640,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: COLORS.gray[600],
+    marginTop: Spacing.md,
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.secondary,
   },
 });

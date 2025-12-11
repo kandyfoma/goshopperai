@@ -3,8 +3,10 @@ import React, {useEffect, useState} from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {ActivityIndicator, View, StyleSheet} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import firestore from '@react-native-firebase/firestore';
 import {RootStackParamList} from '@/shared/types';
 import {useAuth} from '@/shared/contexts';
+import {Colors} from '@/shared/theme/theme';
 
 // Screens
 import {MainTabNavigator} from './MainTabNavigator';
@@ -12,7 +14,12 @@ import {
   WelcomeScreen,
   LoginScreen,
   RegisterScreen,
+  ForgotPasswordScreen,
+  ResetPasswordScreen,
+  ChangePasswordScreen,
+  ProfileSetupScreen,
 } from '@/features/onboarding/screens';
+import {SignInScreen} from '@/features/auth/screens';
 import {
   ScannerScreen,
   MultiPhotoScannerScreen,
@@ -35,8 +42,10 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 const ONBOARDING_KEY = '@goshopperai_onboarding_complete';
 
 export function RootNavigator() {
-  const {isAuthenticated, isLoading} = useAuth();
+  const {isAuthenticated, isLoading, user} = useAuth();
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
+  const [isProfileComplete, setIsProfileComplete] = useState<boolean | null>(null);
+  const [checkingProfile, setCheckingProfile] = useState(false);
 
   console.log(
     '🧭 RootNavigator render - isAuthenticated:',
@@ -64,11 +73,55 @@ export function RootNavigator() {
     checkFirstLaunch();
   }, []);
 
+  // Check if user profile is complete after authentication
+  useEffect(() => {
+    const checkProfileCompletion = async () => {
+      if (!isAuthenticated || !user?.uid) {
+        setIsProfileComplete(null);
+        return;
+      }
+
+      setCheckingProfile(true);
+      try {
+        const userDoc = await firestore()
+          .collection('artifacts')
+          .doc('goshopperai')
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+        const userData = userDoc.data();
+        // Profile is complete if they have firstName, surname, and city
+        const isComplete = !!(
+          userData?.profileCompleted ||
+          (userData?.firstName && userData?.surname && userData?.defaultCity)
+        );
+        
+        console.log('👤 Profile check:', {
+          exists: userDoc.exists,
+          profileCompleted: userData?.profileCompleted,
+          firstName: userData?.firstName,
+          isComplete,
+        });
+        
+        setIsProfileComplete(isComplete);
+      } catch (error) {
+        console.error('Error checking profile:', error);
+        // On error, assume profile needs setup
+        setIsProfileComplete(false);
+      } finally {
+        setCheckingProfile(false);
+      }
+    };
+
+    checkProfileCompletion();
+  }, [isAuthenticated, user?.uid]);
+
   // Show loading screen while checking first launch status or auth
-  if (isFirstLaunch === null || isLoading) {
+  if (isFirstLaunch === null || isLoading || (isAuthenticated && checkingProfile)) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#10B981" />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
@@ -90,8 +143,8 @@ export function RootNavigator() {
           />
         ) : null}
         <Stack.Screen
-          name="Login"
-          component={LoginScreen}
+          name="SignIn"
+          component={SignInScreen}
           options={{animation: 'slide_from_right'}}
         />
         <Stack.Screen
@@ -99,19 +152,42 @@ export function RootNavigator() {
           component={RegisterScreen}
           options={{animation: 'slide_from_right'}}
         />
+        <Stack.Screen
+          name="ForgotPassword"
+          component={ForgotPasswordScreen}
+          options={{animation: 'slide_from_right'}}
+        />
+        <Stack.Screen
+          name="ResetPassword"
+          component={ResetPasswordScreen}
+          options={{animation: 'slide_from_right'}}
+        />
       </Stack.Navigator>
     );
   }
 
-  // Authenticated - show main app
-  console.log('✅ Showing main app (authenticated)');
+  // Authenticated - show main app or profile setup
+  console.log('✅ Showing main app (authenticated), profileComplete:', isProfileComplete);
+  
+  // If profile is not complete, show profile setup first
+  const initialRoute = isProfileComplete === false ? 'ProfileSetup' : 'Main';
+  
   return (
     <Stack.Navigator
-      initialRouteName="Main"
+      initialRouteName={initialRoute}
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
       }}>
+      {/* Profile Setup - shown first if profile incomplete */}
+      <Stack.Screen
+        name="ProfileSetup"
+        component={ProfileSetupScreen}
+        options={{
+          animation: 'fade',
+          gestureEnabled: false, // Prevent back gesture
+        }}
+      />
       <Stack.Screen name="Main" component={MainTabNavigator} />
       <Stack.Screen
         name="Scanner"

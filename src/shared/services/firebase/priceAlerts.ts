@@ -1,6 +1,7 @@
 // Price Alerts Service - Monitor items for price drops
 import firestore from '@react-native-firebase/firestore';
 import {APP_ID} from './config';
+import {authService} from './auth';
 
 const ALERTS_COLLECTION = (userId: string) =>
   `artifacts/goshopperai/users/${userId}/priceAlerts`;
@@ -13,6 +14,7 @@ export interface PriceAlert {
   productName: string;
   productNameNormalized: string;
   targetPrice: number;
+  city?: string; // City for price filtering
   currentLowestPrice?: number;
   currentLowestStore?: string;
   currency: 'USD' | 'CDF';
@@ -27,6 +29,7 @@ export interface PriceAlert {
 export interface PriceAlertInput {
   productName: string;
   targetPrice: number;
+  city?: string;
   currency?: 'USD' | 'CDF';
 }
 
@@ -53,12 +56,22 @@ class PriceAlertsService {
   ): Promise<PriceAlert> {
     const normalized = this.normalizeProductName(input.productName);
 
-    // Check for existing alert on same product
-    const existing = await firestore()
+    // Get user's city for filtering prices
+    const userProfile = await authService.getUserProfile(userId);
+    const userCity = userProfile?.defaultCity;
+    const alertCity = input.city || userCity;
+
+    // Check for existing alert on same product and city
+    let existingQuery = firestore()
       .collection(ALERTS_COLLECTION(userId))
       .where('productNameNormalized', '==', normalized)
-      .where('isActive', '==', true)
-      .get();
+      .where('isActive', '==', true);
+
+    if (alertCity) {
+      existingQuery = existingQuery.where('city', '==', alertCity);
+    }
+
+    const existing = await existingQuery.get();
 
     if (!existing.empty) {
       // Update existing alert
@@ -74,7 +87,7 @@ class PriceAlertsService {
     }
 
     // Get current lowest price for this product
-    const currentPrice = await this.getCurrentLowestPrice(normalized);
+    const currentPrice = await this.getCurrentLowestPrice(normalized, userCity);
 
     const alertRef = firestore().collection(ALERTS_COLLECTION(userId)).doc();
 
@@ -83,6 +96,7 @@ class PriceAlertsService {
       productName: input.productName,
       productNameNormalized: normalized,
       targetPrice: input.targetPrice,
+      city: alertCity,
       currentLowestPrice: currentPrice?.price,
       currentLowestStore: currentPrice?.storeName,
       currency: input.currency || 'USD',
@@ -113,10 +127,17 @@ class PriceAlertsService {
    */
   private async getCurrentLowestPrice(
     productNameNormalized: string,
+    city?: string,
   ): Promise<{price: number; storeName: string} | null> {
-    const pricesSnapshot = await firestore()
+    let query = firestore()
       .collection(PRICES_COLLECTION)
-      .where('productNameNormalized', '==', productNameNormalized)
+      .where('productNameNormalized', '==', productNameNormalized);
+
+    if (city) {
+      query = query.where('storeLocation', '==', city);
+    }
+
+    const pricesSnapshot = await query
       .orderBy('price', 'asc')
       .limit(1)
       .get();

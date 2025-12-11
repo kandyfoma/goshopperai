@@ -1,0 +1,563 @@
+// Profile Setup Screen - Complete profile after registration
+import React, {useState, useEffect} from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+  FlatList,
+  Modal,
+} from 'react-native';
+import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import {RootStackParamList} from '@/shared/types';
+import {useAuth} from '@/shared/contexts';
+import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {Icon} from '@/shared/components';
+import firestore from '@react-native-firebase/firestore';
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type ProfileSetupRouteProp = RouteProp<RootStackParamList, 'ProfileSetup'>;
+
+// Major DRC cities - deduplicated and sorted
+const DRC_CITIES = [
+  'Kinshasa',
+  'Lubumbashi',
+  'Mbuji-Mayi',
+  'Kisangani',
+  'Kananga',
+  'Bukavu',
+  'Goma',
+  'Tshikapa',
+  'Kolwezi',
+  'Likasi',
+  'Uvira',
+  'Butembo',
+  'Beni',
+  'Bunia',
+  'Isiro',
+  'Mbandaka',
+  'Kikwit',
+  'Matadi',
+  'Boma',
+  'Bandundu',
+  'Gemena',
+  'Kabinda',
+  'Mwene-Ditu',
+  'Kalemie',
+  'Kindu',
+  'Lisala',
+  'Bumba',
+  'Inongo',
+  'Boende',
+  'Lusambo',
+  'Ilebo',
+  'Kisantu',
+  'Mbanza-Ngungu',
+  'Kasangulu',
+  'Tshela',
+].sort();
+
+export function ProfileSetupScreen() {
+  const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<ProfileSetupRouteProp>();
+  const {user} = useAuth();
+
+  // Pre-fill from social login if available
+  const [firstName, setFirstName] = useState(route.params?.firstName || '');
+  const [surname, setSurname] = useState(route.params?.surname || '');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showCityPicker, setShowCityPicker] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<{firstName?: string; surname?: string; city?: string}>({});
+
+  // Filter cities based on search
+  const filteredCities = DRC_CITIES.filter(city =>
+    city.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Validate form
+  const validateForm = (): boolean => {
+    const newErrors: {firstName?: string; surname?: string; city?: string} = {};
+
+    if (!firstName.trim()) {
+      newErrors.firstName = 'Le prénom est requis';
+    } else if (firstName.trim().length < 2) {
+      newErrors.firstName = 'Le prénom doit contenir au moins 2 caractères';
+    }
+
+    if (!surname.trim()) {
+      newErrors.surname = 'Le nom est requis';
+    } else if (surname.trim().length < 2) {
+      newErrors.surname = 'Le nom doit contenir au moins 2 caractères';
+    }
+
+    if (!selectedCity) {
+      newErrors.city = 'Veuillez sélectionner votre ville';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Handle profile completion
+  const handleComplete = async () => {
+    if (!validateForm() || !user?.uid) return;
+
+    setIsLoading(true);
+    try {
+      // Save profile to Firestore
+      await firestore()
+        .collection('artifacts')
+        .doc('goshopperai')
+        .collection('users')
+        .doc(user.uid)
+        .set(
+          {
+            firstName: firstName.trim(),
+            surname: surname.trim(),
+            displayName: `${firstName.trim()} ${surname.trim()}`,
+            defaultCity: selectedCity,
+            profileCompleted: true,
+            updatedAt: firestore.FieldValue.serverTimestamp(),
+          },
+          {merge: true},
+        );
+
+      // Navigate to main app
+      navigation.reset({
+        index: 0,
+        routes: [{name: 'Main'}],
+      });
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      setErrors({city: 'Une erreur est survenue. Veuillez réessayer.'});
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // City picker modal
+  const renderCityPicker = () => (
+    <Modal
+      visible={showCityPicker}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setShowCityPicker(false)}>
+      <SafeAreaView style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Sélectionnez votre ville</Text>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setShowCityPicker(false)}>
+            <Icon name="x" size="lg" color={Colors.text.primary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Search input */}
+        <View style={styles.searchContainer}>
+          <Icon name="search" size="md" color={Colors.text.tertiary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Rechercher une ville..."
+            placeholderTextColor={Colors.text.tertiary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="words"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Icon name="x" size="sm" color={Colors.text.tertiary} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* City list */}
+        <FlatList
+          data={filteredCities}
+          keyExtractor={item => item}
+          renderItem={({item}) => (
+            <TouchableOpacity
+              style={[
+                styles.cityItem,
+                selectedCity === item && styles.cityItemSelected,
+              ]}
+              onPress={() => {
+                setSelectedCity(item);
+                setShowCityPicker(false);
+                setSearchQuery('');
+                setErrors(prev => ({...prev, city: undefined}));
+              }}>
+              <Icon
+                name="map-pin"
+                size="md"
+                color={selectedCity === item ? Colors.primary : Colors.text.secondary}
+              />
+              <Text
+                style={[
+                  styles.cityText,
+                  selectedCity === item && styles.cityTextSelected,
+                ]}>
+                {item}
+              </Text>
+              {selectedCity === item && (
+                <Icon name="check" size="md" color={Colors.primary} />
+              )}
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={styles.cityList}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Icon name="map-pin" size="2xl" color={Colors.text.tertiary} />
+              <Text style={styles.emptyText}>Aucune ville trouvée</Text>
+            </View>
+          }
+        />
+      </SafeAreaView>
+    </Modal>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.iconContainer}>
+              <Icon name="user" size="2xl" color={Colors.white} variant="filled" />
+            </View>
+            <Text style={styles.title}>Complétez votre profil</Text>
+            <Text style={styles.subtitle}>
+              Ces informations nous aideront à personnaliser votre expérience
+            </Text>
+          </View>
+
+          {/* Form */}
+          <View style={styles.form}>
+            {/* First Name */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Prénom</Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  errors.firstName ? styles.inputError : null,
+                ]}>
+                <Icon name="user" size="md" color={Colors.text.secondary} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Entrez votre prénom"
+                  placeholderTextColor={Colors.text.tertiary}
+                  value={firstName}
+                  onChangeText={text => {
+                    setFirstName(text);
+                    if (errors.firstName) setErrors(prev => ({...prev, firstName: undefined}));
+                  }}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                />
+              </View>
+              {errors.firstName && (
+                <Text style={styles.errorText}>{errors.firstName}</Text>
+              )}
+            </View>
+
+            {/* Surname */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Nom de famille</Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  errors.surname ? styles.inputError : null,
+                ]}>
+                <Icon name="user" size="md" color={Colors.text.secondary} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Entrez votre nom"
+                  placeholderTextColor={Colors.text.tertiary}
+                  value={surname}
+                  onChangeText={text => {
+                    setSurname(text);
+                    if (errors.surname) setErrors(prev => ({...prev, surname: undefined}));
+                  }}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                />
+              </View>
+              {errors.surname && (
+                <Text style={styles.errorText}>{errors.surname}</Text>
+              )}
+            </View>
+
+            {/* City Selection */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Ville</Text>
+              <TouchableOpacity
+                style={[
+                  styles.inputWrapper,
+                  styles.selectWrapper,
+                  errors.city ? styles.inputError : null,
+                ]}
+                onPress={() => setShowCityPicker(true)}
+                disabled={isLoading}>
+                <Icon name="map-pin" size="md" color={Colors.text.secondary} />
+                <Text
+                  style={[
+                    styles.selectText,
+                    !selectedCity && styles.placeholderText,
+                  ]}>
+                  {selectedCity || 'Sélectionnez votre ville'}
+                </Text>
+                <Icon name="chevron-down" size="md" color={Colors.text.secondary} />
+              </TouchableOpacity>
+              {errors.city && (
+                <Text style={styles.errorText}>{errors.city}</Text>
+              )}
+            </View>
+
+            {/* Info text */}
+            <View style={styles.infoBox}>
+              <Icon name="info" size="md" color={Colors.primary} />
+              <Text style={styles.infoText}>
+                Votre ville nous aide à vous montrer les prix et offres près de chez vous
+              </Text>
+            </View>
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={[styles.button, isLoading && styles.buttonDisabled]}
+              onPress={handleComplete}
+              disabled={isLoading}
+              activeOpacity={0.8}>
+              {isLoading ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <View style={styles.buttonInner}>
+                  <Text style={styles.buttonText}>Commencer</Text>
+                  <Icon name="arrow-right" size="md" color={Colors.white} />
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {renderCityPicker()}
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background.primary,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    padding: Spacing.xl,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: Spacing['2xl'],
+    marginTop: Spacing.xl,
+  },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: BorderRadius.xl,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+    ...Shadows.lg,
+  },
+  title: {
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    paddingHorizontal: Spacing.lg,
+  },
+  form: {
+    flex: 1,
+  },
+  inputContainer: {
+    marginBottom: Spacing.lg,
+  },
+  label: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.border.medium,
+    borderRadius: BorderRadius.base,
+    backgroundColor: Colors.background.primary,
+    paddingHorizontal: Spacing.base,
+    gap: Spacing.md,
+  },
+  selectWrapper: {
+    paddingVertical: Spacing.base,
+  },
+  inputError: {
+    borderColor: Colors.status.error,
+    backgroundColor: Colors.status.errorLight,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: Spacing.base,
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+  },
+  selectText: {
+    flex: 1,
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+  },
+  placeholderText: {
+    color: Colors.text.tertiary,
+  },
+  errorText: {
+    color: Colors.status.error,
+    fontSize: Typography.fontSize.sm,
+    marginTop: Spacing.xs,
+    marginLeft: Spacing.xs,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.base,
+    padding: Spacing.base,
+    marginBottom: Spacing.xl,
+    gap: Spacing.md,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
+    lineHeight: 20,
+  },
+  button: {
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.base,
+    padding: Spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.md,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  buttonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  buttonText: {
+    color: Colors.white,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: Colors.background.primary,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+  },
+  modalTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+  },
+  closeButton: {
+    padding: Spacing.sm,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.base,
+    marginHorizontal: Spacing.lg,
+    marginVertical: Spacing.md,
+    paddingHorizontal: Spacing.base,
+    gap: Spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: Spacing.md,
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+  },
+  cityList: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xl,
+  },
+  cityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.base,
+    borderRadius: BorderRadius.base,
+    marginBottom: Spacing.sm,
+    gap: Spacing.md,
+  },
+  cityItemSelected: {
+    backgroundColor: Colors.background.secondary,
+  },
+  cityText: {
+    flex: 1,
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+  },
+  cityTextSelected: {
+    color: Colors.primary,
+    fontWeight: Typography.fontWeight.semiBold,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing['3xl'],
+  },
+  emptyText: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.md,
+  },
+});
+
+export default ProfileSetupScreen;

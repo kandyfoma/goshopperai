@@ -15,6 +15,8 @@ export interface User {
 export interface UserProfile {
   userId: string;
   displayName?: string;
+  firstName?: string;
+  surname?: string;
   email?: string;
   emailVerified?: boolean;
   phoneNumber?: string;
@@ -26,9 +28,9 @@ export interface UserProfile {
   preferredLanguage: 'fr' | 'ln' | 'sw' | 'en';
   preferredCurrency: 'USD' | 'CDF';
   defaultCity?: string;
+  profileCompleted?: boolean;
   // Additional profile fields
   name?: string;
-  surname?: string;
   age?: number;
   sex?: 'male' | 'female' | 'other';
   monthlyBudget?: number;

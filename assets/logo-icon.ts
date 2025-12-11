@@ -1,181 +1,197 @@
-// Primary logo icon - modern, clean design with shopping cart and AI elements
-export const logoIconSvg = `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+/**
+ * GoShopperAI Logo Variants
+ * 
+ * Color Palette Options:
+ * 
+ * OPTION 1 - Trust & Prosperity (Blue + Gold) [RECOMMENDED]
+ * - Primary (60%): #1E3A5F (Deep Navy Blue)
+ * - Secondary (30%): #F5F7FA (Off-White)
+ * - Accent (10%): #D4AF37 (Gold)
+ * 
+ * OPTION 2 - Energy & Savings (Purple + Orange)
+ * - Primary (60%): #5B21B6 (Deep Purple)
+ * - Secondary (30%): #F8F5FF (Lavender Tint)
+ * - Accent (10%): #F97316 (Vibrant Orange)
+ * 
+ * OPTION 3 - Growth & Action (Teal + Coral)
+ * - Primary (60%): #0F766E (Deep Teal)
+ * - Secondary (30%): #F0FDFA (Mint Tint)
+ * - Accent (10%): #EF4444 (Coral Red)
+ */
+
+// ============================================
+// OPTION 1: BLUE + GOLD (Trust & Prosperity)
+// ============================================
+export const logoBlueGoldSvg = `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#10B981"/>
-      <stop offset="100%" style="stop-color:#059669"/>
+    <linearGradient id="bgBlueGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E3A5F"/>
+      <stop offset="100%" style="stop-color:#152A45"/>
     </linearGradient>
-    <linearGradient id="sparkleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#FCD34D"/>
-      <stop offset="100%" style="stop-color:#F59E0B"/>
-    </linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.15"/>
-    </filter>
   </defs>
   
-  <!-- Background circle with gradient -->
-  <circle cx="50" cy="50" r="48" fill="url(#bgGradient)"/>
+  <!-- Background -->
+  <rect width="100" height="100" rx="22" fill="url(#bgBlueGold)"/>
   
-  <!-- Shopping cart icon -->
-  <g filter="url(#shadow)">
-    <!-- Cart body -->
-    <path d="M25 30 L30 30 L38 60 L70 60 L75 40 L35 40" 
-          fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    <!-- Cart wheels -->
-    <circle cx="42" cy="68" r="5" fill="white"/>
-    <circle cx="65" cy="68" r="5" fill="white"/>
-    <!-- Cart handle -->
-    <path d="M25 30 L20 25" stroke="white" stroke-width="3" stroke-linecap="round"/>
-  </g>
-  
-  <!-- Price tag -->
-  <g transform="translate(55, 20)">
-    <rect x="0" y="0" width="25" height="18" rx="3" fill="white"/>
-    <text x="12.5" y="13" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#10B981" text-anchor="middle">$</text>
-  </g>
-  
-  <!-- AI sparkle stars -->
-  <g fill="url(#sparkleGradient)">
-    <!-- Main star -->
-    <path d="M82 15 L84 20 L89 20 L85 24 L87 29 L82 26 L77 29 L79 24 L75 20 L80 20 Z"/>
-    <!-- Small stars -->
-    <circle cx="70" cy="12" r="2.5"/>
-    <circle cx="90" cy="25" r="2"/>
-    <circle cx="75" cy="28" r="1.5"/>
+  <!-- Letter G with integrated search -->
+  <g transform="translate(15, 18)">
+    <!-- Main G letter -->
+    <path d="M32 0C14.3 0 0 14.3 0 32C0 49.7 14.3 60 32 60C38 60 43.5 58.5 48 55.8V35H30V45H38V49C36.2 49.8 34.2 50 32 50C20 50 10 42 10 32C10 20 20 10 32 10C40 10 47 14.5 50 21L58 16C53 6.5 43.5 0 32 0Z" 
+          fill="white"/>
+    
+    <!-- Search magnifier integrated -->
+    <circle cx="54" cy="44" r="11" fill="none" stroke="#D4AF37" stroke-width="4"/>
+    <line x1="62" y1="52" x2="70" y2="60" stroke="#D4AF37" stroke-width="4" stroke-linecap="round"/>
   </g>
 </svg>`;
 
-// White/light variant for dark backgrounds
+// ============================================
+// OPTION 2: PURPLE + ORANGE (Energy & Savings)
+// ============================================
+export const logoPurpleOrangeSvg = `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgPurple" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5B21B6"/>
+      <stop offset="100%" style="stop-color:#4C1D95"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="100" height="100" rx="22" fill="url(#bgPurple)"/>
+  
+  <!-- Letter G with integrated search -->
+  <g transform="translate(15, 18)">
+    <!-- Main G letter -->
+    <path d="M32 0C14.3 0 0 14.3 0 32C0 49.7 14.3 60 32 60C38 60 43.5 58.5 48 55.8V35H30V45H38V49C36.2 49.8 34.2 50 32 50C20 50 10 42 10 32C10 20 20 10 32 10C40 10 47 14.5 50 21L58 16C53 6.5 43.5 0 32 0Z" 
+          fill="white"/>
+    
+    <!-- Search magnifier integrated -->
+    <circle cx="54" cy="44" r="11" fill="none" stroke="#F97316" stroke-width="4"/>
+    <line x1="62" y1="52" x2="70" y2="60" stroke="#F97316" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>`;
+
+// ============================================
+// OPTION 3: TEAL + CORAL (Growth & Action)
+// ============================================
+export const logoTealCoralSvg = `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0F766E"/>
+      <stop offset="100%" style="stop-color:#0D5D56"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="100" height="100" rx="22" fill="url(#bgTeal)"/>
+  
+  <!-- Letter G with integrated search -->
+  <g transform="translate(15, 18)">
+    <!-- Main G letter -->
+    <path d="M32 0C14.3 0 0 14.3 0 32C0 49.7 14.3 60 32 60C38 60 43.5 58.5 48 55.8V35H30V45H38V49C36.2 49.8 34.2 50 32 50C20 50 10 42 10 32C10 20 20 10 32 10C40 10 47 14.5 50 21L58 16C53 6.5 43.5 0 32 0Z" 
+          fill="white"/>
+    
+    <!-- Search magnifier integrated -->
+    <circle cx="54" cy="44" r="11" fill="none" stroke="#EF4444" stroke-width="4"/>
+    <line x1="62" y1="52" x2="70" y2="60" stroke="#EF4444" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>`;
+
+// Default export (Blue + Gold recommended)
+export const logoIconSvg = logoBlueGoldSvg;
+
+// White variant for dark mode
 export const logoIconWhiteSvg = `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="sparkleGradientW" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#FCD34D"/>
-      <stop offset="100%" style="stop-color:#F59E0B"/>
-    </linearGradient>
-  </defs>
+  <!-- Background -->
+  <rect width="100" height="100" rx="22" fill="white"/>
   
-  <!-- Background circle -->
-  <circle cx="50" cy="50" r="48" fill="white"/>
-  
-  <!-- Shopping cart icon -->
-  <g>
-    <path d="M25 30 L30 30 L38 60 L70 60 L75 40 L35 40" 
-          fill="none" stroke="#10B981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="42" cy="68" r="5" fill="#10B981"/>
-    <circle cx="65" cy="68" r="5" fill="#10B981"/>
-    <path d="M25 30 L20 25" stroke="#10B981" stroke-width="3" stroke-linecap="round"/>
-  </g>
-  
-  <!-- Price tag -->
-  <g transform="translate(55, 20)">
-    <rect x="0" y="0" width="25" height="18" rx="3" fill="#10B981"/>
-    <text x="12.5" y="13" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="white" text-anchor="middle">$</text>
-  </g>
-  
-  <!-- AI sparkle stars -->
-  <g fill="url(#sparkleGradientW)">
-    <path d="M82 15 L84 20 L89 20 L85 24 L87 29 L82 26 L77 29 L79 24 L75 20 L80 20 Z"/>
-    <circle cx="70" cy="12" r="2.5"/>
-    <circle cx="90" cy="25" r="2"/>
-    <circle cx="75" cy="28" r="1.5"/>
+  <!-- Letter G with integrated search -->
+  <g transform="translate(15, 18)">
+    <!-- Main G letter -->
+    <path d="M32 0C14.3 0 0 14.3 0 32C0 49.7 14.3 60 32 60C38 60 43.5 58.5 48 55.8V35H30V45H38V49C36.2 49.8 34.2 50 32 50C20 50 10 42 10 32C10 20 20 10 32 10C40 10 47 14.5 50 21L58 16C53 6.5 43.5 0 32 0Z" 
+          fill="#1E3A5F"/>
+    
+    <!-- Search magnifier integrated -->
+    <circle cx="54" cy="44" r="11" fill="none" stroke="#D4AF37" stroke-width="4"/>
+    <line x1="62" y1="52" x2="70" y2="60" stroke="#D4AF37" stroke-width="4" stroke-linecap="round"/>
   </g>
 </svg>`;
 
-// Minimal icon variant (no background) - for tab bars and small sizes
+// Minimal variant (no background)
 export const logoIconMinimalSvg = `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="cartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#10B981"/>
-      <stop offset="100%" style="stop-color:#059669"/>
-    </linearGradient>
-  </defs>
-  
-  <!-- Shopping cart icon -->
-  <g>
-    <path d="M15 25 L22 25 L35 70 L80 70 L90 35 L30 35" 
-          fill="none" stroke="url(#cartGradient)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="42" cy="82" r="7" fill="url(#cartGradient)"/>
-    <circle cx="72" cy="82" r="7" fill="url(#cartGradient)"/>
-    <path d="M15 25 L8 18" stroke="url(#cartGradient)" stroke-width="5" stroke-linecap="round"/>
-  </g>
-  
-  <!-- AI sparkle -->
-  <g fill="#F59E0B">
-    <path d="M85 12 L87 18 L93 18 L88 23 L90 29 L85 25 L80 29 L82 23 L77 18 L83 18 Z"/>
+  <!-- Letter G with integrated search -->
+  <g transform="translate(15, 18)">
+    <!-- Main G letter -->
+    <path d="M32 0C14.3 0 0 14.3 0 32C0 49.7 14.3 60 32 60C38 60 43.5 58.5 48 55.8V35H30V45H38V49C36.2 49.8 34.2 50 32 50C20 50 10 42 10 32C10 20 20 10 32 10C40 10 47 14.5 50 21L58 16C53 6.5 43.5 0 32 0Z" 
+          fill="#1E3A5F"/>
+    
+    <!-- Search magnifier integrated -->
+    <circle cx="54" cy="44" r="11" fill="none" stroke="#D4AF37" stroke-width="4"/>
+    <line x1="62" y1="52" x2="70" y2="60" stroke="#D4AF37" stroke-width="4" stroke-linecap="round"/>
   </g>
 </svg>`;
 
 // Full logo with text
 export const logoFullSvg = `<svg width="280" height="80" viewBox="0 0 280 80" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bgGradientFull" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#10B981"/>
-      <stop offset="100%" style="stop-color:#059669"/>
-    </linearGradient>
-    <linearGradient id="sparkleGradientFull" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#FCD34D"/>
-      <stop offset="100%" style="stop-color:#F59E0B"/>
+    <linearGradient id="bgFull" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E3A5F"/>
+      <stop offset="100%" style="stop-color:#152A45"/>
     </linearGradient>
   </defs>
   
   <!-- Logo icon -->
   <g transform="translate(5, 5) scale(0.7)">
-    <circle cx="50" cy="50" r="48" fill="url(#bgGradientFull)"/>
-    <g>
-      <path d="M25 30 L30 30 L38 60 L70 60 L75 40 L35 40" 
-            fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="42" cy="68" r="5" fill="white"/>
-      <circle cx="65" cy="68" r="5" fill="white"/>
-      <path d="M25 30 L20 25" stroke="white" stroke-width="3" stroke-linecap="round"/>
-    </g>
-    <g transform="translate(55, 20)">
-      <rect x="0" y="0" width="25" height="18" rx="3" fill="white"/>
-      <text x="12.5" y="13" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#10B981" text-anchor="middle">$</text>
-    </g>
-    <g fill="url(#sparkleGradientFull)">
-      <path d="M82 15 L84 20 L89 20 L85 24 L87 29 L82 26 L77 29 L79 24 L75 20 L80 20 Z"/>
-      <circle cx="70" cy="12" r="2.5"/>
-      <circle cx="90" cy="25" r="2"/>
+    <rect width="100" height="100" rx="22" fill="url(#bgFull)"/>
+    <g transform="translate(15, 18)">
+      <path d="M32 0C14.3 0 0 14.3 0 32C0 49.7 14.3 60 32 60C38 60 43.5 58.5 48 55.8V35H30V45H38V49C36.2 49.8 34.2 50 32 50C20 50 10 42 10 32C10 20 20 10 32 10C40 10 47 14.5 50 21L58 16C53 6.5 43.5 0 32 0Z" 
+            fill="white"/>
+      <circle cx="54" cy="44" r="11" fill="none" stroke="#D4AF37" stroke-width="4"/>
+      <line x1="62" y1="52" x2="70" y2="60" stroke="#D4AF37" stroke-width="4" stroke-linecap="round"/>
     </g>
   </g>
   
   <!-- App name -->
-  <text x="85" y="38" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#1F2937">GoShopper</text>
-  <text x="230" y="38" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#10B981">AI</text>
+  <text x="85" y="38" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#1E3A5F">GoShopper</text>
+  <text x="230" y="38" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#D4AF37">AI</text>
   
   <!-- Tagline -->
-  <text x="85" y="58" font-family="Arial, sans-serif" font-size="12" fill="#6B7280">Économisez intelligemment</text>
+  <text x="85" y="58" font-family="Arial, sans-serif" font-size="12" fill="#64748B">Économisez intelligemment</text>
 </svg>`;
 
-// Original receipt-based logo (previous design)
-export const logoReceiptSvg = `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="bgGradientReceipt" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#10B981"/>
-      <stop offset="100%" style="stop-color:#059669"/>
-    </linearGradient>
-  </defs>
-  
-  <!-- Background circle -->
-  <circle cx="50" cy="50" r="48" fill="url(#bgGradientReceipt)"/>
+// Color palette exports for use throughout the app
+export const ColorPalette = {
+  // Option 1: Blue + Gold (Default)
+  blueGold: {
+    primary: '#1E3A5F',
+    primaryDark: '#152A45',
+    secondary: '#F5F7FA',
+    accent: '#D4AF37',
+    text: '#1E293B',
+    textLight: '#64748B',
+    white: '#FFFFFF',
+  },
+  // Option 2: Purple + Orange
+  purpleOrange: {
+    primary: '#5B21B6',
+    primaryDark: '#4C1D95',
+    secondary: '#F8F5FF',
+    accent: '#F97316',
+    text: '#1E293B',
+    textLight: '#64748B',
+    white: '#FFFFFF',
+  },
+  // Option 3: Teal + Coral
+  tealCoral: {
+    primary: '#0F766E',
+    primaryDark: '#0D5D56',
+    secondary: '#F0FDFA',
+    accent: '#EF4444',
+    text: '#1E293B',
+    textLight: '#64748B',
+    white: '#FFFFFF',
+  },
+};
 
-  <!-- Receipt icon -->
-  <rect x="25" y="18" width="50" height="64" rx="5" ry="5" fill="white" stroke="#374151" stroke-width="1.5"/>
-
-  <!-- Receipt lines -->
-  <line x1="32" y1="32" x2="68" y2="32" stroke="#6B7280" stroke-width="2"/>
-  <line x1="32" y1="42" x2="60" y2="42" stroke="#6B7280" stroke-width="2"/>
-  <line x1="32" y1="52" x2="65" y2="52" stroke="#6B7280" stroke-width="2"/>
-  <line x1="32" y1="62" x2="55" y2="62" stroke="#6B7280" stroke-width="2"/>
-
-  <!-- Total line -->
-  <line x1="32" y1="74" x2="68" y2="74" stroke="#10B981" stroke-width="2.5"/>
-  <text x="35" y="72" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="#10B981">TOTAL</text>
-
-  <!-- AI sparkle effect -->
-  <circle cx="82" cy="18" r="5" fill="#F59E0B"/>
-  <circle cx="88" cy="14" r="2.5" fill="#F59E0B"/>
-  <circle cx="79" cy="22" r="2" fill="#F59E0B"/>
-  <circle cx="86" cy="24" r="3" fill="#F59E0B"/>
-</svg>`;
+// Default color palette (can be changed by user preference)
+export const Colors = ColorPalette.blueGold;

@@ -1,5 +1,6 @@
 // History Screen - List of past receipts
-import React, {useState, useEffect, useCallback} from 'react';
+// Styled with GoShopperAI Design System (Blue + Gold)
+import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {
   View,
   Text,
@@ -10,12 +11,14 @@ import {
   TextInput,
   RefreshControl,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import firestore from '@react-native-firebase/firestore';
 import {Receipt, RootStackParamList} from '@/shared/types';
-import {COLORS} from '@/shared/utils/constants';
+import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {Icon, FadeIn, SlideIn, EmptyState} from '@/shared/components';
 import {formatCurrency, formatDate} from '@/shared/utils/helpers';
 import {useAuth} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
@@ -136,13 +139,13 @@ export function HistoryScreen() {
   const getStatusColor = (status: Receipt['status']) => {
     switch (status) {
       case 'processed':
-        return COLORS.primary[500];
+        return Colors.status.success;
       case 'processing':
-        return COLORS.warning;
+        return Colors.status.warning;
       case 'error':
-        return COLORS.error;
+        return Colors.status.error;
       default:
-        return COLORS.gray[500];
+        return Colors.text.tertiary;
     }
   };
 
@@ -159,84 +162,83 @@ export function HistoryScreen() {
     }
   };
 
-  const renderReceiptItem = ({item}: {item: Receipt}) => (
-    <TouchableOpacity
-      style={styles.receiptCard}
-      onPress={() => handleReceiptPress(item.id)}
-      activeOpacity={0.7}>
-      <View style={styles.receiptIcon}>
-        <Text style={styles.receiptEmoji}>🧾</Text>
-      </View>
+  const renderReceiptItem = ({item, index}: {item: Receipt; index: number}) => {
+    return (
+      <SlideIn direction="left" delay={index * 50}>
+        <TouchableOpacity
+          style={styles.receiptCard}
+          onPress={() => handleReceiptPress(item.id)}
+          activeOpacity={0.7}>
+          <View style={styles.receiptIcon}>
+            <Icon name="receipt" size="lg" color={Colors.primary} />
+          </View>
 
-      <View style={styles.receiptInfo}>
-        <Text style={styles.storeName}>{item.storeName}</Text>
-        <Text style={styles.storeAddress} numberOfLines={1}>
-          {item.storeAddress || 'Adresse non spécifiée'}
-        </Text>
-        <Text style={styles.receiptDate}>
-          {formatDate(item.purchaseDate || item.date)}
-        </Text>
-      </View>
-
-      <View style={styles.receiptRight}>
-        <View style={styles.totalContainer}>
-          {item.totalUSD !== undefined && item.totalCDF !== undefined ? (
-            // Show both currencies if available
-            <>
-              <Text style={styles.totalAmount}>
-                {formatCurrency(item.totalUSD)}
-              </Text>
-              <Text style={styles.totalAmountSecondary}>
-                {formatCurrency(item.totalCDF, 'CDF')}
-              </Text>
-            </>
-          ) : (
-            // Show single currency
-            <Text style={styles.totalAmount}>
-              {formatCurrency(item.totalAmount || item.total, item.currency)}
+          <View style={styles.receiptInfo}>
+            <Text style={styles.storeName}>{item.storeName}</Text>
+            <Text style={styles.storeAddress} numberOfLines={1}>
+              {item.storeAddress || 'Adresse non spécifiée'}
             </Text>
-          )}
-        </View>
-        <View
-          style={[
-            styles.statusBadge,
-            {backgroundColor: getStatusColor(item.status) + '15'},
-          ]}>
-          <Text
-            style={[styles.statusText, {color: getStatusColor(item.status)}]}>
-            {getStatusLabel(item.status)}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+            <View style={styles.dateRow}>
+              <Icon name="calendar" size="xs" color={Colors.text.tertiary} />
+              <Text style={styles.receiptDate}>
+                {formatDate(item.purchaseDate || item.date)}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.receiptRight}>
+            <View style={styles.totalContainer}>
+              {item.totalUSD !== undefined && item.totalCDF !== undefined ? (
+                <>
+                  <Text style={styles.totalAmount}>
+                    {formatCurrency(item.totalUSD)}
+                  </Text>
+                  <Text style={styles.totalAmountSecondary}>
+                    {formatCurrency(item.totalCDF, 'CDF')}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.totalAmount}>
+                  {formatCurrency(item.totalAmount || item.total, item.currency)}
+                </Text>
+              )}
+            </View>
+            <View
+              style={[
+                styles.statusBadge,
+                {backgroundColor: getStatusColor(item.status) + '20'},
+              ]}>
+              <Text
+                style={[styles.statusText, {color: getStatusColor(item.status)}]}>
+                {getStatusLabel(item.status)}
+              </Text>
+            </View>
+            <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} style={{marginTop: 4}} />
+          </View>
+        </TouchableOpacity>
+      </SlideIn>
+    );
+  };
 
   const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <Text style={styles.emptyIcon}>📋</Text>
-      <Text style={styles.emptyTitle}>
-        {searchQuery ? 'Aucun résultat' : 'Pas encore de factures'}
-      </Text>
-      <Text style={styles.emptyDesc}>
-        {searchQuery
+    <EmptyState
+      icon="receipt"
+      title={searchQuery ? 'Aucun résultat' : 'Pas encore de factures'}
+      description={
+        searchQuery
           ? "Essayez avec d'autres termes de recherche"
-          : 'Scannez votre première facture pour commencer à suivre vos dépenses'}
-      </Text>
-      {!searchQuery && (
-        <TouchableOpacity
-          style={styles.emptyButton}
-          onPress={() => navigation.navigate('Scanner')}>
-          <Text style={styles.emptyButtonText}>Scanner une facture</Text>
-        </TouchableOpacity>
-      )}
-    </View>
+          : 'Scannez votre première facture pour commencer à suivre vos dépenses'
+      }
+      actionLabel={!searchQuery ? 'Scanner une facture' : undefined}
+      onAction={!searchQuery ? () => navigation.navigate('Scanner') : undefined}
+    />
   );
 
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loading}>
-          <ActivityIndicator size="large" color={COLORS.primary[500]} />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Chargement de l'historique...</Text>
         </View>
       </SafeAreaView>
@@ -245,64 +247,74 @@ export function HistoryScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Rechercher un magasin..."
-            placeholderTextColor={COLORS.gray[400]}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Text style={styles.clearButton}>✕</Text>
-            </TouchableOpacity>
-          )}
+      {/* Header */}
+      <FadeIn>
+        <View style={styles.headerContainer}>
+          <Text style={styles.headerTitle}>Historique</Text>
+          <Text style={styles.headerSubtitle}>Vos factures scannées</Text>
         </View>
-      </View>
+      </FadeIn>
+
+      {/* Search Bar */}
+      <FadeIn delay={100}>
+        <View style={styles.searchContainer}>
+          <View style={styles.searchBar}>
+            <Icon name="search" size="sm" color={Colors.text.tertiary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Rechercher un magasin..."
+              placeholderTextColor={Colors.text.tertiary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Icon name="x" size="sm" color={Colors.text.tertiary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </FadeIn>
 
       {/* Stats Bar */}
       {receipts.length > 0 && (
-        <View style={styles.statsBar}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{filteredReceipts.length}</Text>
-            <Text style={styles.statLabel}>Factures</Text>
+        <SlideIn direction="up" delay={150}>
+          <View style={styles.statsBar}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{filteredReceipts.length}</Text>
+              <Text style={styles.statLabel}>Factures</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>
+                {formatCurrency(
+                  filteredReceipts.reduce((sum, r) => {
+                    if (r.totalUSD !== undefined) return sum + r.totalUSD;
+                    if (r.currency === 'USD')
+                      return sum + (r.totalAmount || r.total);
+                    return sum;
+                  }, 0),
+                )}
+              </Text>
+              <Text style={styles.statLabel}>Total USD</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>
+                {formatCurrency(
+                  filteredReceipts.reduce((sum, r) => {
+                    if (r.totalCDF !== undefined) return sum + r.totalCDF;
+                    if (r.currency === 'CDF')
+                      return sum + (r.totalAmount || r.total);
+                    return sum;
+                  }, 0),
+                  'CDF',
+                )}
+              </Text>
+              <Text style={styles.statLabel}>Total CDF</Text>
+            </View>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>
-              {formatCurrency(
-                filteredReceipts.reduce((sum, r) => {
-                  // Use totalUSD if available, otherwise fall back to total if currency is USD
-                  if (r.totalUSD !== undefined) return sum + r.totalUSD;
-                  if (r.currency === 'USD')
-                    return sum + (r.totalAmount || r.total);
-                  return sum;
-                }, 0),
-              )}
-            </Text>
-            <Text style={styles.statLabel}>Total USD</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>
-              {formatCurrency(
-                filteredReceipts.reduce((sum, r) => {
-                  // Use totalCDF if available, otherwise fall back to total if currency is CDF
-                  if (r.totalCDF !== undefined) return sum + r.totalCDF;
-                  if (r.currency === 'CDF')
-                    return sum + (r.totalAmount || r.total);
-                  return sum;
-                }, 0),
-                'CDF',
-              )}
-            </Text>
-            <Text style={styles.statLabel}>Total CDF</Text>
-          </View>
-        </View>
+        </SlideIn>
       )}
 
       {/* Receipts List */}
@@ -319,7 +331,7 @@ export function HistoryScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
-            tintColor={COLORS.primary[500]}
+            tintColor={Colors.primary}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -331,69 +343,75 @@ export function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: Colors.background.secondary,
+  },
+  headerContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.sm,
+  },
+  headerTitle: {
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+  },
+  headerSubtitle: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.xs,
   },
   searchContainer: {
-    padding: 16,
-    paddingBottom: 8,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.md,
     height: 48,
-    borderWidth: 1,
-    borderColor: COLORS.gray[200],
-  },
-  searchIcon: {
-    fontSize: 18,
-    marginRight: 10,
+    gap: Spacing.sm,
+    ...Shadows.sm,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: COLORS.gray[900],
-  },
-  clearButton: {
-    fontSize: 16,
-    color: COLORS.gray[400],
-    padding: 4,
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
   },
   statsBar: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: Colors.white,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.base,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Shadows.sm,
   },
   statItem: {
     alignItems: 'center',
     flex: 1,
   },
   statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.primary,
   },
   statLabel: {
-    fontSize: 12,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
     marginTop: 2,
   },
   statDivider: {
     width: 1,
-    height: 30,
-    backgroundColor: COLORS.gray[200],
-    marginHorizontal: 20,
+    height: 32,
+    backgroundColor: Colors.border.light,
   },
   listContent: {
-    padding: 16,
-    paddingTop: 4,
+    padding: Spacing.lg,
+    paddingTop: Spacing.sm,
   },
   listContentEmpty: {
     flex: 1,
@@ -401,104 +419,73 @@ const styles = StyleSheet.create({
   },
   receiptCard: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
     alignItems: 'center',
+    ...Shadows.sm,
   },
   receiptIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: COLORS.primary[50],
+    width: 52,
+    height: 52,
+    borderRadius: BorderRadius.base,
+    backgroundColor: Colors.background.secondary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-  },
-  receiptEmoji: {
-    fontSize: 24,
+    marginRight: Spacing.md,
   },
   receiptInfo: {
     flex: 1,
     justifyContent: 'center',
   },
   storeName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.gray[900],
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
     marginBottom: 2,
   },
   storeAddress: {
-    fontSize: 13,
-    color: COLORS.gray[500],
-    marginBottom: 2,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.xs,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   receiptDate: {
-    fontSize: 12,
-    color: COLORS.gray[400],
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
   },
   receiptRight: {
     alignItems: 'flex-end',
-    marginLeft: 12,
+    marginLeft: Spacing.sm,
   },
   totalContainer: {
     alignItems: 'flex-end',
   },
   totalAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.accent,
     marginBottom: 2,
   },
   totalAmountSecondary: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.gray[600],
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.medium,
+    color: Colors.text.secondary,
   },
   statusBadge: {
     paddingVertical: 3,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    marginTop: Spacing.xs,
   },
   statusText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: 32,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-    opacity: 0.5,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.gray[700],
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyDesc: {
-    fontSize: 14,
-    color: COLORS.gray[500],
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
-    paddingHorizontal: 20,
-  },
-  emptyButton: {
-    backgroundColor: COLORS.primary[500],
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  emptyButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.semiBold,
   },
   loading: {
     flex: 1,
@@ -506,8 +493,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: COLORS.gray[600],
+    marginTop: Spacing.md,
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
   },
 });

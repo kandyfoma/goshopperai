@@ -6,10 +6,12 @@ import {
   logoIconWhiteSvg, 
   logoIconMinimalSvg,
   logoFullSvg,
-  logoReceiptSvg 
+  logoBlueGoldSvg,
+  logoPurpleOrangeSvg,
+  logoTealCoralSvg,
 } from '../../../assets/logo-icon';
 
-type LogoVariant = 'default' | 'white' | 'minimal' | 'full' | 'receipt';
+type LogoVariant = 'default' | 'white' | 'minimal' | 'full' | 'blueGold' | 'purpleOrange' | 'tealCoral';
 
 interface LogoProps {
   size?: number;
@@ -77,8 +79,12 @@ const Logo: React.FC<LogoProps> = ({
         return logoIconMinimalSvg;
       case 'full':
         return logoFullSvg;
-      case 'receipt':
-        return logoReceiptSvg;
+      case 'blueGold':
+        return logoBlueGoldSvg;
+      case 'purpleOrange':
+        return logoPurpleOrangeSvg;
+      case 'tealCoral':
+        return logoTealCoralSvg;
       default:
         return logoIconSvg;
     }

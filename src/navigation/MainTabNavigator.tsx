@@ -1,9 +1,10 @@
-// Main Tab Navigator - Bottom tabs
-import React from 'react';
+// Main Tab Navigator - Bottom tabs with modern design
+import React, {useEffect, useRef} from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import {View, Text, StyleSheet} from 'react-native';
+import {View, Text, StyleSheet, Animated, Platform} from 'react-native';
 import {MainTabParamList} from '@/shared/types';
-import {COLORS} from '@/shared/utils/constants';
+import {Colors, Typography, Spacing, Shadows, Layout} from '@/shared/theme/theme';
+import {Icon} from '@/shared/components';
 
 // Screens
 import {HomeScreen} from '@/features/home/screens';
@@ -21,15 +22,50 @@ interface TabIconProps {
 }
 
 function TabIcon({focused, icon, label}: TabIconProps) {
+  const scaleAnim = useRef(new Animated.Value(focused ? 1 : 0.9)).current;
+  const translateYAnim = useRef(new Animated.Value(focused ? -4 : 0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, {
+        toValue: focused ? 1 : 0.9,
+        useNativeDriver: true,
+        tension: 100,
+        friction: 10,
+      }),
+      Animated.spring(translateYAnim, {
+        toValue: focused ? -4 : 0,
+        useNativeDriver: true,
+        tension: 100,
+        friction: 10,
+      }),
+    ]).start();
+  }, [focused, scaleAnim, translateYAnim]);
+
   return (
-    <View style={styles.tabIconContainer}>
-      <Text style={[styles.tabIcon, focused && styles.tabIconFocused]}>
-        {icon}
-      </Text>
+    <Animated.View
+      style={[
+        styles.tabIconContainer,
+        {
+          transform: [{scale: scaleAnim}, {translateY: translateYAnim}],
+        },
+      ]}>
+      <View
+        style={[
+          styles.iconWrapper,
+          focused && styles.iconWrapperFocused,
+        ]}>
+        <Icon
+          name={icon}
+          size="sm"
+          color={focused ? Colors.primary : Colors.text.tertiary}
+          variant={focused ? 'filled' : 'outline'}
+        />
+      </View>
       <Text style={[styles.tabLabel, focused && styles.tabLabelFocused]}>
         {label}
       </Text>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -40,13 +76,14 @@ export function MainTabNavigator() {
         headerShown: false,
         tabBarShowLabel: false,
         tabBarStyle: styles.tabBar,
+        tabBarHideOnKeyboard: true,
       }}>
       <Tab.Screen
         name="Home"
         component={HomeScreen}
         options={{
           tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} icon="🏠" label="Accueil" />
+            <TabIcon focused={focused} icon="home" label="Accueil" />
           ),
         }}
       />
@@ -55,7 +92,7 @@ export function MainTabNavigator() {
         component={HistoryScreen}
         options={{
           tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} icon="📋" label="Historique" />
+            <TabIcon focused={focused} icon="receipt" label="Historique" />
           ),
         }}
       />
@@ -64,7 +101,7 @@ export function MainTabNavigator() {
         component={StatsScreen}
         options={{
           tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} icon="📊" label="Stats" />
+            <TabIcon focused={focused} icon="stats" label="Stats" />
           ),
         }}
       />
@@ -73,7 +110,7 @@ export function MainTabNavigator() {
         component={ItemsScreen}
         options={{
           tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} icon="🛒" label="Articles" />
+            <TabIcon focused={focused} icon="cart" label="Articles" />
           ),
         }}
       />
@@ -82,7 +119,7 @@ export function MainTabNavigator() {
         component={ProfileScreen}
         options={{
           tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} icon="👤" label="Profil" />
+            <TabIcon focused={focused} icon="user" label="Profil" />
           ),
         }}
       />
@@ -92,31 +129,39 @@ export function MainTabNavigator() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: '#ffffff',
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    height: 70,
-    paddingTop: 8,
-    paddingBottom: 12,
+    backgroundColor: Colors.white,
+    borderTopWidth: 0,
+    height: Platform.OS === 'ios' ? 88 : 70,
+    paddingTop: Spacing.sm,
+    paddingBottom: Platform.OS === 'ios' ? 28 : Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    ...Shadows.lg,
+    elevation: 20,
   },
   tabIconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: 60,
   },
-  tabIcon: {
-    fontSize: 24,
-    marginBottom: 2,
+  iconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
-  tabIconFocused: {
-    transform: [{scale: 1.1}],
+  iconWrapperFocused: {
+    backgroundColor: Colors.background.secondary,
   },
   tabLabel: {
-    fontSize: 11,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
     fontWeight: '500',
+    marginTop: 2,
   },
   tabLabelFocused: {
-    color: COLORS.primary[500],
+    color: Colors.primary,
     fontWeight: '600',
   },
 });

@@ -2,6 +2,8 @@
 import auth, {FirebaseAuthTypes} from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import firebase from '@react-native-firebase/app';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
+import {appleAuth} from '@invertase/react-native-apple-authentication';
 import {User, UserProfile} from '@/shared/types';
 import {COLLECTIONS, APP_ID} from './config';
 
@@ -10,6 +12,12 @@ class AuthService {
   private initPromise: Promise<boolean> | null = null;
 
   constructor() {
+    // Configure Google Sign-In
+    GoogleSignin.configure({
+      webClientId: 'YOUR_FIREBASE_WEB_CLIENT_ID', // Replace with your Firebase web client ID from Firebase Console > Project Settings > General > Web API Key
+      offlineAccess: true,
+    });
+
     // Start initialization process
     this.initPromise = this.initializeWhenReady();
   }
@@ -121,11 +129,20 @@ class AuthService {
   async signInWithGoogle(): Promise<User> {
     try {
       await this.ensureInitialized();
-      // Google Sign-In requires @react-native-google-signin/google-signin package
-      // For now, throw an error indicating it needs to be implemented
-      throw new Error(
-        'Google Sign-In needs to be configured. Install @react-native-google-signin/google-signin',
-      );
+
+      // Check if Google Play Services are available
+      await GoogleSignin.hasPlayServices({showPlayServicesUpdateDialog: true});
+
+      // Sign in with Google
+      const {idToken} = await GoogleSignin.signIn();
+
+      // Create a Google credential with the token
+      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+
+      // Sign-in the user with the credential
+      const credential = await auth().signInWithCredential(googleCredential);
+
+      return this.mapFirebaseUser(credential.user);
     } catch (error) {
       console.error('Google sign in failed:', error);
       throw error;
@@ -138,11 +155,26 @@ class AuthService {
   async signInWithApple(): Promise<User> {
     try {
       await this.ensureInitialized();
-      // Apple Sign-In requires @invertase/react-native-apple-authentication package
-      // For now, throw an error indicating it needs to be implemented
-      throw new Error(
-        'Apple Sign-In needs to be configured. Install @invertase/react-native-apple-authentication',
-      );
+
+      // Start the sign-in request
+      const appleAuthRequestResponse = await appleAuth.performRequest({
+        requestedOperation: appleAuth.Operation.LOGIN,
+        requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
+      });
+
+      // Ensure Apple returned a user identityToken
+      if (!appleAuthRequestResponse.identityToken) {
+        throw new Error('Apple Sign-In failed - no identify token returned');
+      }
+
+      // Create a Firebase credential from the response
+      const {identityToken, nonce} = appleAuthRequestResponse;
+      const appleCredential = auth.AppleAuthProvider.credential(identityToken, nonce);
+
+      // Sign the user in with the credential
+      const credential = await auth().signInWithCredential(appleCredential);
+
+      return this.mapFirebaseUser(credential.user);
     } catch (error) {
       console.error('Apple sign in failed:', error);
       throw error;
@@ -200,6 +232,72 @@ class AuthService {
       await auth().sendPasswordResetEmail(email);
     } catch (error) {
       console.error('Password reset email failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user profile
+   */
+  async getUserProfile(userId: string): Promise<UserProfile | null> {
+    try {
+      const profileRef = firestore().doc(COLLECTIONS.userProfile(userId));
+      const doc = await profileRef.get();
+
+      if (!doc.exists) return null;
+
+      const data = doc.data();
+      return {
+        userId,
+        displayName: data?.displayName,
+        firstName: data?.firstName,
+        surname: data?.surname,
+        email: data?.email,
+        emailVerified: data?.emailVerified,
+        phoneNumber: data?.phoneNumber,
+        phoneVerified: data?.phoneVerified,
+        countryCode: data?.countryCode,
+        isInDRC: data?.isInDRC,
+        verified: data?.verified,
+        verifiedAt: data?.verifiedAt?.toDate(),
+        preferredLanguage: data?.preferredLanguage || 'fr',
+        preferredCurrency: data?.preferredCurrency || 'USD',
+        defaultCity: data?.defaultCity,
+        profileCompleted: data?.profileCompleted,
+        name: data?.name,
+        age: data?.age,
+        sex: data?.sex,
+        monthlyBudget: data?.monthlyBudget,
+        notificationsEnabled: data?.notificationsEnabled ?? true,
+        priceAlertsEnabled: data?.priceAlertsEnabled ?? true,
+        createdAt: data?.createdAt?.toDate() || new Date(),
+        updatedAt: data?.updatedAt?.toDate() || new Date(),
+      } as UserProfile;
+    } catch (error) {
+      console.error('Get user profile failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update user password (requires recent authentication)
+   */
+  async updatePassword(currentPassword: string, newPassword: string): Promise<void> {
+    try {
+      await this.ensureInitialized();
+      const user = auth().currentUser;
+      if (!user || !user.email) {
+        throw new Error('No authenticated user found');
+      }
+
+      // Re-authenticate user with current password
+      const credential = auth.EmailAuthProvider.credential(user.email, currentPassword);
+      await user.reauthenticateWithCredential(credential);
+      
+      // Update password
+      await user.updatePassword(newPassword);
+    } catch (error) {
+      console.error('Update password failed:', error);
       throw error;
     }
   }

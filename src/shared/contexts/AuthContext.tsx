@@ -13,6 +13,8 @@ import {analyticsService} from '@/shared/services';
 
 interface AuthContextType extends AuthState {
   signIn: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signInWithApple: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -67,10 +69,10 @@ export function AuthProvider({children}: AuthProviderProps) {
 
   // Removed auto sign-in - users must now register/login explicitly
 
-  const signIn = useCallback(async () => {
+  const signInWithGoogle = useCallback(async () => {
     setState(prev => ({...prev, isLoading: true, error: null}));
     try {
-      const user = await authService.signInAnonymously();
+      const user = await authService.signInWithGoogle();
       setState({
         user,
         isLoading: false,
@@ -79,12 +81,34 @@ export function AuthProvider({children}: AuthProviderProps) {
       });
 
       // Track sign in event
-      analyticsService.logLogin('anonymous');
+      analyticsService.logLogin('google');
     } catch (error: any) {
       setState(prev => ({
         ...prev,
         isLoading: false,
-        error: error.message || 'Échec de la connexion',
+        error: error.message || 'Échec de la connexion Google',
+      }));
+    }
+  }, []);
+
+  const signInWithApple = useCallback(async () => {
+    setState(prev => ({...prev, isLoading: true, error: null}));
+    try {
+      const user = await authService.signInWithApple();
+      setState({
+        user,
+        isLoading: false,
+        isAuthenticated: true,
+        error: null,
+      });
+
+      // Track sign in event
+      analyticsService.logLogin('apple');
+    } catch (error: any) {
+      setState(prev => ({
+        ...prev,
+        isLoading: false,
+        error: error.message || 'Échec de la connexion Apple',
       }));
     }
   }, []);
@@ -113,6 +137,8 @@ export function AuthProvider({children}: AuthProviderProps) {
       value={{
         ...state,
         signIn,
+        signInWithGoogle,
+        signInWithApple,
         signOut,
       }}>
       {children}

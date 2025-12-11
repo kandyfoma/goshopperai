@@ -17,7 +17,8 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {authService} from '@/shared/services/firebase';
-import {COLORS} from '@/shared/utils/constants';
+import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {Icon} from '@/shared/components';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -80,7 +81,9 @@ export function RegisterScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.logo}>🛒</Text>
+            <View style={styles.logoContainer}>
+              <Icon name="user-plus" size="2xl" color={Colors.white} variant="filled" />
+            </View>
             <Text style={styles.title}>Créer un compte</Text>
             <Text style={styles.subtitle}>
               Commencez à économiser aujourd'hui
@@ -91,42 +94,54 @@ export function RegisterScreen() {
           <View style={styles.form}>
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="votre@email.com"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!loading}
-              />
+              <View style={styles.inputWrapper}>
+                <Icon name="mail" size="md" color={Colors.text.secondary} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="votre@email.com"
+                  placeholderTextColor={Colors.text.tertiary}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!loading}
+                />
+              </View>
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Mot de passe</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Au moins 6 caractères"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                editable={!loading}
-              />
+              <View style={styles.inputWrapper}>
+                <Icon name="lock" size="md" color={Colors.text.secondary} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Au moins 6 caractères"
+                  placeholderTextColor={Colors.text.tertiary}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  editable={!loading}
+                />
+              </View>
             </View>
 
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Confirmer le mot de passe</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Répétez le mot de passe"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                editable={!loading}
-              />
+              <View style={styles.inputWrapper}>
+                <Icon name="lock" size="md" color={Colors.text.secondary} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Répétez le mot de passe"
+                  placeholderTextColor={Colors.text.tertiary}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  editable={!loading}
+                />
+              </View>
             </View>
 
             <TouchableOpacity
@@ -134,9 +149,12 @@ export function RegisterScreen() {
               onPress={handleRegister}
               disabled={loading}>
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={Colors.white} />
               ) : (
-                <Text style={styles.buttonText}>S'inscrire</Text>
+                <View style={styles.buttonInner}>
+                  <Text style={styles.buttonText}>S'inscrire</Text>
+                  <Icon name="arrow-right" size="md" color={Colors.white} />
+                </View>
               )}
             </TouchableOpacity>
 
@@ -152,8 +170,9 @@ export function RegisterScreen() {
               style={[styles.button, styles.socialButton]}
               onPress={handleGoogleSignIn}
               disabled={loading}>
+              <Text style={styles.googleIcon}>G</Text>
               <Text style={styles.socialButtonText}>
-                🔍 Continuer avec Google
+                Continuer avec Google
               </Text>
             </TouchableOpacity>
 
@@ -162,6 +181,7 @@ export function RegisterScreen() {
                 style={[styles.button, styles.socialButton, styles.appleButton]}
                 onPress={handleAppleSignIn}
                 disabled={loading}>
+                <Icon name="apple" size="md" color={Colors.white} />
                 <Text style={[styles.socialButtonText, styles.appleButtonText]}>
                   Continuer avec Apple
                 </Text>
@@ -187,114 +207,141 @@ export function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background.primary,
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 20,
+    padding: Spacing.lg,
     justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: Spacing['2xl'],
   },
-  logo: {
-    fontSize: 64,
-    marginBottom: 10,
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: BorderRadius.xl,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.base,
+    ...Shadows.lg,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
-    marginBottom: 8,
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
   },
   form: {
-    marginBottom: 30,
+    marginBottom: Spacing['2xl'],
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.gray[700],
-    marginBottom: 8,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border.medium,
+    borderRadius: BorderRadius.base,
+    paddingHorizontal: Spacing.base,
+    backgroundColor: Colors.background.primary,
+    gap: Spacing.md,
   },
   input: {
-    borderWidth: 1,
-    borderColor: COLORS.gray[300],
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    backgroundColor: '#fff',
+    flex: 1,
+    paddingVertical: Spacing.base,
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
   },
   button: {
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: BorderRadius.base,
+    padding: Spacing.base,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   primaryButton: {
-    backgroundColor: COLORS.primary[500],
+    backgroundColor: Colors.primary,
+    ...Shadows.md,
+  },
+  buttonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
   buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: Colors.white,
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.bold,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: Spacing.lg,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: COLORS.gray[200],
+    backgroundColor: Colors.border.light,
   },
   dividerText: {
-    marginHorizontal: 10,
-    color: COLORS.gray[500],
-    fontSize: 14,
+    marginHorizontal: Spacing.sm,
+    color: Colors.text.tertiary,
+    fontSize: Typography.fontSize.md,
   },
   socialButton: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background.primary,
     borderWidth: 1,
-    borderColor: COLORS.gray[300],
+    borderColor: Colors.border.medium,
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  googleIcon: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: '#4285F4',
   },
   socialButtonText: {
-    color: COLORS.gray[700],
-    fontSize: 16,
-    fontWeight: '600',
+    color: Colors.text.primary,
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semiBold,
   },
   appleButton: {
-    backgroundColor: '#000',
-    borderColor: '#000',
+    backgroundColor: Colors.black,
+    borderColor: Colors.black,
   },
   appleButtonText: {
-    color: '#fff',
+    color: Colors.white,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 5,
+    gap: Spacing.xs,
   },
   footerText: {
-    color: COLORS.gray[600],
-    fontSize: 14,
+    color: Colors.text.secondary,
+    fontSize: Typography.fontSize.md,
   },
   linkText: {
-    color: COLORS.primary[500],
-    fontSize: 14,
-    fontWeight: '700',
+    color: Colors.accent,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.bold,
   },
 });
 

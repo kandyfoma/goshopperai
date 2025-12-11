@@ -15,18 +15,61 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {useAuth} from '@/shared/contexts';
+import {useToast} from '@/shared/contexts';
 import {priceAlertsService, PriceAlert} from '@/shared/services/firebase';
 import {COLORS} from '@/shared/utils/constants';
+import {Spinner} from '@/shared/components';
 
 export function PriceAlertsScreen() {
   const navigation = useNavigation();
   const {user} = useAuth();
+  const {showToast} = useToast();
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newProductName, setNewProductName] = useState('');
   const [newTargetPrice, setNewTargetPrice] = useState('');
+  const [newCity, setNewCity] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+
+  // Major DRC cities - deduplicated and sorted
+  const DRC_CITIES = [
+    'Kinshasa',
+    'Lubumbashi',
+    'Mbuji-Mayi',
+    'Kisangani',
+    'Kananga',
+    'Bukavu',
+    'Goma',
+    'Tshikapa',
+    'Kolwezi',
+    'Likasi',
+    'Uvira',
+    'Butembo',
+    'Beni',
+    'Bunia',
+    'Isiro',
+    'Mbandaka',
+    'Kikwit',
+    'Matadi',
+    'Boma',
+    'Bandundu',
+    'Gemena',
+    'Kabinda',
+    'Mwene-Ditu',
+    'Kalemie',
+    'Kindu',
+    'Lisala',
+    'Bumba',
+    'Inongo',
+    'Boende',
+    'Lusambo',
+    'Ilebo',
+    'Kisantu',
+    'Mbanza-Ngungu',
+    'Kasangulu',
+    'Tshela',
+  ].sort();
 
   // Load alerts
   useEffect(() => {
@@ -51,14 +94,17 @@ export function PriceAlertsScreen() {
       await priceAlertsService.createAlert(user.uid, {
         productName: newProductName.trim(),
         targetPrice: parseFloat(newTargetPrice),
+        city: newCity || undefined,
       });
 
       setShowAddModal(false);
       setNewProductName('');
       setNewTargetPrice('');
+      setNewCity('');
+      showToast('Alerte créée avec succès', 'success');
     } catch (error) {
       console.error('Create alert error:', error);
-      Alert.alert('Erreur', "Impossible de créer l'alerte");
+      showToast("Impossible de créer l'alerte", 'error');
     } finally {
       setIsCreating(false);
     }
@@ -76,8 +122,10 @@ export function PriceAlertsScreen() {
           onPress: async () => {
             try {
               await priceAlertsService.deleteAlert(user.uid, alertId);
+              showToast('Alerte supprimée avec succès', 'success');
             } catch (error) {
               console.error('Delete alert error:', error);
+              showToast('Erreur lors de la suppression', 'error');
             }
           },
         },
@@ -114,6 +162,9 @@ export function PriceAlertsScreen() {
             <Text style={styles.alertTarget}>
               Prix cible: ${item.targetPrice.toFixed(2)}
             </Text>
+            {item.city && (
+              <Text style={styles.alertCity}>📍 {item.city}</Text>
+            )}
           </View>
 
           {isTriggered && (
@@ -162,7 +213,7 @@ export function PriceAlertsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary[500]} />
+          <Spinner size="large" color={COLORS.primary[500]} />
           <Text style={styles.loadingText}>Chargement des alertes...</Text>
         </View>
       </SafeAreaView>
@@ -255,10 +306,26 @@ export function PriceAlertsScreen() {
               />
             </View>
 
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>Ville (optionnel)</Text>
+              <TextInput
+                style={styles.input}
+                value={newCity}
+                onChangeText={setNewCity}
+                placeholder="Ex: Kinshasa (laissez vide pour votre ville par défaut)"
+                placeholderTextColor={COLORS.gray[400]}
+              />
+            </View>
+
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.cancelButton}
-                onPress={() => setShowAddModal(false)}>
+                onPress={() => {
+                  setShowAddModal(false);
+                  setNewProductName('');
+                  setNewTargetPrice('');
+                  setNewCity('');
+                }}>
                 <Text style={styles.cancelButtonText}>Annuler</Text>
               </TouchableOpacity>
 
@@ -273,7 +340,7 @@ export function PriceAlertsScreen() {
                   !newProductName.trim() || !newTargetPrice || isCreating
                 }>
                 {isCreating ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <Spinner size="small" color="#fff" />
                 ) : (
                   <Text style={styles.createButtonText}>Créer</Text>
                 )}
@@ -415,6 +482,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.primary[600],
     fontWeight: '600',
+  },
+  alertCity: {
+    fontSize: 12,
+    color: COLORS.gray[500],
+    marginTop: 2,
   },
   triggeredBadge: {
     backgroundColor: COLORS.primary[100],

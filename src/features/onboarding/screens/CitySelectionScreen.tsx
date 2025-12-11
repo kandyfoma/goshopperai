@@ -13,7 +13,8 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {useAuth} from '@/shared/contexts';
-import {COLORS} from '@/shared/utils/constants';
+import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {Icon} from '@/shared/components';
 import firestore from '@react-native-firebase/firestore';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -172,6 +173,11 @@ export function CitySelectionScreen() {
         selectedCity === item && styles.cityItemSelected,
       ]}
       onPress={() => setSelectedCity(item)}>
+      {selectedCity === item && (
+        <View style={styles.checkIcon}>
+          <Icon name="check" size="sm" color={Colors.white} />
+        </View>
+      )}
       <Text
         style={[
           styles.cityText,
@@ -185,6 +191,9 @@ export function CitySelectionScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <View style={styles.headerIcon}>
+          <Icon name="map-pin" size="xl" color={Colors.primary} />
+        </View>
         <Text style={styles.title}>Sélectionnez votre ville</Text>
         <Text style={styles.subtitle}>
           Choisissez la ville où vous faites vos achats pour une meilleure
@@ -210,9 +219,12 @@ export function CitySelectionScreen() {
           onPress={handleCitySelect}
           disabled={!selectedCity || isSaving}>
           {isSaving ? (
-            <ActivityIndicator color="#fff" size="small" />
+            <ActivityIndicator color={Colors.white} size="small" />
           ) : (
-            <Text style={styles.continueButtonText}>Continuer</Text>
+            <View style={styles.buttonInner}>
+              <Text style={styles.continueButtonText}>Continuer</Text>
+              <Icon name="arrow-right" size="md" color={Colors.white} />
+            </View>
           )}
         </TouchableOpacity>
       </View>
@@ -223,73 +235,100 @@ export function CitySelectionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background.primary,
   },
   header: {
-    padding: 24,
+    padding: Spacing.xl,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[200],
+    borderBottomColor: Colors.border.light,
+  },
+  headerIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.background.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.base,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
-    marginBottom: 8,
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
-    color: COLORS.gray[600],
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
     textAlign: 'center',
     lineHeight: 22,
   },
   citiesGrid: {
-    padding: 16,
+    padding: Spacing.base,
   },
   cityItem: {
     flex: 1,
-    margin: 8,
-    padding: 16,
-    borderRadius: 12,
+    margin: Spacing.sm,
+    padding: Spacing.base,
+    borderRadius: BorderRadius.base,
     borderWidth: 2,
-    borderColor: COLORS.gray[200],
+    borderColor: Colors.border.light,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 60,
+    backgroundColor: Colors.background.primary,
   },
   cityItemSelected: {
-    borderColor: COLORS.primary[500],
-    backgroundColor: COLORS.primary[50],
+    borderColor: Colors.primary,
+    backgroundColor: Colors.background.secondary,
+  },
+  checkIcon: {
+    position: 'absolute',
+    top: Spacing.sm,
+    right: Spacing.sm,
+    width: 20,
+    height: 20,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cityText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.gray[700],
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.medium,
+    color: Colors.text.secondary,
     textAlign: 'center',
   },
   cityTextSelected: {
-    color: COLORS.primary[600],
-    fontWeight: '600',
+    color: Colors.primary,
+    fontWeight: Typography.fontWeight.semiBold,
   },
   footer: {
-    padding: 24,
+    padding: Spacing.xl,
     borderTopWidth: 1,
-    borderTopColor: COLORS.gray[200],
+    borderTopColor: Colors.border.light,
   },
   continueButton: {
-    backgroundColor: COLORS.primary[500],
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.base,
+    padding: Spacing.base,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Shadows.md,
   },
   continueButtonDisabled: {
-    backgroundColor: COLORS.gray[300],
+    backgroundColor: Colors.border.medium,
+  },
+  buttonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
   continueButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    color: Colors.white,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semiBold,
   },
 });

@@ -1,4 +1,5 @@
 // Items Screen - Browse and compare item prices across stores
+// Styled with GoShopperAI Design System (Blue + Gold)
 import React, {useState, useEffect} from 'react';
 import {
   View,
@@ -11,7 +12,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
-import {COLORS} from '@/shared/utils/constants';
+import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {Icon, FadeIn, SlideIn} from '@/shared/components';
 import {formatCurrency} from '@/shared/utils/helpers';
 import {useAuth, useUser} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
@@ -154,64 +156,78 @@ export function ItemsScreen() {
     });
   };
 
-  const renderItem = ({item}: {item: ItemData}) => (
-    <TouchableOpacity style={styles.itemCard}>
-      <View style={styles.itemHeader}>
-        <Text style={styles.itemName}>{item.name}</Text>
-        <Text style={styles.itemStats}>
-          {item.prices.length} achats • {item.storeCount} magasin
-          {item.storeCount > 1 ? 's' : ''}
-        </Text>
-      </View>
+  const renderItem = ({item, index}: {item: ItemData; index: number}) => (
+    <SlideIn delay={index * 50}>
+      <TouchableOpacity style={styles.itemCard} activeOpacity={0.7}>
+        <View style={styles.itemHeader}>
+          <View style={styles.itemIconWrapper}>
+            <Icon name="cart" size="sm" color={Colors.primary} />
+          </View>
+          <View style={styles.itemInfo}>
+            <Text style={styles.itemName}>{item.name}</Text>
+            <Text style={styles.itemStats}>
+              {item.prices.length} achats • {item.storeCount} magasin
+              {item.storeCount > 1 ? 's' : ''}
+            </Text>
+          </View>
+        </View>
 
-      <View style={styles.priceInfo}>
-        <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>Prix min:</Text>
-          <Text style={styles.priceValue}>
-            {formatCurrency(item.minPrice, item.currency)}
-          </Text>
-        </View>
-        <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>Prix max:</Text>
-          <Text style={styles.priceValue}>
-            {formatCurrency(item.maxPrice, item.currency)}
-          </Text>
-        </View>
-        <View style={styles.priceRow}>
-          <Text style={styles.priceLabel}>Prix moyen:</Text>
-          <Text style={[styles.priceValue, styles.avgPrice]}>
-            {formatCurrency(item.avgPrice, item.currency)}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.storesList}>
-        <Text style={styles.storesTitle}>Prix par magasin:</Text>
-        {item.prices
-          .sort((a, b) => a.price - b.price)
-          .slice(0, 3)
-          .map((price, index) => (
-            <View key={index} style={styles.storePrice}>
-              <Text style={styles.storeName}>{price.storeName}</Text>
-              <Text style={styles.storePriceValue}>
-                {formatCurrency(price.price, price.currency)}
+        <View style={styles.priceInfo}>
+          <View style={styles.priceRow}>
+            <View style={styles.priceItem}>
+              <Text style={styles.priceLabel}>Min</Text>
+              <Text style={[styles.priceValue, styles.priceMin]}>
+                {formatCurrency(item.minPrice, item.currency)}
               </Text>
             </View>
-          ))}
-        {item.prices.length > 3 && (
-          <Text style={styles.moreStores}>
-            +{item.prices.length - 3} autres...
-          </Text>
-        )}
-      </View>
-    </TouchableOpacity>
+            <View style={styles.priceDivider} />
+            <View style={styles.priceItem}>
+              <Text style={styles.priceLabel}>Max</Text>
+              <Text style={[styles.priceValue, styles.priceMax]}>
+                {formatCurrency(item.maxPrice, item.currency)}
+              </Text>
+            </View>
+            <View style={styles.priceDivider} />
+            <View style={styles.priceItem}>
+              <Text style={styles.priceLabel}>Moyen</Text>
+              <Text style={[styles.priceValue, styles.avgPrice]}>
+                {formatCurrency(item.avgPrice, item.currency)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.storesList}>
+          <Text style={styles.storesTitle}>Meilleurs prix:</Text>
+          {item.prices
+            .sort((a, b) => a.price - b.price)
+            .slice(0, 3)
+            .map((price, index) => (
+              <View key={index} style={styles.storePrice}>
+                <View style={styles.storeInfo}>
+                  <Icon name="location" size="xs" color={Colors.text.tertiary} />
+                  <Text style={styles.storeName}>{price.storeName}</Text>
+                </View>
+                <Text style={styles.storePriceValue}>
+                  {formatCurrency(price.price, price.currency)}
+                </Text>
+              </View>
+            ))}
+          {item.prices.length > 3 && (
+            <Text style={styles.moreStores}>
+              +{item.prices.length - 3} autres...
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
+    </SlideIn>
   );
 
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary[500]} />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Chargement des articles...</Text>
         </View>
       </SafeAreaView>
@@ -220,26 +236,39 @@ export function ItemsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Articles</Text>
-        <Text style={styles.subtitle}>Comparez les prix de vos achats</Text>
-      </View>
+      <FadeIn>
+        <View style={styles.header}>
+          <Text style={styles.title}>Articles</Text>
+          <Text style={styles.subtitle}>Comparez les prix de vos achats</Text>
+        </View>
+      </FadeIn>
 
       <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Rechercher un article..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholderTextColor={COLORS.gray[400]}
-        />
+        <View style={styles.searchWrapper}>
+          <Icon name="search" size="sm" color={Colors.text.tertiary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Rechercher un article..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor={Colors.text.tertiary}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Icon name="close" size="sm" color={Colors.text.tertiary} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <View style={styles.statsContainer}>
-        <Text style={styles.statsText}>
-          {filteredItems.length} article{filteredItems.length > 1 ? 's' : ''}{' '}
-          trouvé{filteredItems.length > 1 ? 's' : ''}
-        </Text>
+        <View style={styles.statsBadge}>
+          <Icon name="grid" size="xs" color={Colors.primary} />
+          <Text style={styles.statsText}>
+            {filteredItems.length} article{filteredItems.length > 1 ? 's' : ''}{' '}
+            trouvé{filteredItems.length > 1 ? 's' : ''}
+          </Text>
+        </View>
       </View>
 
       <FlatList
@@ -250,10 +279,18 @@ export function ItemsScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
+            <View style={styles.emptyIconWrapper}>
+              <Icon name="search" size="xl" color={Colors.text.tertiary} />
+            </View>
+            <Text style={styles.emptyTitle}>
               {searchQuery
                 ? 'Aucun article trouvé'
                 : 'Aucun article disponible'}
+            </Text>
+            <Text style={styles.emptyText}>
+              {searchQuery
+                ? 'Essayez un autre terme de recherche'
+                : 'Scannez des factures pour voir vos articles ici'}
             </Text>
           </View>
         }
@@ -265,128 +302,178 @@ export function ItemsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.gray[50],
+    backgroundColor: Colors.background.primary,
   },
   header: {
-    padding: 20,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[200],
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
-    marginBottom: 4,
+    fontSize: Typography.fontSize['3xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   subtitle: {
-    fontSize: 16,
-    color: COLORS.gray[600],
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.secondary,
   },
   searchContainer: {
-    padding: 20,
-    backgroundColor: '#ffffff',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+  },
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    ...Shadows.sm,
   },
   searchInput: {
-    backgroundColor: COLORS.gray[100],
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: COLORS.gray[200],
+    flex: 1,
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.primary,
+    marginLeft: Spacing.sm,
+    paddingVertical: Spacing.sm,
   },
   statsContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[200],
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
+  },
+  statsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
   },
   statsText: {
-    fontSize: 14,
-    color: COLORS.gray[600],
-    fontWeight: '500',
+    fontSize: Typography.fontSize.sm,
+    color: Colors.primary,
+    fontWeight: Typography.fontWeight.medium,
   },
   listContainer: {
-    padding: 20,
+    padding: Spacing.lg,
+    paddingBottom: Spacing['3xl'],
   },
   itemCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+    ...Shadows.md,
   },
   itemHeader: {
-    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  itemIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  itemInfo: {
+    flex: 1,
   },
   itemName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.gray[900],
-    marginBottom: 4,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
+    marginBottom: 2,
   },
   itemStats: {
-    fontSize: 14,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.tertiary,
   },
   priceInfo: {
-    marginBottom: 12,
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
   },
   priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+  },
+  priceItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  priceDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: Colors.border.light,
   },
   priceLabel: {
-    fontSize: 14,
-    color: COLORS.gray[600],
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
+    marginBottom: Spacing.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   priceValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.gray[900],
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+  },
+  priceMin: {
+    color: Colors.status.success,
+  },
+  priceMax: {
+    color: Colors.status.error,
   },
   avgPrice: {
-    color: COLORS.primary[600],
+    color: Colors.primary,
   },
   storesList: {
     borderTopWidth: 1,
-    borderTopColor: COLORS.gray[200],
-    paddingTop: 12,
+    borderTopColor: Colors.border.light,
+    paddingTop: Spacing.md,
   },
   storesTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.gray[900],
-    marginBottom: 8,
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
   },
   storePrice: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
+  },
+  storeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: Spacing.xs,
   },
   storeName: {
-    fontSize: 14,
-    color: COLORS.gray[700],
-    flex: 1,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
   },
   storePriceValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.primary[600],
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.status.success,
   },
   moreStores: {
-    fontSize: 12,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
     fontStyle: 'italic',
-    marginTop: 4,
+    marginTop: Spacing.xs,
   },
   loadingContainer: {
     flex: 1,
@@ -394,19 +481,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: COLORS.gray[600],
+    marginTop: Spacing.md,
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.secondary,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: Spacing['3xl'],
+  },
+  emptyIconWrapper: {
+    width: 80,
+    height: 80,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.background.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
   },
   emptyText: {
-    fontSize: 16,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.tertiary,
     textAlign: 'center',
+    maxWidth: 250,
   },
 });

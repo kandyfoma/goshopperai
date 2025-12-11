@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -16,6 +17,10 @@ import auth from '@react-native-firebase/auth';
 import {RootStackParamList, Receipt, ReceiptItem} from '@/shared/types';
 import {COLORS} from '@/shared/utils/constants';
 import {formatCurrency, formatDate} from '@/shared/utils/helpers';
+import {receiptStorageService} from '@/shared/services/firebase';
+import {useAuth} from '@/shared/contexts';
+import {useToast} from '@/shared/contexts';
+import {Spinner} from '@/shared/components';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type ReceiptDetailRouteProp = RouteProp<RootStackParamList, 'ReceiptDetail'>;
@@ -23,6 +28,8 @@ type ReceiptDetailRouteProp = RouteProp<RootStackParamList, 'ReceiptDetail'>;
 export function ReceiptDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ReceiptDetailRouteProp>();
+  const {user} = useAuth();
+  const {showToast} = useToast();
   const {receiptId} = route.params;
 
   const [receipt, setReceipt] = useState<Receipt | null>(null);
@@ -64,6 +71,7 @@ export function ReceiptDetailScreen() {
             storeNameNormalized: data.storeNameNormalized || '',
             storeAddress: data.storeAddress,
             storePhone: data.storePhone,
+            city: data.city,
             receiptNumber: data.receiptNumber,
             date: data.date
               ? new Date(data.date)
@@ -88,6 +96,55 @@ export function ReceiptDetailScreen() {
             updatedAt: data.updatedAt?.toDate() || new Date(),
             scannedAt: data.scannedAt?.toDate() || new Date(),
           });
+
+          // Detect city if not set
+          if (!data.city && data.storeName) {
+            const detectedCity = await receiptStorageService.detectCityFromStore(data.storeName);
+            if (detectedCity) {
+              const userProfile = await authService.getUserProfile(userId);
+              const userCity = userProfile?.defaultCity;
+
+              if (detectedCity !== userCity) {
+                // Ask user to confirm
+                Alert.alert(
+                  'Ville détectée',
+                  `Le reçu semble provenir de ${detectedCity}, mais votre ville par défaut est ${userCity || 'non définie'}. Voulez-vous enregistrer ce reçu dans ${detectedCity} ?`,
+                  [
+                    {
+                      text: 'Utiliser ma ville',
+                      onPress: () => {
+                        if (userCity) {
+                          receiptStorageService.updateReceiptCity(receiptDoc.id, userId, userCity);
+                          setReceipt(prev => prev ? {...prev, city: userCity} : null);
+                          showToast(`Reçu enregistré dans ${userCity}`, 'success');
+                        }
+                      },
+                    },
+                    {
+                      text: 'Utiliser la ville détectée',
+                      onPress: () => {
+                        receiptStorageService.updateReceiptCity(receiptDoc.id, userId, detectedCity);
+                        setReceipt(prev => prev ? {...prev, city: detectedCity} : null);
+                        showToast(`Reçu enregistré dans ${detectedCity}`, 'success');
+                      },
+                    },
+                  ],
+                );
+              } else {
+                // Same city, just set it
+                await receiptStorageService.updateReceiptCity(receiptDoc.id, userId, detectedCity);
+                setReceipt(prev => prev ? {...prev, city: detectedCity} : null);
+              }
+            } else {
+              // No city detected, use user's default
+              const userProfile = await authService.getUserProfile(userId);
+              const userCity = userProfile?.defaultCity;
+              if (userCity) {
+                await receiptStorageService.updateReceiptCity(receiptDoc.id, userId, userCity);
+                setReceipt(prev => prev ? {...prev, city: userCity} : null);
+              }
+            }
+          }
         }
       } catch (err) {
         console.error('Error fetching receipt:', err);
@@ -108,7 +165,7 @@ export function ReceiptDetailScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loading}>
-          <ActivityIndicator size="large" color={COLORS.primary[500]} />
+          <Spinner size="large" color={COLORS.primary[500]} />
           <Text style={styles.loadingText}>Chargement du reçu...</Text>
         </View>
       </SafeAreaView>

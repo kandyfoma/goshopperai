@@ -1,6 +1,7 @@
 // Home Screen - Main landing page optimized for ease of use
 // Designed for Congolese housewives - simple, visual, large buttons
-import React, {useEffect} from 'react';
+// Styled with GoShopperAI Design System (Blue + Gold)
+import React, {useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -9,17 +10,163 @@ import {
   ScrollView,
   SafeAreaView,
   Dimensions,
+  Animated,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {useSubscription, useAuth, useUser} from '@/shared/contexts';
-import {COLORS} from '@/shared/utils/constants';
+import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {Icon, IconBox, Card, FadeIn, SlideIn, Stagger} from '@/shared/components';
 import {analyticsService} from '@/shared/services';
 
 const {width} = Dimensions.get('window');
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+// Animated Scan Button with Pulse Effect
+const AnimatedScanButton = ({onPress, disabled}: {onPress: () => void; disabled: boolean}) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const pulseOpacity = useRef(new Animated.Value(0.6)).current;
+
+  useEffect(() => {
+    // Continuous pulse animation
+    const pulse = Animated.loop(
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.15,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.sequence([
+          Animated.timing(pulseOpacity, {
+            toValue: 0,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseOpacity, {
+            toValue: 0.6,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, []);
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <View style={styles.scanButtonWrapper}>
+      {/* Pulse ring effect */}
+      <Animated.View
+        style={[
+          styles.pulseRing,
+          {
+            transform: [{scale: pulseAnim}],
+            opacity: pulseOpacity,
+          },
+        ]}
+      />
+      <Animated.View style={{transform: [{scale: scaleAnim}]}}>
+        <TouchableOpacity
+          style={[
+            styles.mainScanButton,
+            disabled && styles.mainScanButtonDisabled,
+          ]}
+          onPress={onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          activeOpacity={1}>
+          <View style={styles.scanButtonContent}>
+            <View style={styles.scanIconContainer}>
+              <Icon name="camera" size="3xl" color={Colors.white} />
+            </View>
+            <Text style={styles.scanButtonTitle}>SCANNER</Text>
+            <Text style={styles.scanButtonTitleLingala}>Zwa foto</Text>
+            <Text style={styles.scanButtonSubtitle}>
+              Appuyez ici pour scanner
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
+};
+
+// Quick Action Card Component
+const QuickActionCard = ({
+  icon,
+  title,
+  subtitle,
+  onPress,
+  delay = 0,
+}: {
+  icon: string;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+  delay?: number;
+}) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+      tension: 100,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 100,
+    }).start();
+  };
+
+  return (
+    <SlideIn direction="up" delay={delay}>
+      <Animated.View style={{transform: [{scale: scaleAnim}], flex: 1}}>
+        <TouchableOpacity
+          style={styles.quickActionCard}
+          onPress={onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          activeOpacity={1}>
+          <View style={styles.quickActionIconWrapper}>
+            <Icon name={icon} size="lg" color={Colors.primary} />
+          </View>
+          <Text style={styles.quickActionTitle}>{title}</Text>
+          <Text style={styles.quickActionSubtitle}>{subtitle}</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </SlideIn>
+  );
+};
 
 export function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -28,7 +175,6 @@ export function HomeScreen() {
   const {profile: userProfile} = useUser();
 
   useEffect(() => {
-    // Track screen view
     analyticsService.logScreenView('Home', 'HomeScreen');
   }, []);
 
@@ -39,237 +185,228 @@ export function HomeScreen() {
       return;
     }
 
-    // Check if user has set their city
     if (!userProfile?.defaultCity) {
       analyticsService.logCustomEvent('scan_redirect_city_selection');
       navigation.navigate('CitySelection');
       return;
     }
 
-    // User has city set, proceed to scanner
     analyticsService.logCustomEvent('scan_started');
     navigation.navigate('Scanner');
   };
 
   const isSubscribed = subscription?.isSubscribed;
 
-  // Get greeting based on time of day
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return {fr: 'Bonjour !', lingala: 'Mbote!'};
-    if (hour < 18) return {fr: 'Bon après-midi !', lingala: 'Mbote!'};
-    return {fr: 'Bonsoir !', lingala: 'Mbote na butu!'};
+    if (hour < 12) return {fr: 'Bonjour', lingala: 'Mbote'};
+    if (hour < 18) return {fr: 'Bon après-midi', lingala: 'Mbote'};
+    return {fr: 'Bonsoir', lingala: 'Mbote na butu'};
   };
 
   const greeting = getGreeting();
+  const userName = userProfile?.displayName?.split(' ')[0] || '';
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        {/* Greeting Header */}
-        <View style={styles.header}>
-          <View style={styles.greetingContainer}>
-            <Text style={styles.greeting}>{greeting.fr}</Text>
-            <Text style={styles.greetingLingala}>{greeting.lingala}</Text>
+        {/* Header */}
+        <FadeIn delay={0}>
+          <View style={styles.header}>
+            <View style={styles.greetingContainer}>
+              <Text style={styles.greeting}>
+                {greeting.fr}{userName ? `, ${userName}` : ''} 👋
+              </Text>
+              <Text style={styles.greetingLingala}>{greeting.lingala}</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.profileButton}
+              onPress={() => navigation.navigate('Main', {screen: 'Profile'} as any)}>
+              <Icon name="user" size="md" color={Colors.primary} />
+            </TouchableOpacity>
           </View>
-          <View style={styles.logoContainer}>
-            <Text style={styles.logo}>🛒</Text>
+        </FadeIn>
+
+        {/* Trial Status Card */}
+        {isTrialActive && (
+          <SlideIn direction="right" delay={100}>
+            <View style={styles.statusCard}>
+              <View style={styles.statusIconContainer}>
+                <Icon name="gift" size="lg" color={Colors.accent} variant="filled" />
+              </View>
+              <View style={styles.statusTextContainer}>
+                <Text style={styles.statusTitle}>Essai gratuit actif</Text>
+                <Text style={styles.statusSubtitle}>
+                  {trialDaysRemaining > 0
+                    ? `${trialDaysRemaining} jours restants`
+                    : 'Dernière journée !'}
+                </Text>
+              </View>
+              <View style={styles.statusBadge}>
+                <Text style={styles.statusBadgeText}>GRATUIT</Text>
+              </View>
+            </View>
+          </SlideIn>
+        )}
+
+        {/* Premium Status Card */}
+        {isSubscribed && (
+          <SlideIn direction="right" delay={100}>
+            <View style={[styles.statusCard, styles.statusCardPremium]}>
+              <View style={[styles.statusIconContainer, styles.statusIconPremium]}>
+                <Icon name="star" size="lg" color={Colors.white} variant="filled" />
+              </View>
+              <View style={styles.statusTextContainer}>
+                <Text style={styles.statusTitle}>Abonné Premium</Text>
+                <Text style={styles.statusSubtitle}>Scans illimités</Text>
+              </View>
+              <View style={[styles.statusBadge, styles.statusBadgePremium]}>
+                <Text style={styles.statusBadgeText}>PRO</Text>
+              </View>
+            </View>
+          </SlideIn>
+        )}
+
+        {/* Main Scan Button */}
+        <FadeIn delay={200}>
+          <AnimatedScanButton onPress={handleScanPress} disabled={!canScan} />
+        </FadeIn>
+
+        {/* How it works - Steps */}
+        <FadeIn delay={300}>
+          <View style={styles.guideSection}>
+            <Text style={styles.sectionTitle}>Comment ça marche ?</Text>
+            <View style={styles.stepsContainer}>
+              <View style={styles.stepCard}>
+                <View style={[styles.stepNumber, {backgroundColor: Colors.primary}]}>
+                  <Text style={styles.stepNumberText}>1</Text>
+                </View>
+                <Icon name="camera" size="xl" color={Colors.primary} />
+                <Text style={styles.stepTitle}>Photo</Text>
+                <Text style={styles.stepDesc}>Prenez en photo</Text>
+              </View>
+
+              <View style={styles.stepConnector}>
+                <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} />
+              </View>
+
+              <View style={styles.stepCard}>
+                <View style={[styles.stepNumber, {backgroundColor: Colors.accent}]}>
+                  <Text style={styles.stepNumberText}>2</Text>
+                </View>
+                <Icon name="search" size="xl" color={Colors.accent} />
+                <Text style={styles.stepTitle}>Analyse</Text>
+                <Text style={styles.stepDesc}>IA lit les prix</Text>
+              </View>
+
+              <View style={styles.stepConnector}>
+                <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} />
+              </View>
+
+              <View style={styles.stepCard}>
+                <View style={[styles.stepNumber, {backgroundColor: Colors.status.success}]}>
+                  <Text style={styles.stepNumberText}>3</Text>
+                </View>
+                <Icon name="trending-down" size="xl" color={Colors.status.success} />
+                <Text style={styles.stepTitle}>Économies</Text>
+                <Text style={styles.stepDesc}>Meilleurs prix</Text>
+              </View>
+            </View>
           </View>
+        </FadeIn>
+
+        {/* Quick Actions Section */}
+        <Text style={styles.sectionTitle}>Actions rapides</Text>
+
+        {/* Row 1 */}
+        <View style={styles.quickActionsRow}>
+          <QuickActionCard
+            icon="file-text"
+            title="Longue facture"
+            subtitle="Multi-photos"
+            onPress={() => navigation.navigate('MultiPhotoScanner')}
+            delay={400}
+          />
+          <QuickActionCard
+            icon="clock"
+            title="Historique"
+            subtitle="Mes factures"
+            onPress={() => navigation.navigate('Main', {screen: 'History'} as any)}
+            delay={450}
+          />
         </View>
 
-        {/* Trial/Subscription Status - Very visible */}
-        {isTrialActive && (
-          <View style={styles.statusCard}>
-            <View style={styles.statusIconContainer}>
-              <Text style={styles.statusIcon}>🎁</Text>
+        {/* Row 2 */}
+        <View style={styles.quickActionsRow}>
+          <QuickActionCard
+            icon="stats"
+            title="Statistiques"
+            subtitle="Mes dépenses"
+            onPress={() => navigation.navigate('Main', {screen: 'Stats'} as any)}
+            delay={500}
+          />
+          <QuickActionCard
+            icon="star"
+            title="Premium"
+            subtitle="Plus de scans"
+            onPress={() => navigation.navigate('Subscription')}
+            delay={550}
+          />
+        </View>
+
+        {/* Row 3 - New Features */}
+        <View style={styles.quickActionsRow}>
+          <QuickActionCard
+            icon="bell"
+            title="Alertes Prix"
+            subtitle="Suivre les prix"
+            onPress={() => navigation.navigate('PriceAlerts')}
+            delay={600}
+          />
+          <QuickActionCard
+            icon="cart"
+            title="Liste Courses"
+            subtitle="Oyo ya kosomba"
+            onPress={() => navigation.navigate('ShoppingList')}
+            delay={650}
+          />
+        </View>
+
+        {/* Row 4 - AI & Achievements */}
+        <View style={styles.quickActionsRow}>
+          <QuickActionCard
+            icon="help"
+            title="Assistant IA"
+            subtitle="Poser questions"
+            onPress={() => navigation.navigate('AIAssistant')}
+            delay={700}
+          />
+          <QuickActionCard
+            icon="trophy"
+            title="Mes Succès"
+            subtitle="Voir progrès"
+            onPress={() => navigation.navigate('Achievements')}
+            delay={750}
+          />
+        </View>
+
+        {/* Help Card */}
+        <SlideIn direction="up" delay={800}>
+          <TouchableOpacity style={styles.helpCard} activeOpacity={0.7}>
+            <View style={styles.helpIconWrapper}>
+              <Icon name="help" size="md" color={Colors.primary} />
             </View>
-            <View style={styles.statusTextContainer}>
-              <Text style={styles.statusTitle}>Essai gratuit actif</Text>
-              <Text style={styles.statusSubtitle}>
-                {trialDaysRemaining > 0
-                  ? `${trialDaysRemaining} jours restants • Scans illimités`
-                  : 'Dernière journée !'}
+            <View style={styles.helpTextContainer}>
+              <Text style={styles.helpTitle}>Besoin d'aide ?</Text>
+              <Text style={styles.helpSubtitle}>
+                Appuyez pour voir le guide complet
               </Text>
             </View>
-          </View>
-        )}
-
-        {isSubscribed && (
-          <View style={[styles.statusCard, styles.statusCardPremium]}>
-            <View style={styles.statusIconContainer}>
-              <Text style={styles.statusIcon}>⭐</Text>
-            </View>
-            <View style={styles.statusTextContainer}>
-              <Text style={styles.statusTitle}>Abonné Premium</Text>
-              <Text style={styles.statusSubtitle}>Scans illimités</Text>
-            </View>
-          </View>
-        )}
-
-        {/* MAIN SCAN BUTTON - Very large and prominent */}
-        <TouchableOpacity
-          style={[
-            styles.mainScanButton,
-            !canScan && styles.mainScanButtonDisabled,
-          ]}
-          onPress={handleScanPress}
-          activeOpacity={0.8}>
-          <View style={styles.scanButtonContent}>
-            <Text style={styles.scanButtonIcon}>📸</Text>
-            <Text style={styles.scanButtonTitle}>SCANNER</Text>
-            <Text style={styles.scanButtonTitleLingala}>Zwa foto</Text>
-            <Text style={styles.scanButtonSubtitle}>
-              Appuyez ici pour prendre une photo
-            </Text>
-          </View>
-
-          {/* Pulse animation hint */}
-          <View style={styles.pulseRing} />
-        </TouchableOpacity>
-
-        {/* Simple 3-step guide */}
-        <View style={styles.guideSection}>
-          <Text style={styles.guideSectionTitle}>Comment utiliser ?</Text>
-
-          <View style={styles.stepsContainer}>
-            <View style={styles.stepCard}>
-              <View style={[styles.stepNumber, {backgroundColor: '#10b981'}]}>
-                <Text style={styles.stepNumberText}>1</Text>
-              </View>
-              <Text style={styles.stepIcon}>📷</Text>
-              <Text style={styles.stepTitle}>Photo</Text>
-              <Text style={styles.stepDesc}>Photographiez votre ticket</Text>
-            </View>
-
-            <View style={styles.stepArrow}>
-              <Text style={styles.stepArrowText}>→</Text>
-            </View>
-
-            <View style={styles.stepCard}>
-              <View style={[styles.stepNumber, {backgroundColor: '#6366f1'}]}>
-                <Text style={styles.stepNumberText}>2</Text>
-              </View>
-              <Text style={styles.stepIcon}>🤖</Text>
-              <Text style={styles.stepTitle}>Analyse</Text>
-              <Text style={styles.stepDesc}>L'IA lit les prix</Text>
-            </View>
-
-            <View style={styles.stepArrow}>
-              <Text style={styles.stepArrowText}>→</Text>
-            </View>
-
-            <View style={styles.stepCard}>
-              <View style={[styles.stepNumber, {backgroundColor: '#f59e0b'}]}>
-                <Text style={styles.stepNumberText}>3</Text>
-              </View>
-              <Text style={styles.stepIcon}>💰</Text>
-              <Text style={styles.stepTitle}>Économies</Text>
-              <Text style={styles.stepDesc}>Voyez les meilleurs prix</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Quick Actions - Large touch targets */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.quickActionCard}
-            onPress={() => navigation.navigate('MultiPhotoScanner')}
-            activeOpacity={0.7}>
-            <Text style={styles.quickActionIcon}>📄</Text>
-            <Text style={styles.quickActionTitle}>Longue facture</Text>
-            <Text style={styles.quickActionSubtitle}>Mokanda molai</Text>
+            <Icon name="chevron-right" size="md" color={Colors.text.tertiary} />
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickActionCard}
-            onPress={() =>
-              navigation.navigate('Main', {screen: 'History'} as any)
-            }
-            activeOpacity={0.7}>
-            <Text style={styles.quickActionIcon}>📋</Text>
-            <Text style={styles.quickActionTitle}>Mes factures</Text>
-            <Text style={styles.quickActionSubtitle}>Voir l'historique</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* More Quick Actions Row 2 */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.quickActionCard}
-            onPress={() =>
-              navigation.navigate('Main', {screen: 'Stats'} as any)
-            }
-            activeOpacity={0.7}>
-            <Text style={styles.quickActionIcon}>📊</Text>
-            <Text style={styles.quickActionTitle}>Mes dépenses</Text>
-            <Text style={styles.quickActionSubtitle}>Voir les stats</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickActionCard}
-            onPress={() => navigation.navigate('Subscription')}
-            activeOpacity={0.7}>
-            <Text style={styles.quickActionIcon}>⭐</Text>
-            <Text style={styles.quickActionTitle}>Premium</Text>
-            <Text style={styles.quickActionSubtitle}>Plus de scans</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Phase 1.1 & 1.2 Features Row */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.quickActionCard}
-            onPress={() => navigation.navigate('PriceAlerts')}
-            activeOpacity={0.7}>
-            <Text style={styles.quickActionIcon}>🔔</Text>
-            <Text style={styles.quickActionTitle}>Alertes Prix</Text>
-            <Text style={styles.quickActionSubtitle}>Suivre les prix</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickActionCard}
-            onPress={() => navigation.navigate('ShoppingList')}
-            activeOpacity={0.7}>
-            <Text style={styles.quickActionIcon}>🛒</Text>
-            <Text style={styles.quickActionTitle}>Liste Courses</Text>
-            <Text style={styles.quickActionSubtitle}>Oyo ya kosomba</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* More Phase 1.1 & 1.2 Features Row */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.quickActionCard}
-            onPress={() => navigation.navigate('AIAssistant')}
-            activeOpacity={0.7}>
-            <Text style={styles.quickActionIcon}>🤖</Text>
-            <Text style={styles.quickActionTitle}>Assistant IA</Text>
-            <Text style={styles.quickActionSubtitle}>Poser questions</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickActionCard}
-            onPress={() => navigation.navigate('Achievements')}
-            activeOpacity={0.7}>
-            <Text style={styles.quickActionIcon}>🏆</Text>
-            <Text style={styles.quickActionTitle}>Mes Succès</Text>
-            <Text style={styles.quickActionSubtitle}>Voir progrès</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Help/Support */}
-        <TouchableOpacity style={styles.helpCard} activeOpacity={0.7}>
-          <Text style={styles.helpIcon}>❓</Text>
-          <View style={styles.helpTextContainer}>
-            <Text style={styles.helpTitle}>Besoin d'aide ?</Text>
-            <Text style={styles.helpSubtitle}>
-              Appuyez ici pour voir le guide
-            </Text>
-          </View>
-          <Text style={styles.helpArrow}>→</Text>
-        </TouchableOpacity>
+        </SlideIn>
       </ScrollView>
     </SafeAreaView>
   );
@@ -278,145 +415,163 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0fdf4', // Light green background
+    backgroundColor: Colors.background.secondary,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
+    padding: Spacing.lg,
+    paddingBottom: 120,
   },
+  
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
   },
   greetingContainer: {
     flex: 1,
   },
   greeting: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
   },
   greetingLingala: {
-    fontSize: 16,
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.xs,
     fontStyle: 'italic',
-    color: COLORS.gray[500],
-    marginTop: 2,
   },
-  logoContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: COLORS.primary[100],
+  profileButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.background.secondary,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.border.light,
   },
-  logo: {
-    fontSize: 36,
-  },
+
+  // Status Cards
   statusCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#dcfce7',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
-    borderWidth: 2,
-    borderColor: COLORS.primary[300],
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.base,
+    marginBottom: Spacing.lg,
+    ...Shadows.md,
   },
   statusCardPremium: {
-    backgroundColor: '#fef3c7',
-    borderColor: '#fbbf24',
+    backgroundColor: Colors.primary,
   },
   statusIconContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#ffffff',
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.base,
+    backgroundColor: Colors.status.warningLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: Spacing.md,
   },
-  statusIcon: {
-    fontSize: 28,
+  statusIconPremium: {
+    backgroundColor: Colors.accent,
   },
   statusTextContainer: {
     flex: 1,
   },
   statusTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
     marginBottom: 2,
   },
   statusSubtitle: {
-    fontSize: 14,
-    color: COLORS.gray[600],
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
   },
-  mainScanButton: {
-    backgroundColor: COLORS.primary[500],
-    borderRadius: 24,
-    padding: 32,
+  statusBadge: {
+    backgroundColor: Colors.accent,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+  },
+  statusBadgePremium: {
+    backgroundColor: Colors.accentLight,
+  },
+  statusBadgeText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+  },
+
+  // Main Scan Button
+  scanButtonWrapper: {
     alignItems: 'center',
-    marginBottom: 32,
-    shadowColor: COLORS.primary[600],
-    shadowOffset: {width: 0, height: 8},
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 10,
+    justifyContent: 'center',
+    marginVertical: Spacing.xl,
     position: 'relative',
-    overflow: 'hidden',
-  },
-  mainScanButtonDisabled: {
-    backgroundColor: COLORS.gray[300],
-    shadowColor: COLORS.gray[400],
-  },
-  scanButtonContent: {
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  scanButtonIcon: {
-    fontSize: 72,
-    marginBottom: 16,
-  },
-  scanButtonTitle: {
-    color: '#ffffff',
-    fontSize: 32,
-    fontWeight: 'bold',
-    letterSpacing: 2,
-    marginBottom: 4,
-  },
-  scanButtonTitleLingala: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 18,
-    fontStyle: 'italic',
-    marginBottom: 12,
-  },
-  scanButtonSubtitle: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 16,
-    textAlign: 'center',
   },
   pulseRing: {
     position: 'absolute',
-    top: -10,
-    left: -10,
-    right: -10,
-    bottom: -10,
-    borderRadius: 34,
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.3)',
+    width: width - 80,
+    height: 180,
+    borderRadius: BorderRadius['2xl'],
+    backgroundColor: Colors.primary,
   },
-  guideSection: {
-    marginBottom: 24,
+  mainScanButton: {
+    width: width - 80,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius['2xl'],
+    padding: Spacing['2xl'],
+    alignItems: 'center',
+    ...Shadows.xl,
   },
-  guideSectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
-    marginBottom: 16,
+  mainScanButtonDisabled: {
+    backgroundColor: Colors.border.medium,
+  },
+  scanButtonContent: {
+    alignItems: 'center',
+  },
+  scanIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  scanButtonTitle: {
+    color: Colors.white,
+    fontSize: Typography.fontSize['3xl'],
+    fontWeight: Typography.fontWeight.bold,
+    letterSpacing: 3,
+    marginBottom: Spacing.xs,
+  },
+  scanButtonTitleLingala: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: Typography.fontSize.base,
+    fontStyle: 'italic',
+    marginBottom: Spacing.sm,
+  },
+  scanButtonSubtitle: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: Typography.fontSize.md,
     textAlign: 'center',
+  },
+
+  // Guide Section
+  guideSection: {
+    marginBottom: Spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.md,
   },
   stepsContainer: {
     flexDirection: 'row',
@@ -425,117 +580,111 @@ const styles = StyleSheet.create({
   },
   stepCard: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    ...Shadows.sm,
     position: 'relative',
   },
   stepNumber: {
     position: 'absolute',
-    top: -10,
-    left: -10,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    top: -8,
+    left: -8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepNumberText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  stepIcon: {
-    fontSize: 36,
-    marginBottom: 8,
+    color: Colors.white,
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.bold,
   },
   stepTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.gray[900],
-    marginBottom: 4,
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
+    marginTop: Spacing.sm,
+    marginBottom: 2,
   },
   stepDesc: {
-    fontSize: 11,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
     textAlign: 'center',
   },
-  stepArrow: {
-    paddingHorizontal: 4,
+  stepConnector: {
+    paddingHorizontal: Spacing.xs,
   },
-  stepArrowText: {
-    fontSize: 20,
-    color: COLORS.gray[300],
-    fontWeight: 'bold',
-  },
-  quickActions: {
+
+  // Quick Actions
+  quickActionsRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
+    gap: Spacing.md,
+    marginBottom: Spacing.md,
   },
   quickActionCard: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    ...Shadows.sm,
   },
-  quickActionIcon: {
-    fontSize: 40,
-    marginBottom: 12,
+  quickActionIconWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: BorderRadius.base,
+    backgroundColor: Colors.background.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
   },
   quickActionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.gray[900],
-    marginBottom: 4,
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
+    marginBottom: 2,
   },
   quickActionSubtitle: {
-    fontSize: 12,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.tertiary,
   },
+
+  // Help Card
   helpCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.base,
+    marginTop: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
     borderStyle: 'dashed',
   },
-  helpIcon: {
-    fontSize: 32,
-    marginRight: 16,
+  helpIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.base,
+    backgroundColor: Colors.background.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
   },
   helpTextContainer: {
     flex: 1,
   },
   helpTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.gray[900],
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
     marginBottom: 2,
   },
   helpSubtitle: {
-    fontSize: 13,
-    color: COLORS.gray[500],
-  },
-  helpArrow: {
-    fontSize: 20,
-    color: COLORS.gray[400],
-    fontWeight: 'bold',
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.tertiary,
   },
 });
 

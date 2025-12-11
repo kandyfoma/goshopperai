@@ -16,8 +16,10 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {useSubscription, useAuth} from '@/shared/contexts';
+import {useToast} from '@/shared/contexts';
 import {cameraService, imageCompressionService} from '@/shared/services/camera';
 import {COLORS} from '@/shared/utils/constants';
+import {Spinner} from '@/shared/components';
 import functions from '@react-native-firebase/functions';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -37,6 +39,7 @@ export function MultiPhotoScannerScreen() {
   const navigation = useNavigation<NavigationProp>();
   const {user} = useAuth();
   const {canScan, recordScan} = useSubscription();
+  const {showToast} = useToast();
 
   const [photos, setPhotos] = useState<CapturedPhoto[]>([]);
   const [state, setState] = useState<ScanState>('capturing');
@@ -47,10 +50,7 @@ export function MultiPhotoScannerScreen() {
   const handleAddPhoto = useCallback(
     async (fromGallery: boolean = false) => {
       if (photos.length >= MAX_PHOTOS) {
-        Alert.alert(
-          'Limite atteinte',
-          `Maximum ${MAX_PHOTOS} photos par facture`,
-        );
+        showToast(`Maximum ${MAX_PHOTOS} photos par facture`, 'warning');
         return;
       }
 
@@ -127,7 +127,7 @@ export function MultiPhotoScannerScreen() {
     }
 
     if (photos.length === 0) {
-      Alert.alert('Erreur', 'Prenez au moins une photo');
+      showToast('Prenez au moins une photo', 'error');
       return;
     }
 
@@ -209,7 +209,7 @@ export function MultiPhotoScannerScreen() {
           {index < processingIndex ? (
             <Text style={styles.thumbnailStatusDone}>✓</Text>
           ) : index === processingIndex ? (
-            <ActivityIndicator color="#ffffff\" size="small" />
+            <Spinner size="small" color="#ffffff" />
           ) : (
             <Text style={styles.thumbnailStatusPending}>○</Text>
           )}

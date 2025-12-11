@@ -13,7 +13,8 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
-import {COLORS} from '@/shared/utils/constants';
+import {Colors, Typography, Spacing, BorderRadius} from '@/shared/theme/theme';
+import {Icon} from '@/shared/components';
 
 const {width} = Dimensions.get('window');
 
@@ -21,7 +22,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface OnboardingSlide {
   id: string;
-  icon: string;
+  iconName: string;
   title: string;
   titleLingala?: string;
   description: string;
@@ -32,41 +33,41 @@ interface OnboardingSlide {
 const SLIDES: OnboardingSlide[] = [
   {
     id: '1',
-    icon: '👋',
+    iconName: 'hand',
     title: 'Bienvenue !',
     titleLingala: 'Boyei malamu!',
     description: 'GoShopperAI vous aide à faire des économies sur vos achats',
     descriptionLingala:
       'GoShopperAI ekosalisa yo okoba mbongo na bisombi na yo',
-    backgroundColor: COLORS.primary[500],
+    backgroundColor: Colors.primary,
   },
   {
     id: '2',
-    icon: '📸',
+    iconName: 'camera',
     title: 'Prenez une photo',
     titleLingala: 'Zwa foto',
     description: 'Photographiez simplement votre ticket de caisse ou facture',
     descriptionLingala: 'Zwa foto ya ticket to facture na yo',
-    backgroundColor: '#10b981',
+    backgroundColor: Colors.status.success,
   },
   {
     id: '3',
-    icon: '🤖',
+    iconName: 'sparkles',
     title: "L'IA analyse tout",
     titleLingala: 'IA etaleli nyonso',
     description:
       'Notre intelligence artificielle lit automatiquement tous les prix',
     descriptionLingala: 'Intelligence artificielle etangi ntalo nyonso',
-    backgroundColor: '#6366f1',
+    backgroundColor: Colors.primaryLight,
   },
   {
     id: '4',
-    icon: '💰',
+    iconName: 'wallet',
     title: 'Économisez !',
     titleLingala: 'Bomba mbongo!',
     description: 'Comparez les prix et trouvez les meilleures offres',
     descriptionLingala: 'Talela ntalo mpe zwa oyo ya malamu koleka',
-    backgroundColor: '#f59e0b',
+    backgroundColor: Colors.accent,
   },
 ];
 
@@ -100,7 +101,9 @@ export function WelcomeScreen() {
   const renderSlide = ({item}: {item: OnboardingSlide}) => (
     <View style={[styles.slide, {backgroundColor: item.backgroundColor}]}>
       <View style={styles.slideContent}>
-        <Text style={styles.slideIcon}>{item.icon}</Text>
+        <View style={styles.iconContainer}>
+          <Icon name={item.iconName} size="3xl" color={Colors.white} variant="filled" />
+        </View>
         <Text style={styles.slideTitle}>{item.title}</Text>
         {item.titleLingala && (
           <Text style={styles.slideTitleLingala}>{item.titleLingala}</Text>
@@ -166,15 +169,22 @@ export function WelcomeScreen() {
             style={[styles.nextButton, isLastSlide && styles.startButton]}
             onPress={handleNext}
             activeOpacity={0.8}>
-            <Text style={styles.nextButtonText}>
-              {isLastSlide ? '🚀 Commencer !' : 'Suivant →'}
-            </Text>
+            <View style={styles.buttonContent}>
+              <Text style={styles.nextButtonText}>
+                {isLastSlide ? 'Commencer !' : 'Suivant'}
+              </Text>
+              <Icon 
+                name={isLastSlide ? 'rocket' : 'chevron-right'} 
+                size="md" 
+                color={Colors.primary} 
+              />
+            </View>
           </TouchableOpacity>
         </View>
 
         {/* Trial info */}
         <View style={styles.trialInfo}>
-          <Text style={styles.trialIcon}>🎁</Text>
+          <Icon name="gift" size="md" color={Colors.white} />
           <Text style={styles.trialText}>
             2 mois gratuits • Aucune carte requise
           </Text>
@@ -187,94 +197,99 @@ export function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.primary[500],
+    backgroundColor: Colors.primary,
   },
   slide: {
     width,
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: Spacing['2xl'],
   },
   slideContent: {
     alignItems: 'center',
   },
-  slideIcon: {
-    fontSize: 100,
-    marginBottom: 32,
+  iconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing['2xl'],
   },
   slideTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#ffffff',
+    fontSize: Typography.fontSize['3xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.white,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   slideTitleLingala: {
-    fontSize: 20,
+    fontSize: Typography.fontSize.xl,
     fontStyle: 'italic',
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
   },
   slideDescription: {
-    fontSize: 18,
+    fontSize: Typography.fontSize.lg,
     color: 'rgba(255,255,255,0.9)',
     textAlign: 'center',
     lineHeight: 26,
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   slideDescriptionLingala: {
-    fontSize: 14,
+    fontSize: Typography.fontSize.md,
     fontStyle: 'italic',
     color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
     lineHeight: 22,
   },
   bottomSection: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing['2xl'],
     backgroundColor: 'rgba(0,0,0,0.1)',
   },
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 24,
-    marginTop: 16,
+    marginBottom: Spacing.xl,
+    marginTop: Spacing.base,
   },
   dot: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: BorderRadius.full,
     backgroundColor: 'rgba(255,255,255,0.4)',
     marginHorizontal: 6,
   },
   dotActive: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.white,
     width: 24,
   },
   buttonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
   },
   skipButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
+    paddingVertical: Spacing.base,
+    paddingHorizontal: Spacing.xl,
   },
   skipButtonText: {
     color: 'rgba(255,255,255,0.8)',
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.medium,
   },
   nextButton: {
-    backgroundColor: '#ffffff',
-    paddingVertical: 18,
-    paddingHorizontal: 40,
-    borderRadius: 30,
+    backgroundColor: Colors.white,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing['2xl'],
+    borderRadius: BorderRadius['2xl'],
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: Colors.black,
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -283,10 +298,16 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 0,
   },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+  },
   nextButtonText: {
-    color: COLORS.primary[600],
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: Colors.primary,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
     textAlign: 'center',
   },
   trialInfo: {
@@ -294,18 +315,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-  },
-  trialIcon: {
-    fontSize: 20,
-    marginRight: 8,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.xl,
+    gap: Spacing.sm,
   },
   trialText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '500',
+    color: Colors.white,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.medium,
   },
 });
 

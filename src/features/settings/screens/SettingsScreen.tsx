@@ -1,4 +1,5 @@
 // Settings Screen - App settings and profile
+// Styled with GoShopperAI Design System (Blue + Gold)
 import React from 'react';
 import {
   View,
@@ -15,11 +16,9 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useAuth, useUser, useSubscription, useTheme} from '@/shared/contexts';
 import {RootStackParamList} from '@/shared/types';
-import {
-  COLORS,
-  SUBSCRIPTION_PLANS,
-  TRIAL_SCAN_LIMIT,
-} from '@/shared/utils/constants';
+import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {Icon, FadeIn, SlideIn} from '@/shared/components';
+import {SUBSCRIPTION_PLANS, TRIAL_SCAN_LIMIT} from '@/shared/utils/constants';
 import {formatDate} from '@/shared/utils/helpers';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -49,7 +48,9 @@ function SettingItem({
       onPress={onPress}
       disabled={!onPress}
       activeOpacity={onPress ? 0.7 : 1}>
-      <Text style={styles.settingIcon}>{icon}</Text>
+      <View style={[styles.settingIconWrapper, danger && styles.settingIconWrapperDanger]}>
+        <Icon name={icon} size="sm" color={danger ? Colors.status.error : Colors.primary} />
+      </View>
       <View style={styles.settingContent}>
         <Text
           style={[styles.settingTitle, danger && styles.settingTitleDanger]}>
@@ -58,7 +59,7 @@ function SettingItem({
         {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
       </View>
       {rightElement}
-      {showArrow && onPress && <Text style={styles.settingArrow}>›</Text>}
+      {showArrow && onPress && <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} />}
     </TouchableOpacity>
   );
 }
@@ -166,171 +167,206 @@ export function SettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <FadeIn>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Paramètres</Text>
+          <Text style={styles.headerSubtitle}>Gérez votre compte</Text>
+        </View>
+      </FadeIn>
+      
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}>
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
         {/* Profile Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.profileAvatar}>
-            <Text style={styles.profileAvatarText}>👤</Text>
+        <SlideIn delay={100}>
+          <View style={styles.profileCard}>
+            <View style={styles.profileAvatar}>
+              <Icon name="user" size="lg" color={Colors.primary} />
+            </View>
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>
+                {user?.displayName || 'Utilisateur'}
+              </Text>
+              <Text style={styles.profileId}>ID: {user?.id?.slice(0, 8)}...</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.editButton}
+              onPress={() => navigation.navigate('Profile' as any)}>
+              <Icon name="edit" size="sm" color={Colors.primary} />
+            </TouchableOpacity>
           </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>
-              {user?.displayName || 'Utilisateur'}
-            </Text>
-            <Text style={styles.profileId}>ID: {user?.id?.slice(0, 8)}...</Text>
-          </View>
-        </View>
+        </SlideIn>
 
         {/* Subscription Card */}
-        <TouchableOpacity
-          style={styles.subscriptionCard}
-          onPress={() => navigation.navigate('Subscription')}
-          activeOpacity={0.9}>
-          <View style={styles.subscriptionHeader}>
-            <View style={styles.subscriptionBadge}>
-              <Text style={styles.subscriptionBadgeText}>
-                {currentPlan.name}
-              </Text>
-            </View>
-            <Text style={styles.subscriptionArrow}>›</Text>
-          </View>
-
-          {subscription?.planId === 'free' ? (
-            <View style={styles.trialProgress}>
-              <Text style={styles.trialText}>
-                Essai: {trialRemaining}/{TRIAL_SCAN_LIMIT} scans restants
-              </Text>
-              <View style={styles.trialBar}>
-                <View
-                  style={[
-                    styles.trialBarFill,
-                    {width: `${(trialRemaining / TRIAL_SCAN_LIMIT) * 100}%`},
-                  ]}
-                />
+        <SlideIn delay={200}>
+          <TouchableOpacity
+            style={styles.subscriptionCard}
+            onPress={() => navigation.navigate('Subscription')}
+            activeOpacity={0.9}>
+            <View style={styles.subscriptionGlow} />
+            <View style={styles.subscriptionHeader}>
+              <View style={styles.subscriptionBadge}>
+                <Icon name="crown" size="xs" color={Colors.accent} />
+                <Text style={styles.subscriptionBadgeText}>
+                  {currentPlan.name}
+                </Text>
               </View>
+              <Icon name="chevron-right" size="sm" color="rgba(255,255,255,0.8)" />
             </View>
-          ) : (
-            <Text style={styles.subscriptionExpiry}>
-              Expire le:{' '}
-              {subscription?.expiryDate
-                ? formatDate(subscription.expiryDate)
-                : 'Illimité'}
-            </Text>
-          )}
 
-          <Text style={styles.upgradeText}>
-            {subscription?.planId === 'premium'
-              ? 'Gérer mon abonnement'
-              : 'Passer à Premium →'}
-          </Text>
-        </TouchableOpacity>
+            {subscription?.planId === 'free' ? (
+              <View style={styles.trialProgress}>
+                <Text style={styles.trialText}>
+                  Essai: {trialRemaining}/{TRIAL_SCAN_LIMIT} scans restants
+                </Text>
+                <View style={styles.trialBar}>
+                  <View
+                    style={[
+                      styles.trialBarFill,
+                      {width: `${(trialRemaining / TRIAL_SCAN_LIMIT) * 100}%`},
+                    ]}
+                  />
+                </View>
+              </View>
+            ) : (
+              <Text style={styles.subscriptionExpiry}>
+                Expire le:{' '}
+                {subscription?.expiryDate
+                  ? formatDate(subscription.expiryDate)
+                  : 'Illimité'}
+              </Text>
+            )}
+
+            <View style={styles.upgradeButton}>
+              <Text style={styles.upgradeText}>
+                {subscription?.planId === 'premium'
+                  ? 'Gérer mon abonnement'
+                  : 'Passer à Premium'}
+              </Text>
+              <Icon name="arrow-right" size="xs" color={Colors.accent} />
+            </View>
+          </TouchableOpacity>
+        </SlideIn>
 
         {/* Settings Sections */}
-        <SettingSection title="Préférences">
-          <SettingItem
-            icon="🌙"
-            title="Mode sombre"
-            subtitle={isDarkMode ? 'Activé' : 'Désactivé'}
-            showArrow={false}
-            rightElement={
-              <Switch
-                value={isDarkMode}
-                onValueChange={toggleTheme}
-                trackColor={{
-                  false: COLORS.gray[200],
-                  true: COLORS.primary[300],
-                }}
-                thumbColor={isDarkMode ? COLORS.primary[500] : '#ffffff'}
-              />
-            }
-          />
-          <SettingItem
-            icon="🔔"
-            title="Notifications"
-            subtitle={notificationsEnabled ? 'Activées' : 'Désactivées'}
-            showArrow={false}
-            rightElement={
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={handleToggleNotifications}
-                trackColor={{
-                  false: COLORS.gray[200],
-                  true: COLORS.primary[300],
-                }}
-                thumbColor={
-                  notificationsEnabled ? COLORS.primary[500] : '#ffffff'
-                }
-              />
-            }
-          />
-          <SettingItem
-            icon="📊"
-            title="Alertes de prix"
-            subtitle="Gérer vos alertes de prix"
-            showArrow={true}
-            onPress={() => navigation.navigate('PriceAlerts')}
-          />
-        </SettingSection>
+        <SlideIn delay={300}>
+          <SettingSection title="Préférences">
+            <SettingItem
+              icon="moon"
+              title="Mode sombre"
+              subtitle={isDarkMode ? 'Activé' : 'Désactivé'}
+              showArrow={false}
+              rightElement={
+                <Switch
+                  value={isDarkMode}
+                  onValueChange={toggleTheme}
+                  trackColor={{
+                    false: Colors.border.light,
+                    true: Colors.primaryLight,
+                  }}
+                  thumbColor={isDarkMode ? Colors.primary : '#ffffff'}
+                />
+              }
+            />
+            <SettingItem
+              icon="bell"
+              title="Notifications"
+              subtitle={notificationsEnabled ? 'Activées' : 'Désactivées'}
+              showArrow={false}
+              rightElement={
+                <Switch
+                  value={notificationsEnabled}
+                  onValueChange={handleToggleNotifications}
+                  trackColor={{
+                    false: Colors.border.light,
+                    true: Colors.primaryLight,
+                  }}
+                  thumbColor={
+                    notificationsEnabled ? Colors.primary : '#ffffff'
+                  }
+                />
+              }
+            />
+            <SettingItem
+              icon="trending-up"
+              title="Alertes de prix"
+              subtitle="Gérer vos alertes de prix"
+              showArrow={true}
+              onPress={() => navigation.navigate('PriceAlerts')}
+            />
+          </SettingSection>
+        </SlideIn>
 
-        <SettingSection title="Support">
-          <SettingItem
-            icon="💬"
-            title="Contacter le support"
-            subtitle="support@goshopperai.com"
-            onPress={handleContactSupport}
-          />
-          <SettingItem
-            icon="⭐"
-            title="Noter l'application"
-            subtitle="Donnez-nous 5 étoiles !"
-            onPress={handleRateApp}
-          />
-          <SettingItem
-            icon="📖"
-            title="FAQ"
-            subtitle="Questions fréquentes"
-            onPress={() => Linking.openURL('https://goshopperai.com/faq')}
-          />
-        </SettingSection>
+        <SlideIn delay={400}>
+          <SettingSection title="Support">
+            <SettingItem
+              icon="message"
+              title="Contacter le support"
+              subtitle="support@goshopperai.com"
+              onPress={handleContactSupport}
+            />
+            <SettingItem
+              icon="star"
+              title="Noter l'application"
+              subtitle="Donnez-nous 5 étoiles !"
+              onPress={handleRateApp}
+            />
+            <SettingItem
+              icon="help"
+              title="FAQ"
+              subtitle="Questions fréquentes"
+              onPress={() => Linking.openURL('https://goshopperai.com/faq')}
+            />
+          </SettingSection>
+        </SlideIn>
 
-        <SettingSection title="Légal">
-          <SettingItem
-            icon="🔒"
-            title="Politique de confidentialité"
-            onPress={handlePrivacyPolicy}
-          />
-          <SettingItem
-            icon="📄"
-            title="Conditions d'utilisation"
-            onPress={handleTermsOfService}
-          />
-        </SettingSection>
+        <SlideIn delay={500}>
+          <SettingSection title="Légal">
+            <SettingItem
+              icon="lock"
+              title="Politique de confidentialité"
+              onPress={handlePrivacyPolicy}
+            />
+            <SettingItem
+              icon="document"
+              title="Conditions d'utilisation"
+              onPress={handleTermsOfService}
+            />
+          </SettingSection>
+        </SlideIn>
 
-        <SettingSection title="Compte">
-          <SettingItem
-            icon="🗑️"
-            title="Supprimer mes données"
-            subtitle="Supprimer toutes les factures et données"
-            onPress={handleDeleteData}
-            danger
-          />
-          <SettingItem
-            icon="🚪"
-            title="Déconnexion"
-            onPress={handleSignOut}
-            danger
-          />
-        </SettingSection>
+        <SlideIn delay={600}>
+          <SettingSection title="Compte">
+            <SettingItem
+              icon="trash"
+              title="Supprimer mes données"
+              subtitle="Supprimer toutes les factures et données"
+              onPress={handleDeleteData}
+              danger
+            />
+            <SettingItem
+              icon="logout"
+              title="Déconnexion"
+              onPress={handleSignOut}
+              danger
+            />
+          </SettingSection>
+        </SlideIn>
 
         {/* App Info */}
-        <View style={styles.appInfo}>
-          <Text style={styles.appName}>Prix Tracker</Text>
-          <Text style={styles.appVersion}>Version 1.0.0</Text>
-          <Text style={styles.appCopyright}>
-            © 2024 GoShopperAI. Tous droits réservés.
-          </Text>
-        </View>
+        <FadeIn delay={700}>
+          <View style={styles.appInfo}>
+            <View style={styles.appLogoContainer}>
+              <Icon name="receipt" size="md" color={Colors.primary} />
+            </View>
+            <Text style={styles.appName}>GoShopperAI</Text>
+            <Text style={styles.appVersion}>Version 1.0.0</Text>
+            <Text style={styles.appCopyright}>
+              © 2024 GoShopperAI. Tous droits réservés.
+            </Text>
+          </View>
+        </FadeIn>
       </ScrollView>
     </SafeAreaView>
   );
@@ -339,175 +375,223 @@ export function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: Colors.background.primary,
+  },
+  header: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
+  },
+  headerTitle: {
+    fontSize: Typography.fontSize['3xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
+  },
+  headerSubtitle: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.secondary,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
+    padding: Spacing.lg,
+    paddingBottom: Spacing['3xl'],
   },
   profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    ...Shadows.md,
   },
   profileAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: COLORS.primary[100],
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: Colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
-  },
-  profileAvatarText: {
-    fontSize: 28,
+    marginRight: Spacing.md,
   },
   profileInfo: {
     flex: 1,
   },
   profileName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.gray[900],
-    marginBottom: 2,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   profileId: {
-    fontSize: 13,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.tertiary,
+  },
+  editButton: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   subscriptionCard: {
-    backgroundColor: COLORS.primary[500],
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 24,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    marginBottom: Spacing.xl,
+    overflow: 'hidden',
+    ...Shadows.lg,
+  },
+  subscriptionGlow: {
+    position: 'absolute',
+    top: -50,
+    right: -50,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: Colors.accent,
+    opacity: 0.15,
   },
   subscriptionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   subscriptionBadge: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
   },
   subscriptionBadgeText: {
     color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.bold,
     textTransform: 'uppercase',
-  },
-  subscriptionArrow: {
-    color: '#ffffff',
-    fontSize: 24,
-    fontWeight: '300',
+    letterSpacing: 0.5,
   },
   trialProgress: {
-    marginBottom: 12,
+    marginBottom: Spacing.md,
   },
   trialText: {
     color: 'rgba(255,255,255,0.9)',
-    fontSize: 14,
-    marginBottom: 8,
+    fontSize: Typography.fontSize.sm,
+    marginBottom: Spacing.sm,
   },
   trialBar: {
     height: 6,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: BorderRadius.full,
     overflow: 'hidden',
   },
   trialBarFill: {
     height: '100%',
-    backgroundColor: '#ffffff',
-    borderRadius: 3,
+    backgroundColor: Colors.accent,
+    borderRadius: BorderRadius.full,
   },
   subscriptionExpiry: {
     color: 'rgba(255,255,255,0.8)',
-    fontSize: 13,
-    marginBottom: 8,
+    fontSize: Typography.fontSize.sm,
+    marginBottom: Spacing.sm,
+  },
+  upgradeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
   upgradeText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '600',
+    color: Colors.accent,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semiBold,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.tertiary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 8,
-    paddingHorizontal: 4,
+    letterSpacing: 1,
+    marginBottom: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
   },
   sectionContent: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
     overflow: 'hidden',
+    ...Shadows.sm,
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
+    padding: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[100],
+    borderBottomColor: Colors.border.light,
   },
-  settingIcon: {
-    fontSize: 22,
-    marginRight: 14,
-    width: 28,
-    textAlign: 'center',
+  settingIconWrapper: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  settingIconWrapperDanger: {
+    backgroundColor: `${Colors.status.error}15`,
   },
   settingContent: {
     flex: 1,
   },
   settingTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.gray[900],
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.medium,
+    color: Colors.text.primary,
   },
   settingTitleDanger: {
-    color: COLORS.error,
+    color: Colors.status.error,
   },
   settingSubtitle: {
-    fontSize: 13,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.tertiary,
     marginTop: 2,
-  },
-  settingArrow: {
-    fontSize: 20,
-    color: COLORS.gray[400],
-    fontWeight: '300',
   },
   appInfo: {
     alignItems: 'center',
-    paddingTop: 24,
-    paddingBottom: 16,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.lg,
+  },
+  appLogoContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: BorderRadius.xl,
+    backgroundColor: Colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
   },
   appName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.gray[700],
-    marginBottom: 4,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   appVersion: {
-    fontSize: 13,
-    color: COLORS.gray[400],
-    marginBottom: 8,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.tertiary,
+    marginBottom: Spacing.sm,
   },
   appCopyright: {
-    fontSize: 12,
-    color: COLORS.gray[400],
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
   },
 });

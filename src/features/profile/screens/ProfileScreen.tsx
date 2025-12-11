@@ -1,6 +1,6 @@
 // Profile Screen - User profile and settings access
-// Optimized for Congolese users with French + Lingala translations
-import React, {useState, useEffect} from 'react';
+// Styled with GoShopperAI Design System (Blue + Gold)
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -8,21 +8,78 @@ import {
   ScrollView,
   SafeAreaView,
   TouchableOpacity,
+  Animated,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useAuth, useSubscription} from '@/shared/contexts';
 import {RootStackParamList} from '@/shared/types';
-import {
-  COLORS,
-  SUBSCRIPTION_PLANS,
-  TRIAL_SCAN_LIMIT,
-} from '@/shared/utils/constants';
+import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {Icon, FadeIn, SlideIn} from '@/shared/components';
+import {SUBSCRIPTION_PLANS, TRIAL_SCAN_LIMIT} from '@/shared/utils/constants';
 import {formatCurrency, formatDate} from '@/shared/utils/helpers';
 import functions from '@react-native-firebase/functions';
 import {analyticsService} from '@/shared/services/analytics';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+// Animated Action Card
+const ActionCard = ({
+  icon,
+  label,
+  labelLingala,
+  onPress,
+  primary = false,
+  delay = 0,
+}: {
+  icon: string;
+  label: string;
+  labelLingala: string;
+  onPress: () => void;
+  primary?: boolean;
+  delay?: number;
+}) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.95,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <SlideIn direction="up" delay={delay}>
+      <Animated.View style={[styles.actionCardWrapper, {transform: [{scale: scaleAnim}]}]}>
+        <TouchableOpacity
+          style={[styles.actionCard, primary && styles.actionCardPrimary]}
+          onPress={onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          activeOpacity={1}>
+          <View style={[styles.actionIconWrapper, primary && styles.actionIconWrapperPrimary]}>
+            <Icon 
+              name={icon} 
+              size="lg" 
+              color={primary ? Colors.white : Colors.primary} 
+            />
+          </View>
+          <Text style={[styles.actionLabel, primary && styles.actionLabelPrimary]}>{label}</Text>
+          <Text style={[styles.actionLabelLingala, primary && styles.actionLabelLingalaPrimary]}>
+            {labelLingala}
+          </Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </SlideIn>
+  );
+};
 
 export function ProfileScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -97,185 +154,207 @@ export function ProfileScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        {/* Profile Header - Simple and friendly */}
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarEmoji}>👩‍👩‍👧</Text>
+        {/* Profile Header */}
+        <FadeIn>
+          <View style={styles.profileHeader}>
+            <View style={styles.avatarContainer}>
+              <View style={styles.avatar}>
+                <Icon name="user" size="3xl" color={Colors.primary} />
+              </View>
+              <View style={styles.onlineIndicator} />
             </View>
+            <Text style={styles.welcomeText}>Bienvenue!</Text>
+            <Text style={styles.welcomeSubtext}>Boyei malamu! 🇨🇩</Text>
           </View>
-          <Text style={styles.welcomeText}>Bienvenue!</Text>
-          <Text style={styles.welcomeSubtext}>Boyei malamu! 🇨🇩</Text>
-        </View>
+        </FadeIn>
 
-        {/* Stats Cards - Large and clear */}
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Votre Activité</Text>
-          <Text style={styles.sectionSubtitle}>Misala na yo</Text>
+        {/* Stats Cards */}
+        <SlideIn direction="up" delay={100}>
+          <View style={styles.statsSection}>
+            <Text style={styles.sectionTitle}>Votre Activité</Text>
+            <Text style={styles.sectionSubtitle}>Misala na yo</Text>
 
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statEmoji}>📄</Text>
-              <Text style={styles.statValue}>
-                {userStats.loading ? '...' : stats.totalReceipts}
-              </Text>
-              <Text style={styles.statLabel}>Factures scannées</Text>
-              <Text style={styles.statLabelLingala}>Bafacture</Text>
-            </View>
-
-            <View style={[styles.statCard, styles.statCardHighlight]}>
-              <Text style={styles.statEmoji}>💰</Text>
-              <Text style={[styles.statValue, styles.statValueHighlight]}>
-                {userStats.loading ? '...' : formatCurrency(stats.totalSavings)}
-              </Text>
-              <Text style={[styles.statLabel, styles.statLabelHighlight]}>
-                Économisés
-              </Text>
-              <Text
-                style={[styles.statLabelLingala, styles.statLabelHighlight]}>
-                Obombi!
-              </Text>
-            </View>
-          </View>
-
-          {userStats.error && (
-            <Text style={styles.errorText}>{userStats.error}</Text>
-          )}
-        </View>
-
-        {/* Subscription Card - Clear status */}
-        <TouchableOpacity
-          style={styles.subscriptionCard}
-          onPress={() => navigation.navigate('Subscription')}
-          activeOpacity={0.8}>
-          <View style={styles.subscriptionContent}>
-            <View style={styles.subscriptionIcon}>
-              <Text style={styles.subscriptionIconText}>
-                {isFreeTier ? '🆓' : '⭐'}
-              </Text>
-            </View>
-            <View style={styles.subscriptionInfo}>
-              <Text style={styles.subscriptionPlan}>{currentPlan.name}</Text>
-              {isFreeTier ? (
-                <>
-                  <Text style={styles.subscriptionStatus}>
-                    {trialRemaining} scans gratuits restants
-                  </Text>
-                  <Text style={styles.subscriptionStatusLingala}>
-                    {trialRemaining} scans ofele etikali
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.subscriptionStatus}>
-                  Expire:{' '}
-                  {subscription?.expiryDate
-                    ? formatDate(subscription.expiryDate)
-                    : 'Jamais'}
+            <View style={styles.statsRow}>
+              <View style={styles.statCard}>
+                <View style={styles.statIconWrapper}>
+                  <Icon name="receipt" size="lg" color={Colors.primary} />
+                </View>
+                <Text style={styles.statValue}>
+                  {userStats.loading ? '...' : stats.totalReceipts}
                 </Text>
-              )}
+                <Text style={styles.statLabel}>Factures</Text>
+                <Text style={styles.statLabelLingala}>Bafacture</Text>
+              </View>
+
+              <View style={[styles.statCard, styles.statCardHighlight]}>
+                <View style={[styles.statIconWrapper, styles.statIconWrapperHighlight]}>
+                  <Icon name="trending-down" size="lg" color={Colors.white} />
+                </View>
+                <Text style={[styles.statValue, styles.statValueHighlight]}>
+                  {userStats.loading ? '...' : formatCurrency(stats.totalSavings)}
+                </Text>
+                <Text style={[styles.statLabel, styles.statLabelHighlight]}>
+                  Économisés
+                </Text>
+                <Text style={[styles.statLabelLingala, styles.statLabelHighlight]}>
+                  Obombi!
+                </Text>
+              </View>
             </View>
-            <Text style={styles.subscriptionArrow}>→</Text>
+
+            {userStats.error && (
+              <Text style={styles.errorText}>{userStats.error}</Text>
+            )}
           </View>
+        </SlideIn>
 
-          {isFreeTier && trialRemaining < 3 && (
-            <View style={styles.upgradePrompt}>
-              <Text style={styles.upgradeText}>
-                ⚠️ Plus que {trialRemaining} essais !
-              </Text>
-              <Text style={styles.upgradeButton}>Passer Premium →</Text>
+        {/* Subscription Card */}
+        <SlideIn direction="right" delay={200}>
+          <TouchableOpacity
+            style={styles.subscriptionCard}
+            onPress={() => navigation.navigate('Subscription')}
+            activeOpacity={0.8}>
+            <View style={styles.subscriptionContent}>
+              <View style={[styles.subscriptionIcon, isFreeTier ? {} : styles.subscriptionIconPremium]}>
+                <Icon 
+                  name={isFreeTier ? 'gift' : 'star'} 
+                  size="xl" 
+                  color={isFreeTier ? Colors.accent : Colors.white}
+                  variant="filled"
+                />
+              </View>
+              <View style={styles.subscriptionInfo}>
+                <Text style={styles.subscriptionPlan}>{currentPlan.name}</Text>
+                {isFreeTier ? (
+                  <>
+                    <Text style={styles.subscriptionStatus}>
+                      {trialRemaining} scans gratuits restants
+                    </Text>
+                    <Text style={styles.subscriptionStatusLingala}>
+                      {trialRemaining} scans ofele etikali
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={styles.subscriptionStatus}>
+                    Expire:{' '}
+                    {subscription?.expiryDate
+                      ? formatDate(subscription.expiryDate)
+                      : 'Jamais'}
+                  </Text>
+                )}
+              </View>
+              <Icon name="chevron-right" size="md" color={Colors.primary} />
             </View>
-          )}
-        </TouchableOpacity>
 
-        {/* Quick Actions - Big buttons */}
+            {isFreeTier && trialRemaining < 3 && (
+              <View style={styles.upgradePrompt}>
+                <View style={styles.upgradeWarning}>
+                  <Icon name="alert-triangle" size="sm" color={Colors.status.warning} />
+                  <Text style={styles.upgradeText}>
+                    Plus que {trialRemaining} essais !
+                  </Text>
+                </View>
+                <Text style={styles.upgradeButton}>Passer Premium →</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </SlideIn>
+
+        {/* Quick Actions */}
         <View style={styles.actionsSection}>
           <Text style={styles.sectionTitle}>Actions Rapides</Text>
           <Text style={styles.sectionSubtitle}>Misala ya noki</Text>
 
           <View style={styles.actionsGrid}>
-            <TouchableOpacity
-              style={[styles.actionCard, styles.actionCardPrimary]}
+            <ActionCard
+              icon="camera"
+              label="Scanner"
+              labelLingala="Zwa foto"
               onPress={() => navigation.navigate('Scanner')}
-              activeOpacity={0.8}>
-              <Text style={styles.actionEmoji}>📸</Text>
-              <Text style={styles.actionLabel}>Scanner</Text>
-              <Text style={styles.actionLabelLingala}>Zwa foto</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionCard}
+              primary
+              delay={300}
+            />
+            <ActionCard
+              icon="star"
+              label="Premium"
+              labelLingala="Mingi koleka"
               onPress={() => navigation.navigate('Subscription')}
-              activeOpacity={0.8}>
-              <Text style={styles.actionEmoji}>⭐</Text>
-              <Text style={styles.actionLabel}>Premium</Text>
-              <Text style={styles.actionLabelLingala}>Mingi koleka</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionCard}
+              delay={350}
+            />
+            <ActionCard
+              icon="settings"
+              label="Paramètres"
+              labelLingala="Kobongisa"
               onPress={() => navigation.navigate('Settings')}
-              activeOpacity={0.8}>
-              <Text style={styles.actionEmoji}>⚙️</Text>
-              <Text style={styles.actionLabel}>Paramètres</Text>
-              <Text style={styles.actionLabelLingala}>Kobongisa</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionCard}
-              onPress={() => {
-                /* Navigate to help */
-              }}
-              activeOpacity={0.8}>
-              <Text style={styles.actionEmoji}>❓</Text>
-              <Text style={styles.actionLabel}>Aide</Text>
-              <Text style={styles.actionLabelLingala}>Lisungi</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.actionCard}
+              delay={400}
+            />
+            <ActionCard
+              icon="help"
+              label="Aide"
+              labelLingala="Lisungi"
+              onPress={() => {}}
+              delay={450}
+            />
+            <ActionCard
+              icon="user"
+              label="Modifier Profil"
+              labelLingala="Bongisa profil"
               onPress={() => {
                 analyticsService.logCustomEvent('profile_update_started');
                 navigation.navigate('UpdateProfile');
               }}
-              activeOpacity={0.8}>
-              <Text style={styles.actionEmoji}>👤</Text>
-              <Text style={styles.actionLabel}>Modifier Profil</Text>
-              <Text style={styles.actionLabelLingala}>Bongisa profil</Text>
-            </TouchableOpacity>
+              delay={500}
+            />
           </View>
         </View>
 
-        {/* Progress Badges - Gamification */}
-        <View style={styles.badgesSection}>
-          <Text style={styles.sectionTitle}>Vos Badges</Text>
-          <Text style={styles.sectionSubtitle}>Medailles na yo</Text>
+        {/* Progress Badges */}
+        <SlideIn direction="up" delay={550}>
+          <View style={styles.badgesSection}>
+            <Text style={styles.sectionTitle}>Vos Badges</Text>
+            <Text style={styles.sectionSubtitle}>Medailles na yo</Text>
 
-          <View style={styles.badgesRow}>
-            <View style={styles.badgeItem}>
-              <Text style={styles.badgeEmoji}>🎯</Text>
-              <Text style={styles.badgeLabel}>Premier scan</Text>
-              <Text style={styles.badgeStatus}>✓</Text>
-            </View>
+            <View style={styles.badgesRow}>
+              <View style={styles.badgeItem}>
+                <View style={styles.badgeIconWrapper}>
+                  <Icon name="check-circle" size="lg" color={Colors.status.success} variant="filled" />
+                </View>
+                <Text style={styles.badgeLabel}>Premier scan</Text>
+                <View style={styles.badgeStatus}>
+                  <Icon name="check" size="xs" color={Colors.status.success} />
+                </View>
+              </View>
 
-            <View style={styles.badgeItem}>
-              <Text style={styles.badgeEmoji}>💰</Text>
-              <Text style={styles.badgeLabel}>10$ économisés</Text>
-              <Text style={styles.badgeStatus}>✓</Text>
-            </View>
+              <View style={styles.badgeItem}>
+                <View style={styles.badgeIconWrapper}>
+                  <Icon name="dollar" size="lg" color={Colors.accent} />
+                </View>
+                <Text style={styles.badgeLabel}>10$ économisés</Text>
+                <View style={styles.badgeStatus}>
+                  <Icon name="check" size="xs" color={Colors.status.success} />
+                </View>
+              </View>
 
-            <View style={[styles.badgeItem, styles.badgeLocked]}>
-              <Text style={styles.badgeEmoji}>🏆</Text>
-              <Text style={styles.badgeLabelLocked}>100 factures</Text>
-              <Text style={styles.badgeStatusLocked}>🔒</Text>
+              <View style={[styles.badgeItem, styles.badgeLocked]}>
+                <View style={[styles.badgeIconWrapper, styles.badgeIconLocked]}>
+                  <Icon name="trophy" size="lg" color={Colors.text.tertiary} />
+                </View>
+                <Text style={styles.badgeLabelLocked}>100 factures</Text>
+                <View style={styles.badgeStatusLocked}>
+                  <Icon name="lock" size="xs" color={Colors.text.tertiary} />
+                </View>
+              </View>
             </View>
           </View>
-        </View>
+        </SlideIn>
 
         {/* App Info */}
-        <View style={styles.appInfo}>
-          <Text style={styles.appInfoText}>GoShopper AI v1.0.0</Text>
-          <Text style={styles.appInfoSubtext}>Fait avec ❤️ pour le Congo</Text>
-        </View>
+        <FadeIn delay={600}>
+          <View style={styles.appInfo}>
+            <Text style={styles.appInfoText}>GoShopper AI v1.0.0</Text>
+            <Text style={styles.appInfoSubtext}>Fait avec ❤️ pour le Congo</Text>
+          </View>
+        </FadeIn>
       </ScrollView>
     </SafeAreaView>
   );
@@ -284,130 +363,134 @@ export function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: Colors.background.secondary,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: Spacing.lg,
+    paddingBottom: 100,
   },
 
   // Profile Header
   profileHeader: {
     alignItems: 'center',
-    paddingVertical: 24,
-    marginBottom: 8,
+    paddingVertical: Spacing.xl,
+    marginBottom: Spacing.md,
   },
   avatarContainer: {
-    marginBottom: 16,
+    marginBottom: Spacing.md,
+    position: 'relative',
   },
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.white,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Shadows.lg,
   },
-  avatarEmoji: {
-    fontSize: 50,
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.status.success,
+    borderWidth: 3,
+    borderColor: Colors.background.secondary,
   },
   welcomeText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
-    marginBottom: 4,
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   welcomeSubtext: {
-    fontSize: 18,
-    color: COLORS.primary[600],
+    fontSize: Typography.fontSize.lg,
+    color: Colors.primary,
+    fontWeight: Typography.fontWeight.medium,
   },
 
   // Section Titles
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
     marginBottom: 2,
   },
   sectionSubtitle: {
-    fontSize: 14,
-    color: COLORS.primary[600],
-    marginBottom: 16,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.primary,
+    marginBottom: Spacing.md,
     fontStyle: 'italic',
   },
 
   // Stats Section
   statsSection: {
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: Spacing.md,
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    ...Shadows.md,
   },
   statCardHighlight: {
-    backgroundColor: COLORS.primary[500],
+    backgroundColor: Colors.primary,
   },
-  statEmoji: {
-    fontSize: 32,
-    marginBottom: 8,
+  statIconWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: BorderRadius.base,
+    backgroundColor: Colors.background.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  statIconWrapperHighlight: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   statValue: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
-    marginBottom: 4,
+    fontSize: Typography.fontSize['2xl'],
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   statValueHighlight: {
-    color: '#ffffff',
+    color: Colors.white,
   },
   statLabel: {
-    fontSize: 14,
-    color: COLORS.gray[600],
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
     textAlign: 'center',
   },
   statLabelHighlight: {
     color: 'rgba(255,255,255,0.9)',
   },
   statLabelLingala: {
-    fontSize: 12,
-    color: COLORS.gray[400],
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
     fontStyle: 'italic',
     marginTop: 2,
   },
 
   // Subscription Card
   subscriptionCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 24,
-    borderWidth: 2,
-    borderColor: COLORS.primary[200],
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    marginBottom: Spacing.xl,
+    ...Shadows.md,
   },
   subscriptionContent: {
     flexDirection: 'row',
@@ -416,165 +499,193 @@ const styles = StyleSheet.create({
   subscriptionIcon: {
     width: 60,
     height: 60,
-    borderRadius: 30,
-    backgroundColor: COLORS.primary[100],
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.status.warningLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: Spacing.md,
   },
-  subscriptionIconText: {
-    fontSize: 30,
+  subscriptionIconPremium: {
+    backgroundColor: Colors.accent,
   },
   subscriptionInfo: {
     flex: 1,
   },
   subscriptionPlan: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
-    marginBottom: 4,
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
   },
   subscriptionStatus: {
-    fontSize: 14,
-    color: COLORS.gray[600],
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
   },
   subscriptionStatusLingala: {
-    fontSize: 12,
-    color: COLORS.primary[500],
+    fontSize: Typography.fontSize.xs,
+    color: Colors.primary,
     fontStyle: 'italic',
     marginTop: 2,
   },
-  subscriptionArrow: {
-    fontSize: 24,
-    color: COLORS.primary[500],
-    fontWeight: 'bold',
-  },
   upgradePrompt: {
-    marginTop: 16,
-    paddingTop: 16,
+    marginTop: Spacing.md,
+    paddingTop: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: COLORS.gray[200],
+    borderTopColor: Colors.border.light,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  upgradeWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
   upgradeText: {
-    fontSize: 14,
-    color: '#f59e0b',
-    fontWeight: '600',
+    fontSize: Typography.fontSize.sm,
+    color: Colors.status.warning,
+    fontWeight: Typography.fontWeight.semiBold,
   },
   upgradeButton: {
-    fontSize: 14,
-    color: COLORS.primary[600],
-    fontWeight: 'bold',
+    fontSize: Typography.fontSize.sm,
+    color: Colors.primary,
+    fontWeight: Typography.fontWeight.bold,
   },
 
   // Actions Section
   actionsSection: {
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
   },
   actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: Spacing.md,
+  },
+  actionCardWrapper: {
+    width: '47%',
   },
   actionCard: {
-    width: '47%',
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    ...Shadows.sm,
   },
   actionCardPrimary: {
-    backgroundColor: COLORS.primary[500],
+    backgroundColor: Colors.primary,
   },
-  actionEmoji: {
-    fontSize: 40,
-    marginBottom: 8,
+  actionIconWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: BorderRadius.base,
+    backgroundColor: Colors.background.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  actionIconWrapperPrimary: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   actionLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.gray[800],
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
     textAlign: 'center',
   },
+  actionLabelPrimary: {
+    color: Colors.white,
+  },
   actionLabelLingala: {
-    fontSize: 12,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
     fontStyle: 'italic',
-    marginTop: 4,
+    marginTop: Spacing.xs,
+  },
+  actionLabelLingalaPrimary: {
+    color: 'rgba(255,255,255,0.7)',
   },
 
   // Badges Section
   badgesSection: {
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
   },
   badgesRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: Spacing.sm,
   },
   badgeItem: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    ...Shadows.sm,
   },
   badgeLocked: {
-    backgroundColor: COLORS.gray[100],
+    backgroundColor: Colors.background.tertiary,
     opacity: 0.7,
   },
-  badgeEmoji: {
-    fontSize: 28,
-    marginBottom: 8,
+  badgeIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.background.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  badgeIconLocked: {
+    backgroundColor: Colors.border.light,
   },
   badgeLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.gray[700],
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
   badgeLabelLocked: {
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.tertiary,
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
   },
   badgeStatus: {
-    fontSize: 16,
-    color: COLORS.primary[500],
-    fontWeight: 'bold',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.status.successLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   badgeStatusLocked: {
-    fontSize: 14,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.border.light,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // App Info
   appInfo: {
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: Spacing.md,
   },
   appInfoText: {
-    fontSize: 12,
-    color: COLORS.gray[400],
-    marginBottom: 4,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.tertiary,
+    marginBottom: Spacing.xs,
   },
   appInfoSubtext: {
-    fontSize: 12,
-    color: COLORS.gray[500],
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
   },
   errorText: {
-    fontSize: 14,
-    color: '#ef4444',
+    fontSize: Typography.fontSize.sm,
+    color: Colors.status.error,
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: Spacing.sm,
   },
 });
