@@ -203,10 +203,10 @@ export function ItemsScreen() {
         : 0;
     const hasSavings = savingsPercent > 5; // Show badge if savings > 5%
 
-    // Get top 3 stores with best prices
+    // Get top 2 stores with best prices
     const sortedPrices = [...item.prices].sort((a, b) => a.price - b.price);
     const topStores = sortedPrices
-      .slice(0, 3)
+      .slice(0, 2)
       .filter((p, i, arr) => arr.findIndex(x => x.storeName === p.storeName) === i);
 
     return (
@@ -220,7 +220,7 @@ export function ItemsScreen() {
           {/* Card Header */}
           <View style={styles.itemHeader}>
             <View style={styles.itemIconWrapper}>
-              <Icon name="shopping-bag" size="md" color={Colors.primary} />
+              <Icon name="shopping-bag" size="md" color={Colors.text.inverse} />
             </View>
             <View style={styles.itemInfo}>
               <Text style={styles.itemName} numberOfLines={2}>
@@ -241,7 +241,7 @@ export function ItemsScreen() {
             </View>
             {hasSavings && (
               <View style={styles.savingsBadge}>
-                <Icon name="trending-down" size="xs" color={Colors.status.success} />
+                <Icon name="trending-down" size="xs" color={Colors.text.inverse} />
                 <Text style={styles.savingsText}>-{savingsPercent}%</Text>
               </View>
             )}
@@ -447,7 +447,7 @@ export function ItemsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.secondary,
+    backgroundColor: Colors.background.primary,
   },
   loading: {
     flex: 1,
@@ -564,10 +564,10 @@ const styles = StyleSheet.create({
 
   // Item Card Styles
   itemCard: {
-    backgroundColor: Colors.card.white,
-    borderRadius: BorderRadius['2xl'],
-    padding: Spacing.lg,
-    marginBottom: Spacing.lg,
+    backgroundColor: Colors.card.cream,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
     ...Shadows.sm,
   },
   itemCardPressed: {
@@ -577,26 +577,26 @@ const styles = StyleSheet.create({
   itemHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   itemIconWrapper: {
-    width: 56,
-    height: 56,
-    borderRadius: BorderRadius.xl,
-    backgroundColor: Colors.card.blue,
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.card.red,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.md,
+    marginRight: Spacing.sm,
   },
   itemInfo: {
     flex: 1,
   },
   itemName: {
-    fontSize: Typography.fontSize.lg,
+    fontSize: Typography.fontSize.base,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
     marginBottom: Spacing.xs,
-    lineHeight: Typography.fontSize.lg * 1.3,
+    lineHeight: Typography.fontSize.base * 1.3,
   },
   itemMetaRow: {
     flexDirection: 'row',
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: Colors.card.green,
+    backgroundColor: Colors.card.cosmos,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.full,
@@ -625,16 +625,18 @@ const styles = StyleSheet.create({
   savingsText: {
     fontSize: Typography.fontSize.xs,
     fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.primary,
+    color: Colors.text.inverse,
   },
 
   // Price Comparison Styles
   priceComparison: {
     flexDirection: 'row',
-    backgroundColor: Colors.background.secondary,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
+    backgroundColor: Colors.background.primary,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.sm,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
   },
   priceColumn: {
     flex: 1,
@@ -652,17 +654,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   priceBest: {
-    fontSize: Typography.fontSize.lg,
+    fontSize: Typography.fontSize.base,
     fontWeight: Typography.fontWeight.bold,
-    color: Colors.status.success,
+    color: Colors.card.red,
   },
   priceAvg: {
-    fontSize: Typography.fontSize.lg,
+    fontSize: Typography.fontSize.base,
     fontWeight: Typography.fontWeight.bold,
-    color: Colors.primary,
+    color: Colors.card.cosmos,
   },
   priceMax: {
-    fontSize: Typography.fontSize.lg,
+    fontSize: Typography.fontSize.base,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.secondary,
   },
@@ -671,7 +673,7 @@ const styles = StyleSheet.create({
   storesSection: {
     borderTopWidth: 1,
     borderTopColor: Colors.border.light,
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.sm,
   },
   storesTitleRow: {
     flexDirection: 'row',
@@ -687,25 +689,25 @@ const styles = StyleSheet.create({
   storeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.xs,
     backgroundColor: Colors.background.primary,
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.md,
     marginBottom: Spacing.xs,
   },
   storeRank: {
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.card.yellow,
+    backgroundColor: Colors.card.crimson,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.sm,
+    marginRight: Spacing.xs,
   },
   storeRankText: {
     fontSize: Typography.fontSize.xs,
     fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.primary,
+    color: Colors.text.inverse,
   },
   storeInfo: {
     flex: 1,
@@ -723,11 +725,11 @@ const styles = StyleSheet.create({
   storePriceBadge: {
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
-    backgroundColor: Colors.background.secondary,
+    backgroundColor: Colors.card.yellow,
     borderRadius: BorderRadius.md,
   },
   storePriceBadgeBest: {
-    backgroundColor: Colors.card.green,
+    backgroundColor: Colors.card.red,
   },
   storePrice: {
     fontSize: Typography.fontSize.sm,
@@ -735,7 +737,7 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
   },
   storePriceBest: {
-    color: Colors.text.primary,
+    color: Colors.text.inverse,
   },
 
   // Empty State Styles

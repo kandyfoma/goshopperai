@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   cityItemSelected: {
-    backgroundColor: Colors.card.green,
+    backgroundColor: Colors.card.cream,
   },
   cityText: {
     flex: 1,

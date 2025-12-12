@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Dimensions,
+  StatusBar,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -41,21 +42,30 @@ const StatCard = ({
   icon: string;
   value: string | number;
   label: string;
-  color?: 'blue' | 'green' | 'yellow';
+  color?: 'red' | 'crimson' | 'blue' | 'cosmos' | 'cream' | 'yellow' | 'white';
 }) => {
   const cardColors = {
+    red: Colors.card.red,
+    crimson: Colors.card.crimson,
     blue: Colors.card.blue,
-    green: Colors.card.green,
+    cosmos: Colors.card.cosmos,
+    cream: Colors.card.cream,
     yellow: Colors.card.yellow,
+    white: Colors.card.white,
   };
+
+  // Use white text on dark backgrounds (red, crimson, cosmos)
+  const isDarkBg = ['red', 'crimson', 'cosmos'].includes(color);
+  const textColor = isDarkBg ? Colors.text.inverse : Colors.text.primary;
+  const iconColor = isDarkBg ? Colors.text.inverse : Colors.text.primary;
 
   return (
     <View style={[styles.statCard, {backgroundColor: cardColors[color]}]}>
       <View style={styles.statCardIcon}>
-        <Icon name={icon} size="sm" color={Colors.text.primary} />
+        <Icon name={icon} size="sm" color={iconColor} />
       </View>
-      <Text style={styles.statCardValue}>{value}</Text>
-      <Text style={styles.statCardLabel}>{label}</Text>
+      <Text style={[styles.statCardValue, {color: textColor}]}>{value}</Text>
+      <Text style={[styles.statCardLabel, {color: textColor}]}>{label}</Text>
     </View>
   );
 };
@@ -76,13 +86,21 @@ const MenuItem = ({
   onPress: () => void;
   showChevron?: boolean;
   rightElement?: React.ReactNode;
-  iconColor?: 'blue' | 'green' | 'yellow';
+  iconColor?: 'red' | 'crimson' | 'blue' | 'cosmos' | 'cream' | 'yellow' | 'white';
 }) => {
   const cardColors = {
+    red: Colors.card.red,
+    crimson: Colors.card.crimson,
     blue: Colors.card.blue,
-    green: Colors.card.green,
+    cosmos: Colors.card.cosmos,
+    cream: Colors.card.cream,
     yellow: Colors.card.yellow,
+    white: Colors.card.white,
   };
+
+  // Use white icon on dark backgrounds (red, crimson, cosmos)
+  const isDarkBg = ['red', 'crimson', 'cosmos'].includes(iconColor);
+  const iconDisplayColor = isDarkBg ? Colors.text.inverse : Colors.text.primary;
 
   return (
     <TouchableOpacity
@@ -94,7 +112,7 @@ const MenuItem = ({
           styles.menuIconContainer,
           {backgroundColor: cardColors[iconColor]},
         ]}>
-        <Icon name={icon} size="sm" color={Colors.text.primary} />
+        <Icon name={icon} size="sm" color={iconDisplayColor} />
       </View>
       <View style={styles.menuContent}>
         <Text style={styles.menuTitle}>{title}</Text>
@@ -189,6 +207,11 @@ export function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="#FFFFFF"
+        translucent={false}
+      />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
@@ -218,7 +241,7 @@ export function ProfileScreen() {
             icon="receipt"
             value={userStats.loading ? '—' : userStats.totalReceipts}
             label="Scans"
-            color="blue"
+            color="red"
           />
           <StatCard
             icon="trending-down"
@@ -226,7 +249,7 @@ export function ProfileScreen() {
               userStats.loading ? '—' : formatCurrency(userStats.totalSavings)
             }
             label="Économies"
-            color="green"
+            color="crimson"
           />
         </View>
 
@@ -277,7 +300,7 @@ export function ProfileScreen() {
             <MenuItem
               icon="user"
               title="Modifier le profil"
-              iconColor="blue"
+              iconColor="red"
               onPress={() => {
                 analyticsService.logCustomEvent('profile_update_started');
                 navigation.navigate('UpdateProfile');
@@ -287,7 +310,7 @@ export function ProfileScreen() {
               icon="map-pin"
               title="Ville par défaut"
               subtitle={profile?.defaultCity || 'Non définie'}
-              iconColor="green"
+              iconColor="cosmos"
               onPress={() => navigation.navigate('CitySelection')}
             />
           </View>
@@ -300,7 +323,7 @@ export function ProfileScreen() {
               icon="wallet"
               title="Paramètres du Budget"
               subtitle={profile?.monthlyBudget ? `${formatCurrency(profile.monthlyBudget, profile.preferredCurrency)} / mois` : 'Non défini'}
-              iconColor="green"
+              iconColor="crimson"
               onPress={() => {
                 analyticsService.logCustomEvent('budget_settings_opened');
                 navigation.navigate('BudgetSettings');
@@ -309,19 +332,19 @@ export function ProfileScreen() {
             <MenuItem
               icon="bell"
               title="Notifications"
-              iconColor="yellow"
+              iconColor="blue"
               onPress={() => navigation.navigate('Settings')}
             />
             <MenuItem
               icon="settings"
               title="Paramètres"
-              iconColor="blue"
+              iconColor="cosmos"
               onPress={() => navigation.navigate('Settings')}
             />
             <MenuItem
               icon="help"
               title="Aide et support"
-              iconColor="green"
+              iconColor="cream"
               onPress={() => {}}
             />
           </View>
@@ -333,7 +356,7 @@ export function ProfileScreen() {
             <MenuItem
               icon="trophy"
               title="Mes succès"
-              iconColor="yellow"
+              iconColor="red"
               onPress={() => navigation.navigate('Achievements')}
             />
             <MenuItem
@@ -364,7 +387,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.primary,
   },
   scrollContent: {
-    paddingBottom: 120,
+    paddingBottom: 100,
   },
 
   // Header
@@ -381,7 +404,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: Colors.card.blue,
+    backgroundColor: Colors.card.red,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
@@ -464,10 +487,10 @@ const styles = StyleSheet.create({
     ...Shadows.sm,
   },
   subscriptionCardFree: {
-    backgroundColor: Colors.card.yellow,
+    backgroundColor: Colors.card.cream,
   },
   subscriptionCardPremium: {
-    backgroundColor: Colors.card.green,
+    backgroundColor: Colors.card.cosmos,
   },
   subscriptionLeft: {
     flex: 1,

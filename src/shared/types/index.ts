@@ -25,6 +25,7 @@ export type RootStackParamList = {
   Settings: undefined;
   CitySelection: undefined;
   UpdateProfile: undefined;
+  Stats: undefined;
   // Phase 1.1 Screens
   PriceAlerts: undefined;
   Achievements: undefined;
@@ -32,6 +33,9 @@ export type RootStackParamList = {
   // Phase 1.2 Screens
   ShoppingList: undefined;
   AIAssistant: undefined;
+  // Shops
+  Shops: undefined;
+  ShopDetail: {shopId: string; shopName: string};
   // Legal Screens
   FAQ: undefined;
   PrivacyPolicy: undefined;
@@ -42,7 +46,6 @@ export type MainTabParamList = {
   Home: undefined;
   History: undefined;
   Scanner: undefined;
-  Stats: undefined;
   Items: undefined;
   Profile: undefined;
 };

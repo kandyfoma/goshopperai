@@ -417,7 +417,7 @@ export function ShoppingListScreen() {
           {selectedList.potentialSavings > 0 && (
             <View style={styles.savingsCard}>
               <LinearGradient
-                colors={[Colors.card.green, '#B8D9B0']}
+                colors={[Colors.card.cream, '#F5E6C3']}
                 style={styles.savingsGradient}
                 start={{x: 0, y: 0}}
                 end={{x: 1, y: 1}}>

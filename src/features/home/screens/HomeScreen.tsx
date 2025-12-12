@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import LinearGradient from 'react-native-linear-gradient';
 import {RootStackParamList} from '@/shared/types';
 import {useSubscription, useUser} from '@/shared/contexts';
 import {
@@ -78,17 +79,26 @@ const StatCard = ({
   title: string;
   value: string | number;
   subtitle?: string;
-  color: 'blue' | 'green' | 'yellow' | 'white';
+  color: 'red' | 'crimson' | 'blue' | 'cosmos' | 'cream' | 'yellow' | 'white';
   icon?: string;
   onPress?: () => void;
   size?: 'normal' | 'large';
 }) => {
   const bgColor = {
+    red: Colors.cards.red,
+    crimson: Colors.cards.crimson,
     blue: Colors.cards.blue,
-    green: Colors.cards.green,
+    cosmos: Colors.cards.cosmos,
+    cream: Colors.cards.cream,
     yellow: Colors.cards.yellow,
     white: Colors.cards.white,
   }[color];
+
+  // Use white text on dark backgrounds (red, crimson, cosmos)
+  // Use dark text on light backgrounds (blue, cream, yellow, white)
+  const isDarkBg = ['red', 'crimson', 'cosmos'].includes(color);
+  const textColor = isDarkBg ? Colors.text.inverse : Colors.text.primary;
+  const iconColor = isDarkBg ? Colors.text.inverse : Colors.text.primary;
 
   return (
     <TouchableOpacity
@@ -101,20 +111,20 @@ const StatCard = ({
       activeOpacity={onPress ? 0.8 : 1}
       disabled={!onPress}>
       <View style={styles.statCardHeader}>
-        <Text style={styles.statCardTitle}>{title}</Text>
+        <Text style={[styles.statCardTitle, {color: textColor}]}>{title}</Text>
         {icon && (
           <View style={styles.statCardIcon}>
-            <Icon name={icon} size="sm" color={Colors.text.primary} />
+            <Icon name={icon} size="sm" color={iconColor} />
           </View>
         )}
       </View>
-      <Text style={styles.statCardValue}>{value}</Text>
-      {subtitle && <Text style={styles.statCardSubtitle}>{subtitle}</Text>}
+      <Text style={[styles.statCardValue, {color: textColor}]}>{value}</Text>
+      {subtitle && <Text style={[styles.statCardSubtitle, {color: textColor}]}>{subtitle}</Text>}
     </TouchableOpacity>
   );
 };
 
-// Main Scan Button - Clean, prominent
+// Main Scan Button - Eye-catching gradient design
 const ScanButton = ({
   onPress,
   disabled,
@@ -123,10 +133,29 @@ const ScanButton = ({
   disabled: boolean;
 }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Subtle pulsing glow animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+  }, [glowAnim]);
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
-      toValue: 0.97,
+      toValue: 0.96,
       useNativeDriver: true,
       tension: 100,
       friction: 10,
@@ -142,27 +171,60 @@ const ScanButton = ({
     }).start();
   };
 
+  const glowOpacity = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.7],
+  });
+
   return (
     <Animated.View
       style={[styles.scanButtonWrapper, {transform: [{scale: scaleAnim}]}]}>
+      {/* Glow effect */}
+      <Animated.View
+        style={[
+          styles.scanButtonGlow,
+          {opacity: disabled ? 0 : glowOpacity},
+        ]}
+      />
       <TouchableOpacity
-        style={[styles.scanButton, disabled && styles.scanButtonDisabled]}
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
+        disabled={disabled}
         activeOpacity={1}>
-        <View style={styles.scanButtonContent}>
-          <View style={styles.scanIconCircle}>
-            <Icon name="camera" size="xl" color={Colors.primary} />
+        <LinearGradient
+          colors={
+            disabled
+              ? [Colors.border.light, Colors.background.secondary]
+              : [Colors.card.crimson, Colors.card.red]
+          }
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={styles.scanButton}>
+          {/* Decorative circles */}
+          <View style={styles.scanButtonDecor1} />
+          <View style={styles.scanButtonDecor2} />
+
+          <View style={styles.scanButtonContent}>
+            <View style={styles.scanIconWrapper}>
+              <View style={styles.scanIconCircle}>
+                <Icon name="camera" size="xl" color={Colors.card.crimson} />
+              </View>
+              <View style={styles.scanIconRing} />
+            </View>
+            <View style={styles.scanTextContainer}>
+              <Text style={styles.scanButtonTitle}>
+                Scanner un ticket
+              </Text>
+              <Text style={styles.scanButtonSubtitle}>
+                Comparez les prix instantanément
+              </Text>
+            </View>
+            <View style={styles.scanArrowCircle}>
+              <Icon name="arrow-right" size="md" color={Colors.white} />
+            </View>
           </View>
-          <View style={styles.scanTextContainer}>
-            <Text style={styles.scanButtonTitle}>Scanner un ticket</Text>
-            <Text style={styles.scanButtonSubtitle}>
-              Comparez les prix instantanément
-            </Text>
-          </View>
-        </View>
-        <Icon name="chevron-right" size="md" color={Colors.text.tertiary} />
+        </LinearGradient>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -178,21 +240,30 @@ const QuickAction = ({
   icon: string;
   label: string;
   onPress: () => void;
-  color?: 'blue' | 'green' | 'yellow' | 'white';
+  color?: 'red' | 'crimson' | 'blue' | 'cosmos' | 'cream' | 'yellow' | 'white';
 }) => {
   const bgColor = {
+    red: Colors.cards.red,
+    crimson: Colors.cards.crimson,
     blue: Colors.cards.blue,
-    green: Colors.cards.green,
+    cosmos: Colors.cards.cosmos,
+    cream: Colors.cards.cream,
     yellow: Colors.cards.yellow,
     white: Colors.cards.white,
   }[color];
+
+  // Use white text/icons on dark backgrounds (red, crimson, cosmos)
+  // Use dark text/icons on light backgrounds (blue, cream, yellow, white)
+  const isDarkBg = ['red', 'crimson', 'cosmos'].includes(color);
+  const textColor = isDarkBg ? Colors.text.inverse : Colors.text.primary;
+  const iconColor = isDarkBg ? Colors.text.inverse : Colors.text.primary;
 
   return (
     <TouchableOpacity
       style={[styles.quickAction, {backgroundColor: bgColor}]}
       onPress={onPress}>
-      <Icon name={icon} size="md" color={Colors.text.primary} />
-      <Text style={styles.quickActionLabel}>{label}</Text>
+      <Icon name={icon} size="md" color={iconColor} />
+      <Text style={[styles.quickActionLabel, {color: textColor}]}>{label}</Text>
     </TouchableOpacity>
   );
 };
@@ -327,7 +398,7 @@ export function HomeScreen() {
                   ? 'illimités'
                   : `/${5 - (trialScansUsed || 0)} restants`
               }
-              color="blue"
+              color="red"
               icon="camera"
               onPress={() =>
                 navigation.navigate('Main', {screen: 'History'} as any)
@@ -341,11 +412,9 @@ export function HomeScreen() {
                   : 'Non défini'
               }
               subtitle="ce mois"
-              color="green"
+              color="cosmos"
               icon="wallet"
-              onPress={() =>
-                navigation.navigate('Main', {screen: 'Stats'} as any)
-              }
+              onPress={() => navigation.navigate('Stats')}
             />
           </View>
           <View style={styles.statsRow}>
@@ -357,17 +426,15 @@ export function HomeScreen() {
                   : formatCurrency(monthlySpending, userProfile?.preferredCurrency || 'USD')
               }
               subtitle="ce mois"
-              color="yellow"
+              color="crimson"
               icon="credit-card"
-              onPress={() =>
-                navigation.navigate('Main', {screen: 'Stats'} as any)
-              }
+              onPress={() => navigation.navigate('Stats')}
             />
             <StatCard
               title="Liste"
               value="0"
               subtitle="articles"
-              color="white"
+              color="cream"
               icon="cart"
               onPress={() => navigation.navigate('ShoppingList')}
             />
@@ -377,52 +444,38 @@ export function HomeScreen() {
         {/* Main Scan Button */}
         <ScanButton onPress={handleScanPress} disabled={!canScan} />
 
-        {/* Push Notifications Banner */}
-        <TouchableOpacity
-          style={styles.subscriptionBanner}
-          onPress={() => navigation.navigate('Settings')}>
-          <View style={styles.subscriptionContent}>
-            <View style={styles.subscriptionIcon}>
-              <Icon name="bell" size="md" color={Colors.primary} />
-            </View>
-            <View style={styles.subscriptionText}>
-              <Text style={styles.subscriptionTitle}>
-                Notifications Push
-              </Text>
-              <Text style={styles.subscriptionSubtitle}>
-                Gérez vos notifications
-              </Text>
-            </View>
-          </View>
-          <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} />
-        </TouchableOpacity>
-
         {/* Quick Actions */}
         <Text style={styles.sectionTitle}>Actions rapides</Text>
         <View style={styles.quickActionsGrid}>
           <QuickAction
-            icon="file-text"
-            label="Scanner facture"
-            onPress={() => navigation.navigate('Scanner')}
+            icon="stats"
+            label="Statistiques"
+            onPress={() => navigation.navigate('Stats')}
+            color="cosmos"
+          />
+          <QuickAction
+            icon="shopping-bag"
+            label="Mes Magasins"
+            onPress={() => navigation.navigate('Shops')}
             color="blue"
           />
           <QuickAction
             icon="help"
             label="Assistant IA"
             onPress={() => navigation.navigate('AIAssistant')}
-            color="green"
+            color="cream"
           />
           <QuickAction
             icon="trophy"
             label="Mes succès"
             onPress={() => navigation.navigate('Achievements')}
-            color="yellow"
+            color="crimson"
           />
           <QuickAction
             icon="settings"
             label="Paramètres"
             onPress={() => navigation.navigate('Settings')}
-            color="white"
+            color="red"
           />
         </View>
       </ScrollView>
@@ -433,7 +486,7 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.secondary,
+    backgroundColor: Colors.background.primary,
   },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
@@ -553,82 +606,95 @@ const styles = StyleSheet.create({
 
   // Scan Button
   scanButtonWrapper: {
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.xl,
+    position: 'relative',
+  },
+  scanButtonGlow: {
+    position: 'absolute',
+    top: -8,
+    left: -8,
+    right: -8,
+    bottom: -8,
+    borderRadius: BorderRadius['2xl'],
+    backgroundColor: Colors.card.red,
+    opacity: 0.3,
   },
   scanButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    ...Shadows.md,
+    borderRadius: BorderRadius['2xl'],
+    padding: Spacing.xl,
+    minHeight: 120,
+    overflow: 'hidden',
+    position: 'relative',
+    ...Shadows.lg,
   },
-  scanButtonDisabled: {
-    opacity: 0.6,
+  scanButtonDecor1: {
+    position: 'absolute',
+    top: -30,
+    right: -30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  scanButtonDecor2: {
+    position: 'absolute',
+    bottom: -20,
+    left: -20,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   scanButtonContent: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    position: 'relative',
+    zIndex: 1,
+  },
+  scanIconWrapper: {
+    position: 'relative',
+    marginRight: Spacing.base,
   },
   scanIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.cards.yellow,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.base,
+    ...Shadows.md,
+  },
+  scanIconRing: {
+    position: 'absolute',
+    top: -4,
+    left: -4,
+    right: -4,
+    bottom: -4,
+    borderRadius: 36,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   scanTextContainer: {
     flex: 1,
   },
   scanButtonTitle: {
-    fontSize: Typography.fontSize.lg,
+    fontSize: Typography.fontSize.xl,
     fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.primary,
-    marginBottom: 2,
+    color: Colors.white,
+    marginBottom: Spacing.xs,
   },
   scanButtonSubtitle: {
     fontSize: Typography.fontSize.sm,
-    color: Colors.text.secondary,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
-
-  // Subscription Banner
-  subscriptionBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.cards.green,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.base,
-    marginBottom: Spacing.xl,
-  },
-  subscriptionContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  subscriptionIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.6)',
+  scanArrowCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: Spacing.md,
-  },
-  subscriptionText: {
-    flex: 1,
-  },
-  subscriptionTitle: {
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semiBold,
-    color: Colors.text.primary,
-  },
-  subscriptionSubtitle: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.text.secondary,
-    marginTop: 2,
+    marginLeft: Spacing.sm,
   },
 
   // Section Title

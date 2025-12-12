@@ -334,8 +334,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     <>
       <StatusBar
         barStyle={resolvedStatusBarStyle}
-        backgroundColor="transparent"
-        translucent
+        backgroundColor={Colors.background.primary}
+        translucent={false}
       />
 
       {/* Header */}

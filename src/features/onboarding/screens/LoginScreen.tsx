@@ -26,7 +26,7 @@ import {logoUrbanistSvg} from '../../../../assets/logo-icon';
 
 // Urbanist Design Colors
 const URBANIST = {
-  background: '#F6F5FA', // Ghost White
+  background: '#FFFFFF', // White
   cardBg: '#FFFFFF',
   primaryAccent: '#D8DFE9', // Alice Blue
   secondaryAccent: '#CFDECA', // Honeydew
@@ -274,7 +274,7 @@ export function LoginScreen() {
     <View style={[styles.container, {paddingTop: insets.top}]}>
       <StatusBar
         barStyle="dark-content"
-        backgroundColor={URBANIST.background}
+        backgroundColor="#FFFFFF"
       />
 
       {/* Header with Skip */}

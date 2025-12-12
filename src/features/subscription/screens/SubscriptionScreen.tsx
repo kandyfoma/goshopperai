@@ -423,7 +423,7 @@ export function SubscriptionScreen() {
         {isTrialActive && (
           <Animated.View style={[styles.trialCard, {opacity: fadeAnim}]}>
             <LinearGradient
-              colors={[Colors.card.green, '#B8D9B0']}
+              colors={[Colors.card.cream, '#F5E6C3']}
               style={styles.trialGradient}
               start={{x: 0, y: 0}}
               end={{x: 1, y: 1}}>
@@ -1227,7 +1227,7 @@ const styles = StyleSheet.create({
   savingsBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.card.green,
+    backgroundColor: Colors.card.cream,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: BorderRadius.sm,

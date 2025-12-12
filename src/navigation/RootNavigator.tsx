@@ -36,6 +36,8 @@ import {AIAssistantScreen} from '@/features/assistant';
 import {AchievementsScreen} from '@/features/achievements';
 import {CitySelectionScreen} from '@/features/onboarding/screens';
 import {FAQScreen, PrivacyPolicyScreen, TermsOfServiceScreen} from '@/features/legal';
+import {ShopsScreen, ShopDetailScreen} from '@/features/shops';
+import {StatsScreen} from '@/features/stats/screens';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -254,6 +256,11 @@ export function RootNavigator() {
       />
       {/* Phase 1.1 Screens */}
       <Stack.Screen
+        name="Stats"
+        component={StatsScreen}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
         name="PriceAlerts"
         component={PriceAlertsScreen}
         options={{headerShown: false}}
@@ -272,6 +279,17 @@ export function RootNavigator() {
       <Stack.Screen
         name="AIAssistant"
         component={AIAssistantScreen}
+        options={{headerShown: false}}
+      />
+      {/* Shops */}
+      <Stack.Screen
+        name="Shops"
+        component={ShopsScreen}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShopDetail"
+        component={ShopDetailScreen}
         options={{headerShown: false}}
       />
       <Stack.Screen

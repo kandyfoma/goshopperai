@@ -5,11 +5,11 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  SafeAreaView,
   TouchableOpacity,
   TextInput,
   Alert,
+  SafeAreaView,
+  ScrollView,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -94,25 +94,27 @@ export function BudgetSettingsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}>
-            <Icon name="arrow-left" size="md" color={Colors.text.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Paramètres du Budget</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}>
+          <Icon name="arrow-left" size="md" color={Colors.primary} />
+        </TouchableOpacity>
+        <Text style={styles.title}>Paramètres du Budget</Text>
+        <View style={styles.headerSpacer} />
+      </View>
 
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}>
+        <View>
         {/* Current Budget Display */}
         {profile?.monthlyBudget && (
           <View style={styles.currentBudgetCard}>
             <View style={styles.currentBudgetHeader}>
-              <Icon name="wallet" size="md" color={Colors.accent} />
+              <Icon name="wallet" size="md" color={Colors.card.red} />
               <Text style={styles.currentBudgetTitle}>Budget Actuel</Text>
             </View>
             <Text style={styles.currentBudgetAmount}>
@@ -144,10 +146,19 @@ export function BudgetSettingsScreen() {
                 ]}
                 onPress={() => setSelectedCurrency(currency.code)}>
                 <View style={styles.currencyOptionContent}>
-                  <Text style={styles.currencySymbol}>{currency.symbol}</Text>
+                  <Text style={[
+                    styles.currencySymbol,
+                    selectedCurrency === currency.code && {color: Colors.text.inverse}
+                  ]}>{currency.symbol}</Text>
                   <View style={styles.currencyInfo}>
-                    <Text style={styles.currencyName}>{currency.name}</Text>
-                    <Text style={styles.currencyCode}>{currency.code}</Text>
+                    <Text style={[
+                      styles.currencyName,
+                      selectedCurrency === currency.code && {color: Colors.text.inverse}
+                    ]}>{currency.name}</Text>
+                    <Text style={[
+                      styles.currencyCode,
+                      selectedCurrency === currency.code && {color: Colors.text.inverse}
+                    ]}>{currency.code}</Text>
                   </View>
                 </View>
                 {selectedCurrency === currency.code && (
@@ -201,6 +212,7 @@ export function BudgetSettingsScreen() {
             {isLoading ? 'Enregistrement...' : 'Enregistrer les Paramètres'}
           </Text>
         </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -211,36 +223,41 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background.primary,
   },
-  scrollContent: {
-    padding: Spacing.lg,
-  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.xl,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: BorderRadius.lg,
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     backgroundColor: Colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
     ...Shadows.sm,
   },
-  headerTitle: {
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.card.blue,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
     flex: 1,
-    fontSize: Typography.fontSize.xl,
+    fontSize: Typography.fontSize['2xl'],
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
     textAlign: 'center',
-    marginHorizontal: Spacing.md,
   },
   headerSpacer: {
-    width: 40,
+    width: 44,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    padding: Spacing.lg,
   },
   currentBudgetCard: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.card.cream,
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     marginBottom: Spacing.xl,
@@ -260,7 +277,7 @@ const styles = StyleSheet.create({
   currentBudgetAmount: {
     fontSize: Typography.fontSize['5xl'],
     fontWeight: Typography.fontWeight.bold,
-    color: Colors.accent,
+    color: Colors.card.crimson,
     marginBottom: Spacing.xs,
   },
   currentBudgetCurrency: {
@@ -288,13 +305,13 @@ const styles = StyleSheet.create({
   currencyOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.card.cream,
     borderRadius: BorderRadius.lg,
     padding: Spacing.lg,
     ...Shadows.sm,
   },
   currencyOptionSelected: {
-    backgroundColor: Colors.accent,
+    backgroundColor: Colors.card.cosmos,
   },
   currencyOptionContent: {
     flexDirection: 'row',
@@ -325,14 +342,14 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.status.success,
+    backgroundColor: Colors.card.red,
     justifyContent: 'center',
     alignItems: 'center',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.card.cream,
     borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
@@ -341,7 +358,7 @@ const styles = StyleSheet.create({
   currencyPrefix: {
     fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.semiBold,
-    color: Colors.accent,
+    color: Colors.card.red,
     marginRight: Spacing.sm,
   },
   budgetInput: {
@@ -358,12 +375,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   saveButton: {
-    backgroundColor: Colors.accent,
-    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.card.crimson,
+    borderRadius: BorderRadius.xl,
     paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.xl,
     alignItems: 'center',
-    marginTop: Spacing.lg,
+    marginTop: Spacing.xl,
+    marginBottom: Spacing.lg,
     ...Shadows.md,
   },
   saveButtonDisabled: {

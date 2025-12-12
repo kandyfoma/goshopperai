@@ -230,7 +230,6 @@ export function HistoryScreen() {
               name="chevron-right"
               size="sm"
               color={Colors.text.tertiary}
-              style={{marginTop: 4}}
             />
           </View>
         </TouchableOpacity>
@@ -367,7 +366,7 @@ export function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.secondary,
+    backgroundColor: Colors.background.primary,
   },
   headerContainer: {
     paddingHorizontal: Spacing.lg,
@@ -454,7 +453,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: BorderRadius.base,
-    backgroundColor: Colors.background.secondary,
+    backgroundColor: Colors.card.cream,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.md,

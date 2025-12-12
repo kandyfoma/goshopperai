@@ -11,8 +11,8 @@ import {
   Alert,
   Linking,
   StatusBar,
+  SafeAreaView,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import LinearGradient from 'react-native-linear-gradient';
@@ -102,7 +102,6 @@ function SettingSection({
 
 export function SettingsScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const insets = useSafeAreaInsets();
   const {user, signOut, isAuthenticated} = useAuth();
   const {profile, toggleNotifications, togglePriceAlerts} = useUser();
   const {subscription, trialScansUsed} = useSubscription();
@@ -226,23 +225,22 @@ export function SettingsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar
         barStyle="dark-content"
-        backgroundColor="transparent"
-        translucent
+        backgroundColor="#FFFFFF"
+        translucent={false}
       />
 
       {/* Header */}
-      <View style={[styles.header, {paddingTop: insets.top + Spacing.md}]}>
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
-          <Icon name="chevron-left" size="md" color={Colors.text.primary} />
+          onPress={() => navigation.goBack()}>
+          <Icon name="arrow-left" size="md" color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Paramètres</Text>
-        <View style={styles.headerRight} />
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
@@ -257,7 +255,7 @@ export function SettingsScreen() {
             onPress={() => navigation.navigate('Profile' as any)}
             activeOpacity={0.9}>
             <LinearGradient
-              colors={[Colors.card.blue, '#C8D5E8']}
+              colors={[Colors.card.cream, '#FFFFFF']}
               style={styles.profileGradient}
               start={{x: 0, y: 0}}
               end={{x: 1, y: 1}}>
@@ -286,7 +284,7 @@ export function SettingsScreen() {
             onPress={() => navigation.navigate('Subscription')}
             activeOpacity={0.9}>
             <LinearGradient
-              colors={[Colors.primary, Colors.primaryDark]}
+              colors={[Colors.card.crimson, Colors.card.red]}
               style={styles.subscriptionGradient}
               start={{x: 0, y: 0}}
               end={{x: 1, y: 1}}>
@@ -352,7 +350,7 @@ export function SettingsScreen() {
               title="Mode sombre"
               subtitle={isDarkMode ? 'Activé' : 'Désactivé'}
               showArrow={false}
-              iconBgColor={Colors.card.blue}
+              iconBgColor={Colors.card.cosmos}
               rightElement={
                 <Switch
                   value={isDarkMode}
@@ -370,7 +368,7 @@ export function SettingsScreen() {
               title="Notifications"
               subtitle={notificationsEnabled ? 'Activées' : 'Désactivées'}
               showArrow={false}
-              iconBgColor={Colors.card.green}
+              iconBgColor={Colors.card.crimson}
               rightElement={
                 <Switch
                   value={notificationsEnabled}
@@ -388,7 +386,7 @@ export function SettingsScreen() {
               title="Alertes de prix"
               subtitle="Gérer vos alertes de prix"
               showArrow={true}
-              iconBgColor={Colors.card.yellow}
+              iconBgColor={Colors.card.cream}
               onPress={() => navigation.navigate('PriceAlerts')}
             />
           </SettingSection>
@@ -407,14 +405,14 @@ export function SettingsScreen() {
               icon="star"
               title="Noter l'application"
               subtitle="Donnez-nous 5 étoiles !"
-              iconBgColor={Colors.card.yellow}
+              iconBgColor={Colors.card.cream}
               onPress={handleRateApp}
             />
             <SettingItem
               icon="help"
               title="FAQ"
               subtitle="Questions fréquentes"
-              iconBgColor={Colors.card.green}
+              iconBgColor={Colors.card.red}
               onPress={() => navigation.navigate('FAQ')}
             />
           </SettingSection>
@@ -426,21 +424,21 @@ export function SettingsScreen() {
               icon="trophy"
               title="Succès"
               subtitle="Découvrez vos achievements"
-              iconBgColor={Colors.card.yellow}
+              iconBgColor={Colors.card.cream}
               onPress={() => navigation.navigate('Achievements')}
             />
             <SettingItem
               icon="shopping-bag"
               title="Liste de courses"
               subtitle="Gérer vos listes d'achats"
-              iconBgColor={Colors.card.green}
+              iconBgColor={Colors.card.crimson}
               onPress={() => navigation.navigate('ShoppingList')}
             />
             <SettingItem
               icon="bot"
               title="Assistant IA"
               subtitle="Discutez avec l'assistant intelligent"
-              iconBgColor={Colors.card.blue}
+              iconBgColor={Colors.card.cosmos}
               onPress={() => navigation.navigate('AIAssistant')}
             />
           </SettingSection>
@@ -451,13 +449,13 @@ export function SettingsScreen() {
             <SettingItem
               icon="lock"
               title="Politique de confidentialité"
-              iconBgColor={Colors.card.blue}
+              iconBgColor={Colors.card.red}
               onPress={handlePrivacyPolicy}
             />
             <SettingItem
               icon="document"
               title="Conditions d'utilisation"
-              iconBgColor={Colors.card.blue}
+              iconBgColor={Colors.card.cosmos}
               onPress={handleTermsOfService}
             />
           </SettingSection>
@@ -502,40 +500,41 @@ export function SettingsScreen() {
           </View>
         </FadeIn>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.secondary,
+    backgroundColor: Colors.background.primary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.md,
-    backgroundColor: Colors.background.secondary,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    paddingVertical: Spacing.md,
     backgroundColor: Colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
     ...Shadows.sm,
   },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.card.blue,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   headerTitle: {
-    fontSize: Typography.fontSize.xl,
+    flex: 1,
+    fontSize: Typography.fontSize['2xl'],
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
-    letterSpacing: -0.5,
+    textAlign: 'center',
   },
-  headerRight: {
-    width: 40,
+  headerSpacer: {
+    width: 44,
   },
   scrollView: {
     flex: 1,
@@ -697,7 +696,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.card.blue,
+    backgroundColor: Colors.card.cream,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.md,
@@ -732,7 +731,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: BorderRadius.xl,
-    backgroundColor: Colors.card.blue,
+    backgroundColor: Colors.card.red,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.md,

@@ -1,5 +1,5 @@
 // Receipt Detail Screen - Urbanist Design System
-// GoShopperAI - Soft Pastel Colors with Clean Typography
+// GoShopperAI - Warm color palette with category colors
 import React, {useState, useEffect} from 'react';
 import {
   View,
@@ -11,7 +11,6 @@ import {
   Alert,
   StatusBar,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import firestore from '@react-native-firebase/firestore';
@@ -32,13 +31,29 @@ import {Spinner, Icon} from '@/shared/components';
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type ReceiptDetailRouteProp = RouteProp<RootStackParamList, 'ReceiptDetail'>;
 
+// Category color mapping
+const CATEGORY_COLORS: Record<string, {bg: string; text: string}> = {
+  'Fruits & Légumes': {bg: Colors.card.crimson, text: Colors.white},
+  'Viande & Poisson': {bg: Colors.card.red, text: Colors.white},
+  'Produits Laitiers': {bg: Colors.card.cream, text: Colors.text.primary},
+  'Boulangerie': {bg: Colors.card.yellow, text: Colors.text.primary},
+  'Boissons': {bg: Colors.card.blue, text: Colors.white},
+  'Épicerie': {bg: Colors.card.cosmos, text: Colors.white},
+  'Hygiène': {bg: Colors.accent, text: Colors.white},
+  'Entretien': {bg: Colors.border.light, text: Colors.text.primary},
+  'Autres': {bg: Colors.background.secondary, text: Colors.text.secondary},
+};
+
+const getCategoryColors = (category: string) => {
+  return CATEGORY_COLORS[category] || CATEGORY_COLORS['Autres'];
+};
+
 export function ReceiptDetailScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ReceiptDetailRouteProp>();
   const {user} = useAuth();
   const {showToast} = useToast();
   const {receiptId, receipt: passedReceipt} = route.params;
-  const insets = useSafeAreaInsets();
 
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [loading, setLoading] = useState(true);
@@ -235,8 +250,24 @@ export function ReceiptDetailScreen() {
   }
 
   return (
-    <View style={[styles.container, {paddingTop: insets.top}]}>
-      <StatusBar />
+    <SafeAreaView style={styles.container}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="#FFFFFF"
+        translucent={false}
+      />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}>
+          <Icon name="arrow-left" size="md" color={Colors.primary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Détails du reçu</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -244,18 +275,18 @@ export function ReceiptDetailScreen() {
         {/* Store Header Card */}
         <View style={styles.storeCard}>
           <View style={styles.storeIconContainer}>
-            <Icon name="store" size="xl" color={Colors.text.primary} />
+            <Icon name="store" size="xl" color={Colors.white} />
           </View>
           <Text style={styles.storeName}>{receipt.storeName}</Text>
           <View style={styles.dateContainer}>
-            <Icon name="calendar" size="sm" color={Colors.text.secondary} />
+            <Icon name="calendar" size="sm" color={Colors.white} />
             <Text style={styles.receiptDate}>
               {formatDate(receipt.date, 'long')}
             </Text>
           </View>
           {receipt.city && (
             <View style={styles.cityBadge}>
-              <Icon name="map-pin" size="xs" color={Colors.text.secondary} />
+              <Icon name="map-pin" size="xs" color={Colors.white} />
               <Text style={styles.cityText}>{receipt.city}</Text>
             </View>
           )}
@@ -288,9 +319,23 @@ export function ReceiptDetailScreen() {
               </View>
 
               {item.category && (
-                <View style={styles.categoryBadge}>
-                  <Icon name="tag" size="xs" color={Colors.primary} />
-                  <Text style={styles.categoryText}>{item.category}</Text>
+                <View
+                  style={[
+                    styles.categoryBadge,
+                    {backgroundColor: getCategoryColors(item.category).bg},
+                  ]}>
+                  <Icon
+                    name="tag"
+                    size="xs"
+                    color={getCategoryColors(item.category).text}
+                  />
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      {color: getCategoryColors(item.category).text},
+                    ]}>
+                    {item.category}
+                  </Text>
                 </View>
               )}
 
@@ -304,10 +349,10 @@ export function ReceiptDetailScreen() {
                         width: `${item.confidence * 100}%`,
                         backgroundColor:
                           item.confidence > 0.8
-                            ? Colors.status.success
+                            ? Colors.card.cosmos
                             : item.confidence > 0.5
                             ? Colors.accent
-                            : Colors.status.error,
+                            : Colors.card.crimson,
                       },
                     ]}
                   />
@@ -349,16 +394,16 @@ export function ReceiptDetailScreen() {
           )}
         </View>
 
-        {/* Compare Prices CTA */}
+        {/* Compare Prices Card */}
         <TouchableOpacity
-          style={styles.compareButton}
+          style={styles.compareCard}
           onPress={handleCompare}
           activeOpacity={0.8}>
           <View style={styles.compareIconContainer}>
             <Icon
               name="trending-down"
               size="lg"
-              color={Colors.status.success}
+              color={Colors.card.cosmos}
             />
           </View>
           <View style={styles.compareTextContainer}>
@@ -370,7 +415,7 @@ export function ReceiptDetailScreen() {
           <Icon name="chevron-right" size="md" color={Colors.text.tertiary} />
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -378,6 +423,37 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background.primary,
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.base,
+    backgroundColor: Colors.white,
+    shadowColor: Colors.black,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  headerTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 44,
   },
 
   // Loading & Error States
@@ -430,12 +506,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.lg,
-    paddingBottom: Spacing['3xl'],
+    paddingBottom: 100,
   },
 
   // Store Card
   storeCard: {
-    backgroundColor: Colors.card.blue,
+    backgroundColor: Colors.card.cosmos,
     borderRadius: BorderRadius.xl,
     padding: Spacing.xl,
     alignItems: 'center',
@@ -445,7 +521,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: 'rgba(255,255,255,0.3)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.base,
@@ -453,7 +529,7 @@ const styles = StyleSheet.create({
   storeName: {
     fontSize: Typography.fontSize['2xl'],
     fontFamily: Typography.fontFamily.bold,
-    color: Colors.text.primary,
+    color: Colors.white,
     textAlign: 'center',
     marginBottom: Spacing.sm,
   },
@@ -465,12 +541,12 @@ const styles = StyleSheet.create({
   receiptDate: {
     fontSize: Typography.fontSize.sm,
     fontFamily: Typography.fontFamily.medium,
-    color: Colors.text.secondary,
+    color: Colors.white,
   },
   cityBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: 'rgba(255,255,255,0.3)',
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.full,
@@ -480,7 +556,7 @@ const styles = StyleSheet.create({
   cityText: {
     fontSize: Typography.fontSize.xs,
     fontFamily: Typography.fontFamily.medium,
-    color: Colors.text.secondary,
+    color: Colors.white,
   },
 
   // Section
@@ -546,7 +622,6 @@ const styles = StyleSheet.create({
   categoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.card.blue,
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
     borderRadius: BorderRadius.full,
@@ -557,7 +632,6 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: Typography.fontSize.xs,
     fontFamily: Typography.fontFamily.medium,
-    color: Colors.text.primary,
   },
   confidenceContainer: {
     flexDirection: 'row',
@@ -586,7 +660,7 @@ const styles = StyleSheet.create({
 
   // Total Card
   totalCard: {
-    backgroundColor: Colors.card.green,
+    backgroundColor: Colors.card.cream,
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     marginBottom: Spacing.lg,
@@ -628,22 +702,23 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
   },
 
-  // Compare Button
-  compareButton: {
+  // Compare Card
+  compareCard: {
     backgroundColor: Colors.white,
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: Colors.status.success,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    marginTop: Spacing.base,
     ...Shadows.sm,
   },
   compareIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: Colors.status.successLight,
+    backgroundColor: Colors.background.secondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.base,

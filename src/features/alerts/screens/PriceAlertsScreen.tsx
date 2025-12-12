@@ -171,7 +171,7 @@ export function PriceAlertsScreen() {
               styles.alertIconContainer,
               {
                 backgroundColor: isTriggered
-                  ? Colors.card.green
+                  ? Colors.card.cream
                   : Colors.card.blue,
               },
             ]}>
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
   alertCardTriggered: {
     borderWidth: 2,
     borderColor: Colors.status.success,
-    backgroundColor: Colors.card.green,
+    backgroundColor: Colors.card.cream,
   },
   alertHeader: {
     flexDirection: 'row',
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xs,
   },
   triggeredBadge: {
-    backgroundColor: Colors.card.green,
+    backgroundColor: Colors.card.cream,
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.md,
@@ -622,7 +622,7 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
   },
   toggleButton: {
-    backgroundColor: Colors.card.green,
+    backgroundColor: Colors.card.cream,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.md,

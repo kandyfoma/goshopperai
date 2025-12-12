@@ -41,8 +41,8 @@ function NetworkAwareApp(): React.JSX.Element {
                     <NetworkBanner networkState={networkState} />
                     <StatusBar
                       barStyle="dark-content"
-                      backgroundColor="transparent"
-                      translucent
+                      backgroundColor="#FFFFFF"
+                      translucent={false}
                     />
                     <RootNavigator />
                   </NavigationContainer>

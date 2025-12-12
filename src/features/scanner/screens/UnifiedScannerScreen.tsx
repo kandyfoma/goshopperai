@@ -12,6 +12,7 @@ import {
   Animated,
   Easing,
   Dimensions,
+  SafeAreaView,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -463,10 +464,11 @@ export function UnifiedScannerScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Top Info Bar */}
-      {state === 'idle' && scansRemaining !== undefined && scansRemaining !== Infinity && (
-        <Animated.View 
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Top Info Bar */}
+        {state === 'idle' && scansRemaining !== undefined && scansRemaining !== Infinity && (
+          <Animated.View 
           style={[
             styles.topInfoBar,
             {
@@ -802,11 +804,16 @@ export function UnifiedScannerScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.background.primary,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background.primary,
@@ -1257,7 +1264,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: Colors.card.green,
+    backgroundColor: Colors.card.cream,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.xl,

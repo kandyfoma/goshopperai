@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: BorderRadius['2xl'],
-    backgroundColor: Colors.card.green,
+    backgroundColor: Colors.card.cream,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.lg,

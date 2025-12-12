@@ -1,34 +1,34 @@
 /**
  * GoShopperAI Design System
  *
- * Inspired by modern dashboard UI with soft pastel colors
+ * Warm and inviting color palette inspired by Gochujang Red collection
  * Font: Urbanist-style (System fonts as fallback)
  *
  * Color Palette:
- * - Alice Blue: #D8DFE9 (light accents)
- * - Honeydew: #CFDECA (success/positive)
- * - Vanilla: #EFF0A3 (highlights)
- * - Eerie Black: #212121 (text)
- * - Ghost White: #F6F5FA (background)
+ * - Gochujang Red: #780000 (primary dark)
+ * - Crimson Blaze: #C1121F (primary vibrant)
+ * - Varden: #AE1F23 (warm cream/beige)
+ * - Cosmos Blue: #003049 (deep teal)
+ * - Blue Marble: #669BBC (light blue accent)
  */
 
 // ============================================
 // COLOR PALETTE
 // ============================================
 export const Colors = {
-  // Primary - Dark text color
-  primary: '#212121',
-  primaryDark: '#121212',
-  primaryLight: '#424242',
+  // Primary - Crimson Blaze (warm red)
+  primary: '#C1121F',
+  primaryDark: '#780000',
+  primaryLight: '#FDF0D5',
 
-  // Secondary/Background - Ghost White
-  secondary: '#F6F5FA',
-  secondaryDark: '#ECEAF2',
+  // Secondary/Background - Warm cream
+  secondary: '#FDF0D5',
+  secondaryDark: '#F5E6C3',
 
-  // Accent - Vanilla Yellow (for highlights)
-  accent: '#EFF0A3',
-  accentLight: '#F5F6C4',
-  accentDark: '#E2E386',
+  // Accent - Cosmos Blue
+  accent: '#003049',
+  accentLight: '#669BBC',
+  accentDark: '#002034',
 
   // Neutral colors
   white: '#FFFFFF',
@@ -36,69 +36,75 @@ export const Colors = {
 
   // Text colors
   text: {
-    primary: '#212121',
-    secondary: '#6B7280',
-    tertiary: '#9CA3AF',
+    primary: '#780000',
+    secondary: '#003049',
+    tertiary: '#669BBC',
     inverse: '#FFFFFF',
-    accent: '#212121',
+    accent: '#C1121F',
   },
 
   // Background colors
   background: {
     primary: '#FFFFFF',
-    secondary: '#F6F5FA',
-    tertiary: '#ECEAF2',
-    dark: '#212121',
+    secondary: '#FDF0D5',
+    tertiary: '#F5E6C3',
+    dark: '#780000',
   },
 
-  // Card colors - Soft pastels
+  // Card colors - Warm tones
   cards: {
-    blue: '#D8DFE9',
-    green: '#CFDECA',
-    yellow: '#EFF0A3',
+    red: '#C1121F', // Crimson Blaze
+    crimson: '#780000', // Gochujang Red
+    blue: '#669BBC', // Blue Marble
+    cosmos: '#003049', // Cosmos Blue
+    cream: '#FDF0D5', // Varden cream
+    yellow: '#F5E6C3', // Warm beige
     white: '#FFFFFF',
   },
 
   // Card alias (same as cards for convenience)
   card: {
-    blue: '#D8DFE9',
-    green: '#CFDECA',
-    yellow: '#EFF0A3',
+    red: '#C1121F', // Crimson Blaze
+    crimson: '#780000', // Gochujang Red
+    blue: '#669BBC', // Blue Marble
+    cosmos: '#003049', // Cosmos Blue
+    cream: '#FDF0D5', // Varden cream
+    yellow: '#F5E6C3', // Warm beige
     white: '#FFFFFF',
   },
 
   // Border colors
   border: {
-    light: '#F0EEF5',
-    medium: '#E5E7EB',
-    dark: '#D1D5DB',
+    light: '#F5E6C3',
+    medium: '#E8D5B7',
+    dark: '#D4C4A8',
   },
 
   // Status colors
   status: {
     success: '#22C55E',
-    successLight: '#CFDECA',
-    warning: '#EFF0A3',
-    warningLight: '#F5F6C4',
-    error: '#EF4444',
-    errorLight: '#FEE2E2',
-    info: '#3B82F6',
-    infoLight: '#D8DFE9',
+    successLight: '#FDF0D5',
+    warning: '#F59E0B',
+    warningLight: '#FEF3C7',
+    error: '#C1121F',
+    errorLight: '#FFE5E8',
+    info: '#669BBC',
+    infoLight: '#E5F2F8',
   },
 
   // Gradient presets
   gradients: {
-    primary: ['#212121', '#424242'],
-    accent: ['#EFF0A3', '#E2E386'],
-    card: ['#FFFFFF', '#F6F5FA'],
+    primary: ['#C1121F', '#780000'],
+    accent: ['#003049', '#669BBC'],
+    card: ['#FFFFFF', '#FDF0D5'],
   },
 
   // Shadow colors
   shadow: {
-    light: 'rgba(33, 33, 33, 0.04)',
-    medium: 'rgba(33, 33, 33, 0.08)',
-    dark: 'rgba(33, 33, 33, 0.12)',
-    accent: 'rgba(239, 240, 163, 0.30)',
+    light: 'rgba(120, 0, 0, 0.04)',
+    medium: 'rgba(120, 0, 0, 0.08)',
+    dark: 'rgba(120, 0, 0, 0.12)',
+    accent: 'rgba(193, 18, 31, 0.20)',
   },
 
   // Overlay
@@ -121,18 +127,18 @@ export const Typography = {
     bold: 'System',
   },
 
-  // Font sizes - Based on mockup (36/24/20)
+  // Font sizes - Reduced for better readability
   fontSize: {
-    xs: 12,
-    sm: 14,
-    md: 16,
-    base: 18,
-    lg: 20, // Body text
-    xl: 24, // Sub-heading
-    '2xl': 28,
-    '3xl': 32,
-    '4xl': 36, // Heading 2
-    '5xl': 42,
+    xs: 11,
+    sm: 13,
+    md: 15,
+    base: 16,
+    lg: 18, // Body text
+    xl: 20, // Sub-heading
+    '2xl': 24,
+    '3xl': 28,
+    '4xl': 32, // Heading 2
+    '5xl': 36,
   },
 
   // Line heights
@@ -350,7 +356,7 @@ export const ComponentStyles = {
   // Screen container
   screenContainer: {
     flex: 1,
-    backgroundColor: Colors.background.secondary,
+    backgroundColor: Colors.background.primary,
   },
 
   // Card base

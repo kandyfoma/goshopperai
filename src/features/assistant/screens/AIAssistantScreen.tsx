@@ -168,7 +168,7 @@ export function AIAssistantScreen() {
         {!isUser && (
           <View style={styles.assistantAvatar}>
             <LinearGradient
-              colors={[Colors.primary, Colors.primaryDark]}
+              colors={[Colors.card.crimson, Colors.card.red]}
               style={styles.avatarGradient}
               start={{x: 0, y: 0}}
               end={{x: 1, y: 1}}>
@@ -240,8 +240,8 @@ export function AIAssistantScreen() {
     <View style={styles.container}>
       <StatusBar
         barStyle="dark-content"
-        backgroundColor="transparent"
-        translucent
+        backgroundColor="#FFFFFF"
+        translucent={false}
       />
 
       {/* Header */}
@@ -280,7 +280,7 @@ export function AIAssistantScreen() {
             ]}>
             <View style={styles.welcomeIconContainer}>
               <LinearGradient
-                colors={[Colors.primary, Colors.primaryDark]}
+                colors={[Colors.card.crimson, Colors.card.red]}
                 style={styles.welcomeIconGradient}
                 start={{x: 0, y: 0}}
                 end={{x: 1, y: 1}}>
@@ -394,21 +394,27 @@ export function AIAssistantScreen() {
             onPress={handleSend}
             disabled={!inputText.trim() || isLoading}
             activeOpacity={0.9}>
-            {isLoading ? (
-              <Spinner size="small" color={Colors.white} />
-            ) : (
-              <LinearGradient
-                colors={
-                  inputText.trim()
-                    ? [Colors.primary, Colors.primaryDark]
-                    : [Colors.border.light, Colors.border.light]
-                }
-                style={styles.sendButtonGradient}
-                start={{x: 0, y: 0}}
-                end={{x: 1, y: 1}}>
-                <Icon name="send" size="sm" color={Colors.white} />
-              </LinearGradient>
-            )}
+            <LinearGradient
+              colors={
+                isLoading
+                  ? [Colors.card.cosmos, Colors.card.cosmos]
+                  : inputText.trim()
+                  ? [Colors.card.crimson, Colors.card.red]
+                  : [Colors.card.cream, Colors.card.cream]
+              }
+              style={styles.sendButtonGradient}
+              start={{x: 0, y: 0}}
+              end={{x: 1, y: 1}}>
+              {isLoading ? (
+                <Spinner size="small" color={Colors.white} />
+              ) : (
+                <Icon 
+                  name="send" 
+                  size="sm" 
+                  color={inputText.trim() ? Colors.white : Colors.text.tertiary} 
+                />
+              )}
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -419,7 +425,7 @@ export function AIAssistantScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.secondary,
+    backgroundColor: Colors.background.primary,
   },
   header: {
     flexDirection: 'row',
@@ -427,16 +433,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.md,
-    backgroundColor: Colors.background.secondary,
+    backgroundColor: Colors.white,
+    ...Shadows.sm,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.card.blue,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Shadows.sm,
   },
   headerCenter: {
     alignItems: 'center',
@@ -455,7 +461,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.card.blue,
+    backgroundColor: Colors.card.red,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -515,7 +521,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.card.blue,
+    backgroundColor: Colors.card.cream,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.md,
@@ -563,7 +569,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: BorderRadius.full,
-    backgroundColor: Colors.card.blue,
+    backgroundColor: Colors.card.cosmos,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: Spacing.sm,
@@ -574,7 +580,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
   },
   userContent: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.card.cosmos,
     borderBottomRightRadius: BorderRadius.sm,
   },
   assistantContent: {
@@ -604,7 +610,7 @@ const styles = StyleSheet.create({
   chartPreview: {
     marginTop: Spacing.md,
     padding: Spacing.md,
-    backgroundColor: Colors.card.blue,
+    backgroundColor: Colors.card.cream,
     borderRadius: BorderRadius.lg,
   },
   chartTitleRow: {
@@ -631,7 +637,7 @@ const styles = StyleSheet.create({
   chartValue: {
     fontSize: Typography.fontSize.sm,
     fontFamily: Typography.fontFamily.semiBold,
-    color: Colors.primary,
+    color: Colors.card.crimson,
   },
   inlineSuggestions: {
     flexDirection: 'row',
@@ -640,7 +646,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   inlineSuggestionChip: {
-    backgroundColor: Colors.card.green,
+    backgroundColor: Colors.card.cream,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.full,
@@ -648,7 +654,7 @@ const styles = StyleSheet.create({
   inlineSuggestionText: {
     fontSize: Typography.fontSize.xs,
     fontFamily: Typography.fontFamily.medium,
-    color: Colors.status.success,
+    color: Colors.card.crimson,
   },
   suggestionsBar: {
     backgroundColor: Colors.white,
@@ -660,7 +666,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
   },
   suggestionChip: {
-    backgroundColor: Colors.card.blue,
+    backgroundColor: Colors.card.cream,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.full,
@@ -682,7 +688,7 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     flex: 1,
-    backgroundColor: Colors.card.blue,
+    backgroundColor: Colors.background.secondary,
     borderRadius: BorderRadius.xl,
     paddingHorizontal: Spacing.lg,
   },

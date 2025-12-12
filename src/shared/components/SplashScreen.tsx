@@ -63,7 +63,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({onAnimationComplete}) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Main logo */}
       <Animated.View

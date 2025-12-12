@@ -12,7 +12,7 @@ import Button from './Button';
 
 // Urbanist Design Colors
 const URBANIST_COLORS = {
-  background: '#F6F5FA',
+  background: '#FFFFFF',
   cardBg: '#FFFFFF',
   primaryAccent: '#D8DFE9',
   secondaryAccent: '#CFDECA',

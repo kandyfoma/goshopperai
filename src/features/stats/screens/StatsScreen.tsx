@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
     ...Shadows.sm,
   },
   savingsCard: {
-    backgroundColor: Colors.card.green,
+    backgroundColor: Colors.card.cream,
     overflow: 'hidden',
     ...Shadows.sm,
   },

@@ -20,7 +20,7 @@ import {Colors, Typography, Spacing, BorderRadius} from '@/shared/theme/theme';
 
 // Urbanist Design Colors
 const URBANIST_COLORS = {
-  background: '#F6F5FA',
+  background: '#FFFFFF',
   cardBg: '#FFFFFF',
   primaryAccent: '#D8DFE9',
   secondaryAccent: '#CFDECA',
@@ -82,7 +82,7 @@ export function SignInScreen() {
     <View style={[styles.container, {paddingTop: insets.top}]}>
       <StatusBar
         barStyle="dark-content"
-        backgroundColor={URBANIST_COLORS.background}
+        backgroundColor="#FFFFFF"
       />
 
       {/* Header */}

@@ -9,8 +9,8 @@ import {
   StatusBar,
   Animated,
   Dimensions,
+  SafeAreaView,
 } from 'react-native';
-import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
@@ -29,29 +29,9 @@ import {
 } from '@/shared/theme/theme';
 import {Icon, Spinner} from '@/shared/components';
 
-// Urbanist Design Colors
-const URBANIST_COLORS = {
-  background: '#F6F5FA', // Ghost White
-  cardBg: '#FFFFFF',
-  primaryAccent: '#D8DFE9', // Alice Blue
-  secondaryAccent: '#CFDECA', // Honeydew
-  highlightAccent: '#EFF0A3', // Vanilla
-  textPrimary: '#212121', // Eerie Black
-  textSecondary: '#6B7280',
-  textMuted: '#9CA3AF',
-  success: '#10B981',
-  warning: '#F59E0B',
-  error: '#EF4444',
-  purple: '#8B5CF6',
-  blue: '#3B82F6',
-  gold: '#F59E0B',
-  border: '#E5E7EB',
-};
-
 export function AchievementsScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const insets = useSafeAreaInsets();
   const {user, isAuthenticated} = useAuth();
 
   // Redirect to login if not authenticated
@@ -143,10 +123,11 @@ export function AchievementsScreen() {
 
   if (isLoading) {
     return (
-      <View style={[styles.container, {paddingTop: insets.top}]}>
+      <SafeAreaView style={styles.container}>
         <StatusBar
           barStyle="dark-content"
-          backgroundColor={URBANIST_COLORS.background}
+          backgroundColor="#FFFFFF"
+          translucent={false}
         />
         <View style={styles.loadingContainer}>
           <Animated.View
@@ -163,11 +144,11 @@ export function AchievementsScreen() {
                 ],
               },
             ]}>
-            <Spinner size="large" color={URBANIST_COLORS.purple} />
+            <Spinner size="large" color={Colors.card.cosmos} />
           </Animated.View>
           <Text style={styles.loadingText}>Chargement de vos succès...</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -182,65 +163,52 @@ export function AchievementsScreen() {
       icon: 'camera' as const,
       value: stats?.totalScans || 0,
       label: 'Scans',
-      color: URBANIST_COLORS.blue,
-      bgColor: URBANIST_COLORS.primaryAccent,
+      color: Colors.card.cosmos,
+      bgColor: Colors.background.secondary,
     },
     {
       icon: 'dollar-sign' as const,
       value: `$${(stats?.totalSavings || 0).toFixed(0)}`,
       label: 'Économisé',
-      color: URBANIST_COLORS.success,
-      bgColor: URBANIST_COLORS.secondaryAccent,
+      color: Colors.card.crimson,
+      bgColor: Colors.card.cream,
     },
     {
       icon: 'zap' as const,
       value: stats?.currentStreak || 0,
       label: 'Série',
-      color: URBANIST_COLORS.warning,
-      bgColor: URBANIST_COLORS.highlightAccent,
+      color: Colors.accent,
+      bgColor: Colors.card.yellow,
     },
   ];
 
   return (
-    <View style={[styles.container, {paddingTop: insets.top}]}>
+    <SafeAreaView style={styles.container}>
       <StatusBar
         barStyle="dark-content"
-        backgroundColor={URBANIST_COLORS.background}
+        backgroundColor="#FFFFFF"
+        translucent={false}
       />
 
       {/* Header */}
-      <Animated.View
-        style={[
-          styles.header,
-          {
-            opacity: fadeAnim,
-            transform: [{translateY: slideAnim}],
-          },
-        ]}>
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}>
-          <Icon
-            name="chevron-left"
-            size="md"
-            color={URBANIST_COLORS.textPrimary}
-          />
+          <Icon name="arrow-left" size="md" color={Colors.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Mes Succès</Text>
         <View style={styles.headerBadge}>
-          <Icon name="trophy" size="sm" color={URBANIST_COLORS.gold} />
+          <Icon name="trophy" size="sm" color={Colors.accent} />
           <Text style={styles.headerBadgeText}>
             {unlockedCount}/{achievements.length}
           </Text>
         </View>
-      </Animated.View>
+      </View>
 
       <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          {paddingBottom: insets.bottom + 24},
-        ]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         {/* Level Card */}
         {stats && levelInfo && (
@@ -348,7 +316,7 @@ export function AchievementsScreen() {
         <View style={styles.achievementsSection}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
-              <Icon name="trophy" size="md" color={URBANIST_COLORS.gold} />
+              <Icon name="trophy" size="md" color={Colors.accent} />
               <Text style={styles.sectionTitle}>Accomplissements</Text>
             </View>
             <View style={styles.sectionBadge}>
@@ -364,13 +332,13 @@ export function AchievementsScreen() {
               <Icon
                 name="check-circle"
                 size="sm"
-                color={URBANIST_COLORS.success}
+                color={Colors.card.cosmos}
               />
               <Text style={styles.groupTitle}>Débloqués</Text>
             </View>
             {achievements.filter(a => a.isUnlocked).length === 0 ? (
               <View style={styles.emptyCard}>
-                <Icon name="gift" size="xl" color={URBANIST_COLORS.textMuted} />
+                <Icon name="gift" size="xl" color={Colors.text.tertiary} />
                 <Text style={styles.emptyText}>
                   Continuez à scanner pour débloquer des succès !
                 </Text>
@@ -415,7 +383,7 @@ export function AchievementsScreen() {
                       <Icon
                         name="star"
                         size="xs"
-                        color={URBANIST_COLORS.gold}
+                        color={Colors.accent}
                       />
                       <Text style={styles.achievementXPText}>
                         +{achievement.xpReward}
@@ -429,9 +397,9 @@ export function AchievementsScreen() {
           {/* Locked Achievements */}
           <View style={styles.achievementGroup}>
             <View style={styles.groupHeader}>
-              <Icon name="lock" size="sm" color={URBANIST_COLORS.textMuted} />
+              <Icon name="lock" size="sm" color={Colors.text.tertiary} />
               <Text
-                style={[styles.groupTitle, {color: URBANIST_COLORS.textMuted}]}>
+                style={[styles.groupTitle, {color: Colors.text.secondary}]}>
                 À débloquer
               </Text>
             </View>
@@ -454,11 +422,11 @@ export function AchievementsScreen() {
                     style={[
                       styles.achievementIcon,
                       styles.achievementIconLocked,
-                    ]}>
+                    ]>
                     <Icon
                       name="lock"
                       size="md"
-                      color={URBANIST_COLORS.textMuted}
+                      color={Colors.text.tertiary}
                     />
                   </View>
                   <View style={styles.achievementInfo}>
@@ -497,7 +465,7 @@ export function AchievementsScreen() {
                     <Icon
                       name="star"
                       size="xs"
-                      color={URBANIST_COLORS.textMuted}
+                      color={Colors.text.tertiary}
                     />
                     <Text style={styles.achievementXPTextLocked}>
                       +{achievement.xpReward}
@@ -519,7 +487,7 @@ export function AchievementsScreen() {
               },
             ]}>
             <View style={styles.streakIconContainer}>
-              <Icon name="zap" size="lg" color={URBANIST_COLORS.warning} />
+              <Icon name="zap" size="lg" color={Colors.accent} />
             </View>
             <View style={styles.streakInfo}>
               <Text style={styles.streakTitle}>Plus longue série</Text>
@@ -528,7 +496,7 @@ export function AchievementsScreen() {
               </Text>
             </View>
             <View style={styles.streakBadge}>
-              <Icon name="trophy" size="md" color={URBANIST_COLORS.gold} />
+              <Icon name="trophy" size="md" color={Colors.accent} />
             </View>
           </Animated.View>
         )}
@@ -540,13 +508,13 @@ export function AchievementsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: URBANIST_COLORS.background,
+    backgroundColor: Colors.background.primary,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 16,
+    gap: Spacing.lg,
   },
   loadingSpinner: {
     width: 64,
@@ -555,71 +523,65 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: URBANIST_COLORS.textSecondary,
-    letterSpacing: 0.3,
+    fontSize: Typography.fontSize.md,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.secondary,
   },
 
   // Header
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: URBANIST_COLORS.background,
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.base,
+    backgroundColor: Colors.white,
+    shadowColor: Colors.black,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   backButton: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: URBANIST_COLORS.cardBg,
     justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    alignItems: 'flex-start',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: URBANIST_COLORS.textPrimary,
-    letterSpacing: -0.3,
+    fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
+    flex: 1,
+    textAlign: 'center',
   },
   headerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: URBANIST_COLORS.highlightAccent,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+    gap: Spacing.xs,
+    backgroundColor: Colors.card.yellow,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
   },
   headerBadgeText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: URBANIST_COLORS.textPrimary,
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
   },
 
   scrollContent: {
-    padding: 20,
-    paddingTop: 8,
+    padding: Spacing.lg,
+    paddingBottom: 100,
   },
 
   // Level Card
   levelCard: {
-    backgroundColor: URBANIST_COLORS.cardBg,
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    marginBottom: Spacing.lg,
+    ...Shadows.md,
     overflow: 'hidden',
   },
   levelGlow: {
@@ -634,15 +596,15 @@ const styles = StyleSheet.create({
   levelHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
   },
   levelIconContainer: {
     width: 64,
     height: 64,
-    borderRadius: 20,
+    borderRadius: BorderRadius.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: Spacing.lg,
   },
   levelIcon: {
     fontSize: 36,
@@ -651,30 +613,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   levelTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: URBANIST_COLORS.textPrimary,
-    letterSpacing: -0.3,
+    fontSize: Typography.fontSize['2xl'],
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
   },
   levelTitleLingala: {
-    fontSize: 14,
-    color: URBANIST_COLORS.textSecondary,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
     fontStyle: 'italic',
-    marginTop: 2,
+    marginTop: Spacing.xs,
   },
   levelBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 16,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.lg,
   },
   levelNumber: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: Typography.fontSize.md,
+    fontFamily: Typography.fontFamily.bold,
   },
 
   // XP Progress
   xpContainer: {
-    gap: 8,
+    gap: Spacing.sm,
   },
   xpLabels: {
     flexDirection: 'row',
@@ -682,15 +643,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   xpLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: URBANIST_COLORS.textSecondary,
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.secondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   xpBar: {
     height: 10,
-    backgroundColor: URBANIST_COLORS.border,
+    backgroundColor: Colors.border.light,
     borderRadius: 5,
     overflow: 'hidden',
   },
@@ -699,148 +659,140 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   xpText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: URBANIST_COLORS.textPrimary,
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
   },
   xpHint: {
-    fontSize: 12,
-    color: URBANIST_COLORS.textMuted,
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: Spacing.xs,
   },
 
   // Stats Grid
   statsGrid: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
+    gap: Spacing.base,
+    marginBottom: Spacing.xl,
   },
   statCard: {
     flex: 1,
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
     alignItems: 'center',
-    gap: 8,
+    gap: Spacing.sm,
   },
   statIconContainer: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: BorderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: URBANIST_COLORS.textPrimary,
-    letterSpacing: -0.5,
+    fontSize: Typography.fontSize['2xl'],
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
   },
   statLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: URBANIST_COLORS.textSecondary,
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.secondary,
   },
 
   // Achievements Section
   achievementsSection: {
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: Spacing.lg,
   },
   sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: Spacing.sm,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: URBANIST_COLORS.textPrimary,
-    letterSpacing: -0.3,
+    fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
   },
   sectionBadge: {
-    backgroundColor: URBANIST_COLORS.primaryAccent,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    backgroundColor: Colors.background.secondary,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
   },
   sectionCount: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: URBANIST_COLORS.textSecondary,
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.secondary,
   },
 
   // Achievement Groups
   achievementGroup: {
-    marginBottom: 24,
+    marginBottom: Spacing.xl,
   },
   groupHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 14,
+    gap: Spacing.sm,
+    marginBottom: Spacing.base,
   },
   groupTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: URBANIST_COLORS.textSecondary,
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.secondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
   },
   emptyCard: {
-    backgroundColor: URBANIST_COLORS.cardBg,
-    borderRadius: 16,
-    padding: 32,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing['2xl'],
     alignItems: 'center',
-    gap: 12,
+    gap: Spacing.base,
     borderWidth: 2,
-    borderColor: URBANIST_COLORS.border,
+    borderColor: Colors.border.light,
     borderStyle: 'dashed',
   },
   emptyText: {
-    fontSize: 14,
-    color: URBANIST_COLORS.textMuted,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.tertiary,
     textAlign: 'center',
-    lineHeight: 20,
   },
 
   // Achievement Cards
   achievementCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: URBANIST_COLORS.cardBg,
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    marginBottom: Spacing.base,
+    ...Shadows.sm,
   },
   achievementCardLocked: {
-    backgroundColor: URBANIST_COLORS.background,
+    backgroundColor: Colors.background.secondary,
     borderWidth: 1,
-    borderColor: URBANIST_COLORS.border,
+    borderColor: Colors.border.light,
     shadowOpacity: 0,
     elevation: 0,
   },
   achievementIcon: {
     width: 52,
     height: 52,
-    borderRadius: 16,
-    backgroundColor: URBANIST_COLORS.secondaryAccent,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.card.cream,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: Spacing.base,
   },
   achievementIconLocked: {
-    backgroundColor: URBANIST_COLORS.border,
+    backgroundColor: Colors.border.light,
   },
   achievementIconText: {
     fontSize: 26,
@@ -849,56 +801,53 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   achievementTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: URBANIST_COLORS.textPrimary,
-    letterSpacing: -0.2,
+    fontSize: Typography.fontSize.md,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
   },
   achievementTitleLocked: {
-    color: URBANIST_COLORS.textMuted,
+    color: Colors.text.tertiary,
   },
   achievementTitleLingala: {
-    fontSize: 12,
-    color: URBANIST_COLORS.textSecondary,
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.secondary,
     fontStyle: 'italic',
-    marginTop: 1,
+    marginTop: Spacing.xs,
   },
   achievementDesc: {
-    fontSize: 13,
-    color: URBANIST_COLORS.textSecondary,
-    marginTop: 4,
-    lineHeight: 18,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
+    marginTop: Spacing.xs,
   },
   achievementDescLocked: {
-    fontSize: 13,
-    color: URBANIST_COLORS.textMuted,
-    marginTop: 4,
-    lineHeight: 18,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.xs,
   },
 
   // Progress Bar
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
-    gap: 10,
+    marginTop: Spacing.sm,
+    gap: Spacing.sm,
   },
   progressBar: {
     flex: 1,
     height: 6,
-    backgroundColor: URBANIST_COLORS.border,
+    backgroundColor: Colors.border.light,
     borderRadius: 3,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: URBANIST_COLORS.purple,
+    backgroundColor: Colors.card.cosmos,
     borderRadius: 3,
   },
   progressText: {
-    fontSize: 12,
-    color: URBANIST_COLORS.textMuted,
-    fontWeight: '600',
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
+    fontFamily: Typography.fontFamily.semiBold,
     minWidth: 50,
     textAlign: 'right',
   },
@@ -907,78 +856,73 @@ const styles = StyleSheet.create({
   achievementXP: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: URBANIST_COLORS.highlightAccent,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginLeft: 8,
+    gap: Spacing.xs,
+    backgroundColor: Colors.card.yellow,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    marginLeft: Spacing.sm,
   },
   achievementXPText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: URBANIST_COLORS.textPrimary,
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
   },
   achievementXPLocked: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: URBANIST_COLORS.border,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginLeft: 8,
+    gap: Spacing.xs,
+    backgroundColor: Colors.border.light,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    marginLeft: Spacing.sm,
   },
   achievementXPTextLocked: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: URBANIST_COLORS.textMuted,
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.tertiary,
   },
 
   // Streak Card
   streakCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: URBANIST_COLORS.cardBg,
-    borderRadius: 20,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    ...Shadows.md,
     borderLeftWidth: 4,
-    borderLeftColor: URBANIST_COLORS.warning,
+    borderLeftColor: Colors.accent,
   },
   streakIconContainer: {
     width: 56,
     height: 56,
-    borderRadius: 16,
-    backgroundColor: URBANIST_COLORS.highlightAccent,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.card.yellow,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: Spacing.lg,
   },
   streakInfo: {
     flex: 1,
   },
   streakTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: URBANIST_COLORS.textSecondary,
-    marginBottom: 4,
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.xs,
   },
   streakValue: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: URBANIST_COLORS.textPrimary,
-    letterSpacing: -0.5,
+    fontSize: Typography.fontSize['3xl'],
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
   },
   streakBadge: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: URBANIST_COLORS.highlightAccent,
+    backgroundColor: Colors.card.yellow,
     justifyContent: 'center',
     alignItems: 'center',
   },

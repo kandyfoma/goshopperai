@@ -57,7 +57,7 @@ const SLIDES: OnboardingSlide[] = [
     subtitle: 'en un instant',
     description:
       'Prenez simplement en photo vos tickets de caisse. Notre technologie fait le reste.',
-    accentColor: Colors.card.green,
+    accentColor: Colors.card.cream,
     gradientColors: ['#E5F0E3', '#CFDECA'],
   },
   {
