@@ -48,5 +48,38 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeCompose</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Scanner</string>
+			<key>UIApplicationShortcutItemSubtitle</key>
+			<string>Scanner un ticket</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.goshopperai.scan</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeSearch</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Liste de courses</string>
+			<key>UIApplicationShortcutItemSubtitle</key>
+			<string>Voir ma liste</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.goshopperai.shopping</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeTime</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Historique</string>
+			<key>UIApplicationShortcutItemSubtitle</key>
+			<string>Mes tickets</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.goshopperai.history</string>
+		</dict>
+	</array>
 </dict>
 </plist>

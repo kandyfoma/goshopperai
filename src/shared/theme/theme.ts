@@ -13,9 +13,9 @@
  */
 
 // ============================================
-// COLOR PALETTE
+// LIGHT THEME COLOR PALETTE
 // ============================================
-export const Colors = {
+export const LightColors = {
   // Primary - Crimson Blaze (warm red)
   primary: '#C1121F',
   primaryDark: '#780000',
@@ -114,6 +114,112 @@ export const Colors = {
     dark: 'rgba(0, 0, 0, 0.6)',
   },
 };
+
+// ============================================
+// DARK THEME COLOR PALETTE
+// ============================================
+export const DarkColors = {
+  // Primary - Crimson Blaze (warm red) - slightly lighter for dark mode
+  primary: '#E63946',
+  primaryDark: '#C1121F',
+  primaryLight: '#2D1F1F',
+
+  // Secondary/Background - Dark warm
+  secondary: '#1E1E1E',
+  secondaryDark: '#121212',
+
+  // Accent - Cosmos Blue - lighter for dark mode
+  accent: '#669BBC',
+  accentLight: '#8BB8D0',
+  accentDark: '#003049',
+
+  // Neutral colors
+  white: '#FFFFFF',
+  black: '#000000',
+
+  // Text colors
+  text: {
+    primary: '#FFFFFF',
+    secondary: '#B3B3B3',
+    tertiary: '#808080',
+    inverse: '#121212',
+    accent: '#E63946',
+  },
+
+  // Background colors
+  background: {
+    primary: '#121212',
+    secondary: '#1E1E1E',
+    tertiary: '#2D2D2D',
+    dark: '#0A0A0A',
+  },
+
+  // Card colors - Dark mode variants
+  cards: {
+    red: '#8B1A1A', // Darker Crimson
+    crimson: '#5C0000', // Darker Gochujang
+    blue: '#4A7A94', // Muted Blue Marble
+    cosmos: '#1A3D4D', // Lighter Cosmos Blue
+    cream: '#2D2D2D', // Dark surface
+    yellow: '#3D3523', // Dark warm beige
+    white: '#1E1E1E', // Dark surface
+  },
+
+  // Card alias (same as cards for convenience)
+  card: {
+    red: '#8B1A1A',
+    crimson: '#5C0000',
+    blue: '#4A7A94',
+    cosmos: '#1A3D4D',
+    cream: '#2D2D2D',
+    yellow: '#3D3523',
+    white: '#1E1E1E',
+  },
+
+  // Border colors
+  border: {
+    light: '#2D2D2D',
+    medium: '#3D3D3D',
+    dark: '#4D4D4D',
+  },
+
+  // Status colors - Slightly muted for dark mode
+  status: {
+    success: '#22C55E',
+    successLight: '#1A2E1A',
+    warning: '#F59E0B',
+    warningLight: '#2E2A1A',
+    error: '#E63946',
+    errorLight: '#2E1A1A',
+    info: '#669BBC',
+    infoLight: '#1A2A3E',
+  },
+
+  // Gradient presets
+  gradients: {
+    primary: ['#E63946', '#8B1A1A'],
+    accent: ['#669BBC', '#1A3D4D'],
+    card: ['#1E1E1E', '#2D2D2D'],
+  },
+
+  // Shadow colors
+  shadow: {
+    light: 'rgba(0, 0, 0, 0.2)',
+    medium: 'rgba(0, 0, 0, 0.4)',
+    dark: 'rgba(0, 0, 0, 0.6)',
+    accent: 'rgba(230, 57, 70, 0.30)',
+  },
+
+  // Overlay
+  overlay: {
+    light: 'rgba(0, 0, 0, 0.4)',
+    medium: 'rgba(0, 0, 0, 0.6)',
+    dark: 'rgba(0, 0, 0, 0.8)',
+  },
+};
+
+// Default export is Light theme for backwards compatibility
+export const Colors = LightColors;
 
 // ============================================
 // TYPOGRAPHY - Urbanist-inspired

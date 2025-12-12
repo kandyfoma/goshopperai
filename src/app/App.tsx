@@ -15,10 +15,11 @@ import {UserProvider} from '@/shared/contexts/UserContext';
 import {SubscriptionProvider} from '@/shared/contexts/SubscriptionContext';
 import {ThemeProvider} from '@/shared/contexts/ThemeContext';
 import {ToastProvider} from '@/shared/contexts/ToastContext';
-import {NetworkBanner, useNetwork} from '@/shared/components';
+import {NetworkBanner, useNetwork, OfflineBanner} from '@/shared/components';
 import {initializeFirebase} from '@/shared/services/firebase/config';
 import {analyticsService} from '@/shared/services';
 import {pushNotificationService} from '@/shared/services/firebase';
+import {quickActionsService, inAppReviewService, spotlightSearchService, offlineService, widgetDataService} from '@/shared/services';
 
 // Ignore specific warnings in development
 LogBox.ignoreLogs([
@@ -39,6 +40,7 @@ function NetworkAwareApp(): React.JSX.Element {
                 <ToastProvider>
                   <NavigationContainer>
                     <NetworkBanner networkState={networkState} />
+                    <OfflineBanner />
                     <StatusBar
                       barStyle="dark-content"
                       backgroundColor="#FFFFFF"
@@ -77,6 +79,31 @@ function App(): React.JSX.Element {
         console.log('Initializing Push Notifications...');
         await pushNotificationService.init();
         console.log('Push Notifications initialized successfully');
+
+        // Initialize Quick Actions (App Icon Shortcuts)
+        console.log('Initializing Quick Actions...');
+        quickActionsService.initialize();
+        console.log('Quick Actions initialized successfully');
+
+        // Initialize In-App Review tracking
+        console.log('Initializing In-App Review...');
+        await inAppReviewService.initialize();
+        console.log('In-App Review initialized successfully');
+
+        // Initialize Spotlight Search
+        console.log('Initializing Spotlight Search...');
+        await spotlightSearchService.initialize();
+        console.log('Spotlight Search initialized successfully');
+
+        // Initialize Offline Service
+        console.log('Initializing Offline Service...');
+        await offlineService.initialize();
+        console.log('Offline Service initialized successfully');
+
+        // Initialize Widget Data Service
+        console.log('Initializing Widget Data Service...');
+        await widgetDataService.initialize();
+        console.log('Widget Data Service initialized successfully');
 
         setLoading(false);
       } catch (err) {

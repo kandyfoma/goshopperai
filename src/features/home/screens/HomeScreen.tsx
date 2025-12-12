@@ -10,12 +10,13 @@ import {
   SafeAreaView,
   Animated,
   Dimensions,
+  StatusBar,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import LinearGradient from 'react-native-linear-gradient';
 import {RootStackParamList} from '@/shared/types';
-import {useSubscription, useUser} from '@/shared/contexts';
+import {useSubscription, useUser, useTheme} from '@/shared/contexts';
 import {
   Colors,
   Typography,
@@ -24,7 +25,7 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon} from '@/shared/components';
-import {analyticsService, hapticService} from '@/shared/services';
+import {analyticsService, hapticService, widgetDataService} from '@/shared/services';
 import firestore from '@react-native-firebase/firestore';
 import {formatCurrency} from '@/shared/utils/helpers';
 
@@ -271,6 +272,7 @@ const QuickAction = ({
 
 export function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const {colors, isDarkMode} = useTheme();
   const {
     canScan,
     subscription,
@@ -318,6 +320,16 @@ export function HomeScreen() {
         });
 
         setMonthlySpending(total);
+        
+        // Update widget data
+        const budget = userProfile?.monthlyBudget || 500;
+        widgetDataService.updateSpendingWidget({
+          monthlyTotal: total,
+          monthlyBudget: budget,
+          currency: userProfile?.preferredCurrency || 'USD',
+          lastUpdated: new Date().toISOString(),
+          percentUsed: budget > 0 ? (total / budget) * 100 : 0,
+        });
       } catch (error) {
         console.error('Error fetching monthly spending:', error);
         setMonthlySpending(0);
@@ -361,7 +373,11 @@ export function HomeScreen() {
   const isPremium = subscription?.isSubscribed;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, {backgroundColor: colors.background.primary}]}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background.primary}
+      />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
@@ -372,18 +388,18 @@ export function HomeScreen() {
             {/* Logo or app name could go here */}
           </View>
           <TouchableOpacity
-            style={styles.notificationButton}
+            style={[styles.notificationButton, {backgroundColor: colors.background.secondary}]}
             onPress={() => navigation.navigate('PriceAlerts')}>
-            <Icon name="bell" size="md" color={Colors.text.primary} />
+            <Icon name="bell" size="md" color={colors.text.primary} />
           </TouchableOpacity>
         </View>
 
         {/* Greeting */}
         <View style={styles.greetingSection}>
-          <Text style={styles.greeting}>
+          <Text style={[styles.greeting, {color: colors.text.primary}]}>
             {getGreeting()} {userName ? userName : ''},
           </Text>
-          <Text style={styles.greetingSubtitle}>
+          <Text style={[styles.greetingSubtitle, {color: colors.text.secondary}]}>
             voici ce qui se passe dans vos achats
           </Text>
         </View>

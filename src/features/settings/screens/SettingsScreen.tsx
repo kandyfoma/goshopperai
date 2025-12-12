@@ -26,6 +26,7 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon, FadeIn, SlideIn} from '@/shared/components';
+import {useDynamicType} from '@/shared/hooks';
 import {SUBSCRIPTION_PLANS, TRIAL_SCAN_LIMIT} from '@/shared/utils/constants';
 import {formatDate} from '@/shared/utils/helpers';
 
@@ -105,7 +106,8 @@ export function SettingsScreen() {
   const {user, signOut, isAuthenticated} = useAuth();
   const {profile, toggleNotifications, togglePriceAlerts} = useUser();
   const {subscription, trialScansUsed} = useSubscription();
-  const {isDarkMode, toggleTheme} = useTheme();
+  const {isDarkMode, toggleTheme, themeMode, setThemeMode} = useTheme();
+  const {fontScale, isLargeText, shouldReduceMotion} = useDynamicType();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -347,21 +349,63 @@ export function SettingsScreen() {
           <SettingSection title="Préférences">
             <SettingItem
               icon="moon"
-              title="Mode sombre"
-              subtitle={isDarkMode ? 'Activé' : 'Désactivé'}
-              showArrow={false}
-              iconBgColor={Colors.card.cosmos}
-              rightElement={
-                <Switch
-                  value={isDarkMode}
-                  onValueChange={toggleTheme}
-                  trackColor={{
-                    false: Colors.border.light,
-                    true: Colors.primary,
-                  }}
-                  thumbColor={'#ffffff'}
-                />
+              title="Apparence"
+              subtitle={
+                themeMode === 'system' 
+                  ? 'Automatique (Système)' 
+                  : themeMode === 'dark' 
+                    ? 'Mode sombre' 
+                    : 'Mode clair'
               }
+              showArrow={true}
+              iconBgColor={Colors.card.cosmos}
+              onPress={() => {
+                Alert.alert(
+                  'Apparence',
+                  'Choisissez le thème de l\'application',
+                  [
+                    {
+                      text: 'Système (Auto)',
+                      onPress: () => setThemeMode('system'),
+                    },
+                    {
+                      text: 'Mode clair',
+                      onPress: () => setThemeMode('light'),
+                    },
+                    {
+                      text: 'Mode sombre',
+                      onPress: () => setThemeMode('dark'),
+                    },
+                    {
+                      text: 'Annuler',
+                      style: 'cancel',
+                    },
+                  ],
+                );
+              }}
+            />
+            <SettingItem
+              icon="type"
+              title="Taille du texte"
+              subtitle={`${Math.round(fontScale * 100)}% ${isLargeText ? '(Grande taille)' : ''}`}
+              showArrow={true}
+              iconBgColor={Colors.card.blue}
+              onPress={() => {
+                Alert.alert(
+                  'Taille du texte',
+                  `L'application utilise automatiquement la taille de texte définie dans les réglages de votre téléphone.\n\nÉchelle actuelle: ${Math.round(fontScale * 100)}%\n${shouldReduceMotion ? 'Animations réduites: Activées' : ''}`,
+                  [
+                    {
+                      text: 'Ouvrir les réglages',
+                      onPress: () => Linking.openSettings(),
+                    },
+                    {
+                      text: 'OK',
+                      style: 'cancel',
+                    },
+                  ],
+                );
+              }}
             />
             <SettingItem
               icon="bell"

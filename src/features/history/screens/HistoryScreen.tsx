@@ -24,16 +24,19 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, FadeIn, SlideIn, EmptyState} from '@/shared/components';
+import {Icon, FadeIn, SlideIn, EmptyState, SwipeToDelete} from '@/shared/components';
 import {formatCurrency, formatDate} from '@/shared/utils/helpers';
 import {useAuth} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
+import {spotlightSearchService, offlineService} from '@/shared/services';
+import {useIsOnline} from '@/shared/hooks';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function HistoryScreen() {
   const navigation = useNavigation<NavigationProp>();
   const {user} = useAuth();
+  const isOnline = useIsOnline();
 
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [filteredReceipts, setFilteredReceipts] = useState<Receipt[]>([]);
@@ -108,8 +111,58 @@ export function HistoryScreen() {
 
       setReceipts(receiptsData);
       setFilteredReceipts(receiptsData);
+
+      // Cache receipts for offline access
+      offlineService.cacheReceipts(
+        receiptsData.map(r => ({
+          id: r.id,
+          storeName: r.storeName,
+          total: r.total,
+          date: r.date.toISOString(),
+          itemCount: r.items?.length || 0,
+          cachedAt: Date.now(),
+        }))
+      );
+
+      // Index receipts for Spotlight/App Search
+      spotlightSearchService.indexReceipts(
+        receiptsData.map(r => ({
+          id: r.id,
+          shopName: r.storeName,
+          date: r.date,
+          total: r.total,
+          itemCount: r.items?.length || 0,
+        }))
+      );
     } catch (error) {
       console.error('Error loading receipts:', error);
+      
+      // If offline, try to load from cache
+      if (!isOnline) {
+        const cachedReceipts = await offlineService.getCachedReceipts();
+        if (cachedReceipts.length > 0) {
+          // Convert cached format back to Receipt format (minimal)
+          const offlineReceipts = cachedReceipts.map(c => ({
+            id: c.id,
+            storeName: c.storeName,
+            total: c.total,
+            date: new Date(c.date),
+            items: [],
+            // Add other required fields with defaults
+            userId: user?.uid || '',
+            storeNameNormalized: '',
+            currency: 'EUR',
+            processingStatus: 'completed' as const,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            scannedAt: new Date(c.date),
+          }));
+          setReceipts(offlineReceipts as Receipt[]);
+          setFilteredReceipts(offlineReceipts as Receipt[]);
+          return;
+        }
+      }
+      
       // Keep empty array on error
       setReceipts([]);
       setFilteredReceipts([]);
@@ -169,70 +222,105 @@ export function HistoryScreen() {
     }
   };
 
+  // Delete receipt handler
+  const handleDeleteReceipt = useCallback(
+    async (receiptId: string) => {
+      if (!user?.uid) return;
+
+      try {
+        await firestore()
+          .collection('artifacts')
+          .doc('goshopperai')
+          .collection('users')
+          .doc(user.uid)
+          .collection('receipts')
+          .doc(receiptId)
+          .delete();
+
+        // Remove from local state
+        setReceipts(prev => prev.filter(r => r.id !== receiptId));
+        setFilteredReceipts(prev => prev.filter(r => r.id !== receiptId));
+
+        // Remove from Spotlight search index
+        spotlightSearchService.removeReceipt(receiptId);
+
+        analyticsService.logCustomEvent('receipt_deleted', {receiptId});
+      } catch (error) {
+        console.error('Error deleting receipt:', error);
+      }
+    },
+    [user?.uid],
+  );
+
   const renderReceiptItem = ({item, index}: {item: Receipt; index: number}) => {
     return (
       <SlideIn direction="left" delay={index * 50}>
-        <TouchableOpacity
-          style={styles.receiptCard}
-          onPress={() => handleReceiptPress(item.id, item)}
-          activeOpacity={0.7}>
-          <View style={styles.receiptIcon}>
-            <Icon name="receipt" size="lg" color={Colors.primary} />
-          </View>
-
-          <View style={styles.receiptInfo}>
-            <Text style={styles.storeName}>{item.storeName}</Text>
-            <Text style={styles.storeAddress} numberOfLines={1}>
-              {item.storeAddress || 'Adresse non spécifiée'}
-            </Text>
-            <View style={styles.dateRow}>
-              <Icon name="calendar" size="xs" color={Colors.text.tertiary} />
-              <Text style={styles.receiptDate}>
-                {formatDate(item.date)}
-              </Text>
+        <SwipeToDelete
+          onDelete={() => handleDeleteReceipt(item.id)}
+          deleteLabel="Supprimer"
+          style={{marginBottom: Spacing.sm}}>
+          <TouchableOpacity
+            style={styles.receiptCard}
+            onPress={() => handleReceiptPress(item.id, item)}
+            activeOpacity={0.7}>
+            <View style={styles.receiptIcon}>
+              <Icon name="receipt" size="lg" color={Colors.primary} />
             </View>
-          </View>
 
-          <View style={styles.receiptRight}>
-            <View style={styles.totalContainer}>
-              {item.totalUSD !== undefined && item.totalCDF !== undefined ? (
-                <>
-                  <Text style={styles.totalAmount}>
-                    {formatCurrency(item.totalUSD)}
-                  </Text>
-                  <Text style={styles.totalAmountSecondary}>
-                    {formatCurrency(item.totalCDF, 'CDF')}
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.totalAmount}>
-                  {formatCurrency(
-                    item.totalAmount || item.total,
-                    item.currency,
-                  )}
+            <View style={styles.receiptInfo}>
+              <Text style={styles.storeName}>{item.storeName}</Text>
+              <Text style={styles.storeAddress} numberOfLines={1}>
+                {item.storeAddress || 'Adresse non spécifiée'}
+              </Text>
+              <View style={styles.dateRow}>
+                <Icon name="calendar" size="xs" color={Colors.text.tertiary} />
+                <Text style={styles.receiptDate}>
+                  {formatDate(item.date)}
                 </Text>
-              )}
+              </View>
             </View>
-            <View
-              style={[
-                styles.statusBadge,
-                {backgroundColor: getStatusColor(item.status) + '20'},
-              ]}>
-              <Text
+
+            <View style={styles.receiptRight}>
+              <View style={styles.totalContainer}>
+                {item.totalUSD !== undefined && item.totalCDF !== undefined ? (
+                  <>
+                    <Text style={styles.totalAmount}>
+                      {formatCurrency(item.totalUSD)}
+                    </Text>
+                    <Text style={styles.totalAmountSecondary}>
+                      {formatCurrency(item.totalCDF, 'CDF')}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={styles.totalAmount}>
+                    {formatCurrency(
+                      item.totalAmount || item.total,
+                      item.currency,
+                    )}
+                  </Text>
+                )}
+              </View>
+              <View
                 style={[
-                  styles.statusText,
-                  {color: getStatusColor(item.status)},
+                  styles.statusBadge,
+                  {backgroundColor: getStatusColor(item.status) + '20'},
                 ]}>
-                {getStatusLabel(item.status)}
-              </Text>
+                <Text
+                  style={[
+                    styles.statusText,
+                    {color: getStatusColor(item.status)},
+                  ]}>
+                  {getStatusLabel(item.status)}
+                </Text>
+              </View>
+              <Icon
+                name="chevron-right"
+                size="sm"
+                color={Colors.text.tertiary}
+              />
             </View>
-            <Icon
-              name="chevron-right"
-              size="sm"
-              color={Colors.text.tertiary}
-            />
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </SwipeToDelete>
       </SlideIn>
     );
   };

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="scan"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_camera"
+        android:shortcutShortLabel="@string/shortcut_scan_short"
+        android:shortcutLongLabel="@string/shortcut_scan_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.goshopperai"
+            android:targetClass="com.goshopperai.MainActivity"
+            android:data="goshopperai://scan" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="shopping"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_cart"
+        android:shortcutShortLabel="@string/shortcut_shopping_short"
+        android:shortcutLongLabel="@string/shortcut_shopping_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.goshopperai"
+            android:targetClass="com.goshopperai.MainActivity"
+            android:data="goshopperai://shopping" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="history"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_history"
+        android:shortcutShortLabel="@string/shortcut_history_short"
+        android:shortcutLongLabel="@string/shortcut_history_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.goshopperai"
+            android:targetClass="com.goshopperai.MainActivity"
+            android:data="goshopperai://history" />
+    </shortcut>
+</shortcuts>

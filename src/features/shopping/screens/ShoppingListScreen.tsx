@@ -32,7 +32,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, Spinner, Modal} from '@/shared/components';
+import {Icon, Spinner, Modal, SwipeToDelete} from '@/shared/components';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
@@ -282,48 +282,67 @@ export function ShoppingListScreen() {
     return (
       <Animated.View
         style={[
-          styles.itemCard,
-          item.isChecked && styles.itemCardChecked,
           {
             opacity: fadeAnim,
             transform: [{translateY: slideAnim}],
           },
         ]}>
-        <TouchableOpacity
-          style={[styles.checkBox, item.isChecked && styles.checkBoxChecked]}
-          onPress={() => handleToggleItem(item.id)}
-          activeOpacity={0.7}>
-          {item.isChecked && (
-            <Icon name="check" size="sm" color={Colors.white} />
-          )}
-        </TouchableOpacity>
+        <SwipeToDelete
+          onDelete={() => handleRemoveItem(item.id)}
+          deleteLabel="Supprimer"
+          style={{marginBottom: Spacing.sm}}>
+          <Animated.View
+            style={[
+              styles.itemCard,
+              item.isChecked && styles.itemCardChecked,
+            ]}>
+            <TouchableOpacity
+              style={[
+                styles.checkBox,
+                item.isChecked && styles.checkBoxChecked,
+              ]}
+              onPress={() => handleToggleItem(item.id)}
+              activeOpacity={0.7}>
+              {item.isChecked && (
+                <Icon name="check" size="sm" color={Colors.white} />
+              )}
+            </TouchableOpacity>
 
-        <View style={styles.itemInfo}>
-          <Text
-            style={[styles.itemName, item.isChecked && styles.itemNameChecked]}>
-            {item.name}
-          </Text>
-          <View style={styles.itemDetails}>
-            <View style={styles.quantityBadge}>
-              <Text style={styles.itemQuantity}>x{item.quantity}</Text>
-            </View>
-            {item.bestPrice && (
-              <View style={styles.priceBadge}>
-                <Icon name="tag" size="xs" color={Colors.status.success} />
-                <Text style={styles.itemPrice}>
-                  ${item.bestPrice.toFixed(2)} @ {item.bestStore}
-                </Text>
+            <View style={styles.itemInfo}>
+              <Text
+                style={[
+                  styles.itemName,
+                  item.isChecked && styles.itemNameChecked,
+                ]}>
+                {item.name}
+              </Text>
+              <View style={styles.itemDetails}>
+                <View style={styles.quantityBadge}>
+                  <Text style={styles.itemQuantity}>x{item.quantity}</Text>
+                </View>
+                {item.bestPrice && (
+                  <View style={styles.priceBadge}>
+                    <Icon name="tag" size="xs" color={Colors.status.success} />
+                    <Text style={styles.itemPrice}>
+                      ${item.bestPrice.toFixed(2)} @ {item.bestStore}
+                    </Text>
+                  </View>
+                )}
               </View>
-            )}
-          </View>
-        </View>
+            </View>
 
-        <TouchableOpacity
-          style={styles.removeButton}
-          onPress={() => handleRemoveItem(item.id)}
-          hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
-          <Icon name="x" size="sm" color={Colors.text.tertiary} />
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.removeButton}
+              onPress={() => handleToggleItem(item.id)}
+              hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+              <Icon
+                name={item.isChecked ? 'check-circle' : 'circle'}
+                size="md"
+                color={item.isChecked ? Colors.status.success : Colors.text.tertiary}
+              />
+            </TouchableOpacity>
+          </Animated.View>
+        </SwipeToDelete>
       </Animated.View>
     );
   };
@@ -945,7 +964,7 @@ const styles = StyleSheet.create({
     ...Shadows.sm,
   },
   itemCardChecked: {
-    backgroundColor: Colors.card.green,
+    backgroundColor: Colors.card.cream,
     opacity: 0.8,
   },
   checkBox: {
@@ -995,7 +1014,7 @@ const styles = StyleSheet.create({
   priceBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.card.green,
+    backgroundColor: Colors.card.cream,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: BorderRadius.sm,

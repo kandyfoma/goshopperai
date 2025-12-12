@@ -4,3 +4,8 @@ export {duplicateDetectionService} from './duplicateDetection';
 export {hapticService} from './hapticService';
 export {inAppReviewService} from './inAppReviewService';
 export {shareService} from './shareService';
+export {quickActionsService} from './quickActionsService';
+export {dynamicTypeService} from './dynamicTypeService';
+export {spotlightSearchService} from './spotlightSearchService';
+export {offlineService} from './offlineService';
+export {widgetDataService} from './widgetDataService';
