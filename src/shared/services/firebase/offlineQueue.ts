@@ -130,7 +130,9 @@ class OfflineQueueService {
   async getQueue(): Promise<QueuedReceipt[]> {
     try {
       const data = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
-      if (!data) return [];
+      if (!data) {
+        return [];
+      }
 
       const queue = JSON.parse(data) as QueuedReceipt[];
       return queue.map(item => ({
@@ -152,7 +154,9 @@ class OfflineQueueService {
   async getPendingImages(): Promise<QueuedImage[]> {
     try {
       const data = await AsyncStorage.getItem(PENDING_IMAGES_KEY);
-      if (!data) return [];
+      if (!data) {
+        return [];
+      }
 
       return JSON.parse(data).map((item: QueuedImage) => ({
         ...item,
@@ -370,7 +374,9 @@ class OfflineQueueService {
     const queue = await this.getQueue();
     const item = queue.find(i => i.id === id);
 
-    if (!item) return false;
+    if (!item) {
+      return false;
+    }
 
     // Reset attempts
     await this.updateQueueItem(id, {

@@ -26,12 +26,12 @@ import {logoUrbanistSvg} from '../../../../assets/logo-icon';
 
 // Urbanist Design Colors
 const URBANIST = {
-  background: '#F6F5FA',    // Ghost White
+  background: '#F6F5FA', // Ghost White
   cardBg: '#FFFFFF',
   primaryAccent: '#D8DFE9', // Alice Blue
   secondaryAccent: '#CFDECA', // Honeydew
   highlightAccent: '#EFF0A3', // Vanilla
-  textPrimary: '#212121',    // Eerie Black
+  textPrimary: '#212121', // Eerie Black
   textSecondary: '#6B7280',
   textMuted: '#9CA3AF',
   primary: '#8B5CF6',
@@ -76,7 +76,9 @@ export function LoginScreen() {
 
   // UI state
   const [loading, setLoading] = useState(false);
-  const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
+  const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -248,21 +250,32 @@ export function LoginScreen() {
   // Clear field errors on change
   const handleEmailChange = (value: string) => {
     setEmail(value);
-    if (emailError) setEmailError(null);
-    if (error) setError(null);
+    if (emailError) {
+      setEmailError(null);
+    }
+    if (error) {
+      setError(null);
+    }
   };
 
   const handlePasswordChange = (value: string) => {
     setPassword(value);
-    if (passwordError) setPasswordError(null);
-    if (error) setError(null);
+    if (passwordError) {
+      setPasswordError(null);
+    }
+    if (error) {
+      setError(null);
+    }
   };
 
   const isLoading = loading || socialLoading !== null;
 
   return (
     <View style={[styles.container, {paddingTop: insets.top}]}>
-      <StatusBar barStyle="dark-content" backgroundColor={URBANIST.background} />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={URBANIST.background}
+      />
 
       {/* Header with Skip */}
       <View style={styles.header}>
@@ -280,10 +293,12 @@ export function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}>
         <ScrollView
-          contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 24}]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {paddingBottom: insets.bottom + 24},
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          
           <Animated.View
             style={[
               styles.content,
@@ -292,20 +307,21 @@ export function LoginScreen() {
                 transform: [{translateY: slideAnim}],
               },
             ]}>
-            
             {/* Logo & Title */}
             <View style={styles.logoSection}>
               <View style={styles.logoWrapper}>
                 <SvgXml xml={logoUrbanistSvg} width={80} height={80} />
               </View>
               <Text style={styles.appName}>GoShopperAI</Text>
-              <Text style={styles.tagline}>Scannez vos reçus, économisez plus</Text>
+              <Text style={styles.tagline}>
+                Scannez vos reçus, économisez plus
+              </Text>
             </View>
 
             {/* Success Message */}
             {successMessage && (
               <View style={styles.successBanner}>
-                <Icon name="checkbox-circle-line" size="sm" color={URBANIST.success} />
+                <Icon name="check-circle" size="sm" color={URBANIST.success} />
                 <Text style={styles.successText}>{successMessage}</Text>
               </View>
             )}
@@ -313,8 +329,11 @@ export function LoginScreen() {
             {/* Error Message */}
             {error && (
               <Animated.View
-                style={[styles.errorBanner, {transform: [{translateX: shakeAnimation}]}]}>
-                <Icon name="error-warning-line" size="sm" color={URBANIST.error} />
+                style={[
+                  styles.errorBanner,
+                  {transform: [{translateX: shakeAnimation}]},
+                ]}>
+                <Icon name="alert-triangle" size="sm" color={URBANIST.error} />
                 <Text style={styles.errorText}>{error}</Text>
               </Animated.View>
             )}
@@ -324,12 +343,13 @@ export function LoginScreen() {
               {/* Email Input */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Email</Text>
-                <View style={[
-                  styles.inputWrapper,
-                  emailError && styles.inputError,
-                  isLoading && styles.inputDisabled,
-                ]}>
-                  <Icon name="mail-line" size="sm" color={URBANIST.textMuted} />
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    emailError && styles.inputError,
+                    isLoading && styles.inputDisabled,
+                  ]}>
+                  <Icon name="mail" size="sm" color={URBANIST.textMuted} />
                   <TextInput
                     style={styles.input}
                     placeholder="votre@email.com"
@@ -344,18 +364,21 @@ export function LoginScreen() {
                     onSubmitEditing={() => passwordInputRef.current?.focus()}
                   />
                 </View>
-                {emailError && <Text style={styles.fieldError}>{emailError}</Text>}
+                {emailError && (
+                  <Text style={styles.fieldError}>{emailError}</Text>
+                )}
               </View>
 
               {/* Password Input */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Mot de passe</Text>
-                <View style={[
-                  styles.inputWrapper,
-                  passwordError && styles.inputError,
-                  isLoading && styles.inputDisabled,
-                ]}>
-                  <Icon name="lock-line" size="sm" color={URBANIST.textMuted} />
+                <View
+                  style={[
+                    styles.inputWrapper,
+                    passwordError && styles.inputError,
+                    isLoading && styles.inputDisabled,
+                  ]}>
+                  <Icon name="lock" size="sm" color={URBANIST.textMuted} />
                   <TextInput
                     ref={passwordInputRef}
                     style={styles.input}
@@ -374,13 +397,15 @@ export function LoginScreen() {
                     style={styles.eyeButton}
                     disabled={isLoading}>
                     <Icon
-                      name={showPassword ? 'eye-line' : 'eye-off-line'}
+                      name={showPassword ? 'eye' : 'eye-off'}
                       size="sm"
                       color={URBANIST.textMuted}
                     />
                   </TouchableOpacity>
                 </View>
-                {passwordError && <Text style={styles.fieldError}>{passwordError}</Text>}
+                {passwordError && (
+                  <Text style={styles.fieldError}>{passwordError}</Text>
+                )}
               </View>
 
               {/* Forgot Password */}
@@ -388,7 +413,9 @@ export function LoginScreen() {
                 onPress={handleForgotPassword}
                 disabled={isLoading}
                 style={styles.forgotPasswordButton}>
-                <Text style={styles.forgotPasswordText}>Mot de passe oublié?</Text>
+                <Text style={styles.forgotPasswordText}>
+                  Mot de passe oublié?
+                </Text>
               </TouchableOpacity>
 
               {/* Login Button */}
@@ -402,7 +429,7 @@ export function LoginScreen() {
                 ) : (
                   <>
                     <Text style={styles.loginButtonText}>Se connecter</Text>
-                    <Icon name="arrow-right-line" size="sm" color={URBANIST.white} />
+                    <Icon name="arrow-right" size="sm" color={URBANIST.white} />
                   </>
                 )}
               </TouchableOpacity>
@@ -419,16 +446,25 @@ export function LoginScreen() {
                 {/* Google Sign-In - Android only */}
                 {Platform.OS === 'android' && (
                   <TouchableOpacity
-                    style={[styles.socialButton, styles.singleSocialButton, isLoading && styles.buttonDisabled]}
+                    style={[
+                      styles.socialButton,
+                      styles.singleSocialButton,
+                      isLoading && styles.buttonDisabled,
+                    ]}
                     onPress={handleGoogleSignIn}
                     disabled={isLoading}
                     activeOpacity={0.7}>
                     {socialLoading === 'google' ? (
-                      <ActivityIndicator size="small" color={URBANIST.textPrimary} />
+                      <ActivityIndicator
+                        size="small"
+                        color={URBANIST.textPrimary}
+                      />
                     ) : (
                       <>
                         <Text style={styles.googleIcon}>G</Text>
-                        <Text style={styles.socialButtonText}>Continuer avec Google</Text>
+                        <Text style={styles.socialButtonText}>
+                          Continuer avec Google
+                        </Text>
                       </>
                     )}
                   </TouchableOpacity>
@@ -437,7 +473,12 @@ export function LoginScreen() {
                 {/* Apple Sign-In - iOS only */}
                 {Platform.OS === 'ios' && (
                   <TouchableOpacity
-                    style={[styles.socialButton, styles.appleButton, styles.singleSocialButton, isLoading && styles.buttonDisabled]}
+                    style={[
+                      styles.socialButton,
+                      styles.appleButton,
+                      styles.singleSocialButton,
+                      isLoading && styles.buttonDisabled,
+                    ]}
                     onPress={handleAppleSignIn}
                     disabled={isLoading}
                     activeOpacity={0.7}>
@@ -445,8 +486,14 @@ export function LoginScreen() {
                       <ActivityIndicator size="small" color={URBANIST.white} />
                     ) : (
                       <>
-                        <Icon name="apple-fill" size="sm" color={URBANIST.white} />
-                        <Text style={[styles.socialButtonText, styles.appleButtonText]}>Continuer avec Apple</Text>
+                        <Icon name="apple" size="sm" color={URBANIST.white} />
+                        <Text
+                          style={[
+                            styles.socialButtonText,
+                            styles.appleButtonText,
+                          ]}>
+                          Continuer avec Apple
+                        </Text>
                       </>
                     )}
                   </TouchableOpacity>
@@ -456,8 +503,12 @@ export function LoginScreen() {
 
             {/* Register Link */}
             <View style={styles.registerRow}>
-              <Text style={styles.registerText}>Vous n'avez pas de compte?</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')} disabled={isLoading}>
+              <Text style={styles.registerText}>
+                Vous n'avez pas de compte?
+              </Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Register')}
+                disabled={isLoading}>
                 <Text style={styles.registerLink}> Créer un compte</Text>
               </TouchableOpacity>
             </View>
@@ -465,8 +516,8 @@ export function LoginScreen() {
             {/* Terms */}
             <Text style={styles.termsText}>
               En vous connectant, vous acceptez nos{' '}
-              <Text style={styles.termsLink}>Conditions d'utilisation</Text>
-              {' '}et notre{' '}
+              <Text style={styles.termsLink}>Conditions d'utilisation</Text> et
+              notre{' '}
               <Text style={styles.termsLink}>Politique de confidentialité</Text>
             </Text>
           </Animated.View>

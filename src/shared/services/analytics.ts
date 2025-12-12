@@ -6,7 +6,9 @@ class AnalyticsService {
   private initialized = false;
 
   async initialize() {
-    if (this.initialized) return;
+    if (this.initialized) {
+      return;
+    }
 
     try {
       // Enable analytics collection
@@ -31,15 +33,24 @@ class AnalyticsService {
     try {
       const properties: {[key: string]: string} = {};
 
-      if (profile.defaultCity) properties.city = profile.defaultCity;
-      if (profile.preferredLanguage)
+      if (profile.defaultCity) {
+        properties.city = profile.defaultCity;
+      }
+      if (profile.preferredLanguage) {
         properties.language = profile.preferredLanguage;
-      if (profile.preferredCurrency)
+      }
+      if (profile.preferredCurrency) {
         properties.currency = profile.preferredCurrency;
-      if (profile.age) properties.age_group = this.getAgeGroup(profile.age);
-      if (profile.sex) properties.gender = profile.sex;
-      if (profile.monthlyBudget)
+      }
+      if (profile.age) {
+        properties.age_group = this.getAgeGroup(profile.age);
+      }
+      if (profile.sex) {
+        properties.gender = profile.sex;
+      }
+      if (profile.monthlyBudget) {
         properties.budget_tier = this.getBudgetTier(profile.monthlyBudget);
+      }
 
       await analytics().setUserProperties(properties);
     } catch (error) {
@@ -48,18 +59,34 @@ class AnalyticsService {
   }
 
   private getAgeGroup(age: number): string {
-    if (age < 18) return 'under_18';
-    if (age < 25) return '18_24';
-    if (age < 35) return '25_34';
-    if (age < 45) return '35_44';
-    if (age < 55) return '45_54';
+    if (age < 18) {
+      return 'under_18';
+    }
+    if (age < 25) {
+      return '18_24';
+    }
+    if (age < 35) {
+      return '25_34';
+    }
+    if (age < 45) {
+      return '35_44';
+    }
+    if (age < 55) {
+      return '45_54';
+    }
     return '55_plus';
   }
 
   private getBudgetTier(budget: number): string {
-    if (budget < 50000) return 'low';
-    if (budget < 200000) return 'medium';
-    if (budget < 500000) return 'high';
+    if (budget < 50000) {
+      return 'low';
+    }
+    if (budget < 200000) {
+      return 'medium';
+    }
+    if (budget < 500000) {
+      return 'high';
+    }
     return 'premium';
   }
 

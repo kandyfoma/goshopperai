@@ -1,12 +1,12 @@
 /**
  * AnimatedView Component
- * 
+ *
  * Wrapper components for common animations
  */
 
-import React, { useEffect, useRef } from 'react';
-import { Animated, ViewStyle, Easing } from 'react-native';
-import { Animations } from '../theme/theme';
+import React, {useEffect, useRef} from 'react';
+import {Animated, ViewStyle, Easing} from 'react-native';
+import {Animations} from '../theme/theme';
 
 interface FadeInProps {
   children: React.ReactNode;
@@ -33,11 +33,7 @@ export const FadeIn: React.FC<FadeInProps> = ({
     }).start();
   }, []);
 
-  return (
-    <Animated.View style={[{ opacity }, style]}>
-      {children}
-    </Animated.View>
-  );
+  return <Animated.View style={[{opacity}, style]}>{children}</Animated.View>;
 };
 
 interface SlideInProps extends FadeInProps {
@@ -55,9 +51,11 @@ export const SlideIn: React.FC<SlideInProps> = ({
   style,
 }) => {
   const opacity = useRef(new Animated.Value(0)).current;
-  const translate = useRef(new Animated.Value(
-    direction === 'up' || direction === 'left' ? distance : -distance
-  )).current;
+  const translate = useRef(
+    new Animated.Value(
+      direction === 'up' || direction === 'left' ? distance : -distance,
+    ),
+  ).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -77,12 +75,13 @@ export const SlideIn: React.FC<SlideInProps> = ({
     ]).start();
   }, []);
 
-  const transform = direction === 'up' || direction === 'down'
-    ? [{ translateY: translate }]
-    : [{ translateX: translate }];
+  const transform =
+    direction === 'up' || direction === 'down'
+      ? [{translateY: translate}]
+      : [{translateX: translate}];
 
   return (
-    <Animated.View style={[{ opacity, transform }, style]}>
+    <Animated.View style={[{opacity, transform}, style]}>
       {children}
     </Animated.View>
   );
@@ -121,7 +120,7 @@ export const ScaleIn: React.FC<ScaleInProps> = ({
   }, []);
 
   return (
-    <Animated.View style={[{ opacity, transform: [{ scale }] }, style]}>
+    <Animated.View style={[{opacity, transform: [{scale}]}, style]}>
       {children}
     </Animated.View>
   );
@@ -158,7 +157,7 @@ interface PulseProps {
 }
 
 // Pulse animation (for loading states, attention)
-export const Pulse: React.FC<PulseProps> = ({ children, style }) => {
+export const Pulse: React.FC<PulseProps> = ({children, style}) => {
   const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -176,14 +175,14 @@ export const Pulse: React.FC<PulseProps> = ({ children, style }) => {
           easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
     animation.start();
     return () => animation.stop();
   }, []);
 
   return (
-    <Animated.View style={[{ transform: [{ scale }] }, style]}>
+    <Animated.View style={[{transform: [{scale}]}, style]}>
       {children}
     </Animated.View>
   );
@@ -196,34 +195,50 @@ interface ShakeProps {
 }
 
 // Shake animation (for errors)
-export const Shake: React.FC<ShakeProps> = ({ children, trigger, style }) => {
+export const Shake: React.FC<ShakeProps> = ({children, trigger, style}) => {
   const translateX = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (trigger) {
       Animated.sequence([
-        Animated.timing(translateX, { toValue: 10, duration: 50, useNativeDriver: true }),
-        Animated.timing(translateX, { toValue: -10, duration: 50, useNativeDriver: true }),
-        Animated.timing(translateX, { toValue: 10, duration: 50, useNativeDriver: true }),
-        Animated.timing(translateX, { toValue: -10, duration: 50, useNativeDriver: true }),
-        Animated.timing(translateX, { toValue: 0, duration: 50, useNativeDriver: true }),
+        Animated.timing(translateX, {
+          toValue: 10,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateX, {
+          toValue: -10,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateX, {
+          toValue: 10,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateX, {
+          toValue: -10,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateX, {
+          toValue: 0,
+          duration: 50,
+          useNativeDriver: true,
+        }),
       ]).start();
     }
   }, [trigger]);
 
   return (
-    <Animated.View style={[{ transform: [{ translateX }] }, style]}>
+    <Animated.View style={[{transform: [{translateX}]}, style]}>
       {children}
     </Animated.View>
   );
 };
 
 // Bounce animation (for buttons, CTAs)
-export const Bounce: React.FC<FadeInProps> = ({
-  children,
-  delay = 0,
-  style,
-}) => {
+export const Bounce: React.FC<FadeInProps> = ({children, delay = 0, style}) => {
   const scale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -237,7 +252,7 @@ export const Bounce: React.FC<FadeInProps> = ({
   }, []);
 
   return (
-    <Animated.View style={[{ transform: [{ scale }] }, style]}>
+    <Animated.View style={[{transform: [{scale}]}, style]}>
       {children}
     </Animated.View>
   );

@@ -58,7 +58,8 @@ const MOBILE_MONEY_OPTIONS: MobileMoneyOption[] = [
 ];
 
 export function SubscriptionScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const {user, isAuthenticated} = useAuth();
   const {subscription, isTrialActive, trialDaysRemaining} = useSubscription();
@@ -137,8 +138,8 @@ export function SubscriptionScreen() {
               ? profile.isInDRC
               : profile?.countryCode === 'CD' || true;
           setIsInDRC(isInDRCValue);
-          if (profile?.phoneNumber) setPhoneNumber(profile.phoneNumber);
-          if (profile?.email) setEmail(profile.email);
+          if (profile?.phoneNumber) {setPhoneNumber(profile.phoneNumber);}
+          if (profile?.email) {setEmail(profile.email);}
         } else {
           setIsInDRC(true);
         }
@@ -176,7 +177,7 @@ export function SubscriptionScreen() {
   // Get current plan pricing with selected duration
   const getCurrentPricing = () => {
     const plan = SUBSCRIPTION_PLANS[selectedPlan];
-    if (!plan) return {total: 0, monthly: 0, savings: 0};
+    if (!plan) {return {total: 0, monthly: 0, savings: 0};}
     return calculateDiscountedPrice(plan.price, selectedDuration);
   };
 
@@ -372,13 +373,22 @@ export function SubscriptionScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
+
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, {paddingTop: insets.top + Spacing.md, paddingBottom: insets.bottom + 40}]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: insets.top + Spacing.md,
+            paddingBottom: insets.bottom + 40,
+          },
+        ]}
         showsVerticalScrollIndicator={false}>
-        
         {/* Header */}
         <TouchableOpacity
           style={styles.backButton}
@@ -387,7 +397,11 @@ export function SubscriptionScreen() {
           <Icon name="chevron-left" size="md" color={Colors.text.primary} />
         </TouchableOpacity>
 
-        <Animated.View style={[styles.header, {opacity: fadeAnim, transform: [{translateY: slideAnim}]}]}>
+        <Animated.View
+          style={[
+            styles.header,
+            {opacity: fadeAnim, transform: [{translateY: slideAnim}]},
+          ]}>
           <View style={styles.proIconContainer}>
             <LinearGradient
               colors={[Colors.primary, Colors.primaryDark]}
@@ -399,7 +413,9 @@ export function SubscriptionScreen() {
           </View>
           <Text style={styles.headerTitle}>GoShopper Pro</Text>
           <Text style={styles.headerSubtitle}>
-            {isInDRC ? 'Débloquez toutes les fonctionnalités' : 'Unlock all premium features'}
+            {isInDRC
+              ? 'Débloquez toutes les fonctionnalités'
+              : 'Unlock all premium features'}
           </Text>
         </Animated.View>
 
@@ -419,7 +435,8 @@ export function SubscriptionScreen() {
                   {isInDRC ? 'Essai gratuit actif' : 'Free Trial Active'}
                 </Text>
                 <Text style={styles.trialDesc}>
-                  {trialDaysRemaining} {isInDRC ? 'jours restants' : 'days left'}
+                  {trialDaysRemaining}{' '}
+                  {isInDRC ? 'jours restants' : 'days left'}
                 </Text>
               </View>
             </LinearGradient>
@@ -430,7 +447,11 @@ export function SubscriptionScreen() {
         {isExpiringSoon && !isTrialActive && (
           <Animated.View style={[styles.warningCard, {opacity: fadeAnim}]}>
             <View style={styles.warningIconContainer}>
-              <Icon name="alert-triangle" size="lg" color={Colors.status.error} />
+              <Icon
+                name="alert-triangle"
+                size="lg"
+                color={Colors.status.error}
+              />
             </View>
             <View style={styles.trialInfo}>
               <Text style={styles.warningTitle}>
@@ -499,10 +520,20 @@ export function SubscriptionScreen() {
                 )}
                 <View style={styles.planHeader}>
                   <View style={styles.planNameContainer}>
-                    <Text style={[styles.planName, isSelected && styles.planNameSelected]}>{plan.name}</Text>
+                    <Text
+                      style={[
+                        styles.planName,
+                        isSelected && styles.planNameSelected,
+                      ]}>
+                      {plan.name}
+                    </Text>
                     {planId === 'standard' && (
                       <View style={styles.popularBadge}>
-                        <Icon name="star" size="xs" color={Colors.card.yellow} />
+                        <Icon
+                          name="star"
+                          size="xs"
+                          color={Colors.card.yellow}
+                        />
                         <Text style={styles.popularBadgeText}>
                           {isInDRC ? 'Populaire' : 'Popular'}
                         </Text>
@@ -510,15 +541,29 @@ export function SubscriptionScreen() {
                     )}
                   </View>
                   <View style={styles.planPriceContainer}>
-                    <Text style={[styles.planPrice, isSelected && styles.planPriceSelected]}>
+                    <Text
+                      style={[
+                        styles.planPrice,
+                        isSelected && styles.planPriceSelected,
+                      ]}>
                       {formatCurrency(plan.price)}
                     </Text>
-                    <Text style={styles.planPeriod}>/{isInDRC ? 'mois' : 'mo'}</Text>
+                    <Text style={styles.planPeriod}>
+                      /{isInDRC ? 'mois' : 'mo'}
+                    </Text>
                   </View>
                 </View>
                 <View style={styles.planFeature}>
-                  <Icon name="camera" size="sm" color={isSelected ? Colors.primary : Colors.text.tertiary} />
-                  <Text style={[styles.featureText, isSelected && styles.featureTextSelected]}>
+                  <Icon
+                    name="camera"
+                    size="sm"
+                    color={isSelected ? Colors.primary : Colors.text.tertiary}
+                  />
+                  <Text
+                    style={[
+                      styles.featureText,
+                      isSelected && styles.featureTextSelected,
+                    ]}>
                     {plan.scanLimit === -1
                       ? isInDRC
                         ? 'Scans illimités'
@@ -528,7 +573,11 @@ export function SubscriptionScreen() {
                 </View>
                 {isCurrent && (
                   <View style={styles.currentBadge}>
-                    <Icon name="check" size="xs" color={Colors.status.success} />
+                    <Icon
+                      name="check"
+                      size="xs"
+                      color={Colors.status.success}
+                    />
                     <Text style={styles.currentText}>
                       {isInDRC ? 'Plan actuel' : 'Current'}
                     </Text>
@@ -575,10 +624,18 @@ export function SubscriptionScreen() {
                         </Text>
                       </View>
                     )}
-                    <Text style={[styles.durationLabel, isSelected && styles.durationLabelSelected]}>
+                    <Text
+                      style={[
+                        styles.durationLabel,
+                        isSelected && styles.durationLabelSelected,
+                      ]}>
                       {isInDRC ? duration.labelFr : duration.label}
                     </Text>
-                    <Text style={[styles.durationPrice, isSelected && styles.durationPriceSelected]}>
+                    <Text
+                      style={[
+                        styles.durationPrice,
+                        isSelected && styles.durationPriceSelected,
+                      ]}>
                       {formatCurrency(durationPricing.total)}
                     </Text>
                     {duration.months > 1 && (
@@ -589,7 +646,11 @@ export function SubscriptionScreen() {
                     )}
                     {durationPricing.savings > 0 && (
                       <View style={styles.savingsBadge}>
-                        <Icon name="trending-down" size="xs" color={Colors.status.success} />
+                        <Icon
+                          name="trending-down"
+                          size="xs"
+                          color={Colors.status.success}
+                        />
                         <Text style={styles.savingsText}>
                           {formatCurrency(durationPricing.savings)}
                         </Text>
@@ -616,9 +677,24 @@ export function SubscriptionScreen() {
                 onPress={() => setPaymentMethodType('mobile_money')}
                 activeOpacity={0.8}>
                 <View style={styles.paymentTypeIcon}>
-                  <Icon name="smartphone" size="md" color={paymentMethodType === 'mobile_money' ? Colors.primary : Colors.text.tertiary} />
+                  <Icon
+                    name="smartphone"
+                    size="md"
+                    color={
+                      paymentMethodType === 'mobile_money'
+                        ? Colors.primary
+                        : Colors.text.tertiary
+                    }
+                  />
                 </View>
-                <Text style={[styles.paymentTypeText, paymentMethodType === 'mobile_money' && styles.paymentTypeTextSelected]}>Mobile Money</Text>
+                <Text
+                  style={[
+                    styles.paymentTypeText,
+                    paymentMethodType === 'mobile_money' &&
+                      styles.paymentTypeTextSelected,
+                  ]}>
+                  Mobile Money
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[
@@ -629,9 +705,24 @@ export function SubscriptionScreen() {
                 onPress={() => setPaymentMethodType('card')}
                 activeOpacity={0.8}>
                 <View style={styles.paymentTypeIcon}>
-                  <Icon name="credit-card" size="md" color={paymentMethodType === 'card' ? Colors.primary : Colors.text.tertiary} />
+                  <Icon
+                    name="credit-card"
+                    size="md"
+                    color={
+                      paymentMethodType === 'card'
+                        ? Colors.primary
+                        : Colors.text.tertiary
+                    }
+                  />
                 </View>
-                <Text style={[styles.paymentTypeText, paymentMethodType === 'card' && styles.paymentTypeTextSelected]}>Visa/Card</Text>
+                <Text
+                  style={[
+                    styles.paymentTypeText,
+                    paymentMethodType === 'card' &&
+                      styles.paymentTypeTextSelected,
+                  ]}>
+                  Visa/Card
+                </Text>
               </TouchableOpacity>
             </View>
           </>
@@ -648,14 +739,26 @@ export function SubscriptionScreen() {
                     key={opt.id}
                     style={[
                       styles.mobileMoneyCard,
-                      selectedMobileMoney === opt.id && styles.mobileMoneyCardSelected,
+                      selectedMobileMoney === opt.id &&
+                        styles.mobileMoneyCardSelected,
                     ]}
                     onPress={() => setSelectedMobileMoney(opt.id)}
                     activeOpacity={0.8}>
-                    <View style={[styles.mobileMoneyIconContainer, {backgroundColor: `${opt.color}20`}]}>
+                    <View
+                      style={[
+                        styles.mobileMoneyIconContainer,
+                        {backgroundColor: `${opt.color}20`},
+                      ]}>
                       <Text style={styles.mobileMoneyIcon}>{opt.icon}</Text>
                     </View>
-                    <Text style={[styles.mobileMoneyName, selectedMobileMoney === opt.id && styles.mobileMoneyNameSelected]}>{opt.name}</Text>
+                    <Text
+                      style={[
+                        styles.mobileMoneyName,
+                        selectedMobileMoney === opt.id &&
+                          styles.mobileMoneyNameSelected,
+                      ]}>
+                      {opt.name}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -722,7 +825,11 @@ export function SubscriptionScreen() {
             disabled={isProcessing}
             activeOpacity={0.9}>
             <LinearGradient
-              colors={isProcessing ? [Colors.border, Colors.border] : [Colors.primary, Colors.primaryDark]}
+              colors={
+                isProcessing
+                  ? [Colors.border.light, Colors.border.light]
+                  : [Colors.primary, Colors.primaryDark]
+              }
               style={styles.subscribeButtonGradient}
               start={{x: 0, y: 0}}
               end={{x: 1, y: 1}}>
@@ -792,7 +899,7 @@ export function SubscriptionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.primary,
   },
   scrollView: {
     flex: 1,
@@ -836,7 +943,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: Typography.fontSize.xxxl,
+    fontSize: Typography.fontSize['3xl'],
     fontFamily: Typography.fontFamily.bold,
     color: Colors.text.primary,
     marginBottom: Spacing.xs,
@@ -960,7 +1067,7 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     marginBottom: Spacing.md,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: Colors.border.light,
     position: 'relative',
     overflow: 'hidden',
     ...Shadows.sm,
@@ -1064,7 +1171,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: BorderRadius.xl,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: Colors.border.light,
     alignItems: 'center',
     position: 'relative',
     ...Shadows.sm,
@@ -1146,7 +1253,7 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     borderRadius: BorderRadius.xl,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: Colors.border.light,
     ...Shadows.sm,
   },
   paymentTypeButtonSelected: {
@@ -1179,7 +1286,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: Colors.border.light,
     ...Shadows.sm,
   },
   mobileMoneyCardSelected: {
@@ -1222,7 +1329,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.light,
     overflow: 'hidden',
   },
   phonePrefixContainer: {
@@ -1230,7 +1337,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     backgroundColor: Colors.card.blue,
     borderRightWidth: 1,
-    borderRightColor: Colors.border,
+    borderRightColor: Colors.border.light,
   },
   phonePrefix: {
     fontSize: Typography.fontSize.md,
@@ -1251,7 +1358,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.border.light,
     paddingHorizontal: Spacing.md,
     gap: Spacing.sm,
   },

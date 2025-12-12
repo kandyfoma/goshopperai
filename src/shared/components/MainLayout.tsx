@@ -1,12 +1,12 @@
 /**
  * MainLayout Component
- * 
+ *
  * A flexible layout wrapper for screens with header and footer
  * Supports safe areas for different phone dimensions (notches, home indicators)
  * Fits the Urbanist pastel design aesthetic
  */
 
-import React, { ReactNode } from 'react';
+import React, {ReactNode} from 'react';
 import {
   View,
   Text,
@@ -19,12 +19,19 @@ import {
   KeyboardAvoidingView,
   ViewStyle,
 } from 'react-native';
-import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { Colors, Typography, Spacing, BorderRadius, Shadows, Layout } from '../theme/theme';
+import {useSafeAreaInsets, SafeAreaView} from 'react-native-safe-area-context';
+import {useNavigation} from '@react-navigation/native';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+  Layout,
+} from '../theme/theme';
 import Icon from './Icon';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
 
 // ============================================
 // TYPES
@@ -48,32 +55,32 @@ interface MainLayoutProps {
   headerActions?: HeaderAction[];
   headerTransparent?: boolean;
   headerDark?: boolean;
-  
+
   // Footer props
   showFooter?: boolean;
   footerElement?: ReactNode;
-  
+
   // Content props
   children: ReactNode;
   scrollable?: boolean;
   scrollRef?: React.RefObject<ScrollView>;
   onScroll?: (event: any) => void;
   refreshControl?: React.ReactElement;
-  
+
   // Background
   backgroundColor?: string;
-  
+
   // Keyboard behavior
   keyboardAvoiding?: boolean;
-  
+
   // Style overrides
   contentStyle?: ViewStyle;
   headerStyle?: ViewStyle;
   footerStyle?: ViewStyle;
-  
+
   // Safe area edges to respect
   edges?: ('top' | 'bottom' | 'left' | 'right')[];
-  
+
   // Status bar
   statusBarStyle?: 'light-content' | 'dark-content';
 }
@@ -107,7 +114,7 @@ const LayoutHeader: React.FC<{
   insetTop,
 }) => {
   const navigation = useNavigation();
-  
+
   const textColor = dark ? Colors.white : Colors.text.primary;
   const iconColor = dark ? Colors.white : Colors.text.primary;
   const subtitleColor = dark ? Colors.text.tertiary : Colors.text.secondary;
@@ -126,12 +133,13 @@ const LayoutHeader: React.FC<{
         styles.header,
         {
           paddingTop: insetTop + Spacing.sm,
-          backgroundColor: transparent ? 'transparent' : Colors.background.primary,
+          backgroundColor: transparent
+            ? 'transparent'
+            : Colors.background.primary,
         },
         !transparent && styles.headerShadow,
         style,
-      ]}
-    >
+      ]}>
       <View style={styles.headerContent}>
         {/* Left Section */}
         <View style={styles.headerLeftSection}>
@@ -140,12 +148,19 @@ const LayoutHeader: React.FC<{
             <TouchableOpacity
               onPress={handleBackPress}
               style={styles.headerIconButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
               accessibilityLabel="Go back"
-              accessibilityRole="button"
-            >
-              <View style={[styles.headerIconWrapper, { backgroundColor: dark ? 'rgba(255,255,255,0.1)' : Colors.background.secondary }]}>
-                <Icon name="chevronLeft" size="sm" color={iconColor} />
+              accessibilityRole="button">
+              <View
+                style={[
+                  styles.headerIconWrapper,
+                  {
+                    backgroundColor: dark
+                      ? 'rgba(255,255,255,0.1)'
+                      : Colors.background.secondary,
+                  },
+                ]}>
+                <Icon name="chevron-left" size="sm" color={iconColor} />
               </View>
             </TouchableOpacity>
           )}
@@ -155,18 +170,16 @@ const LayoutHeader: React.FC<{
         <View style={styles.headerCenterSection}>
           {title && (
             <Text
-              style={[styles.headerTitle, { color: textColor }]}
+              style={[styles.headerTitle, {color: textColor}]}
               numberOfLines={1}
-              accessibilityRole="header"
-            >
+              accessibilityRole="header">
               {title}
             </Text>
           )}
           {subtitle && (
             <Text
-              style={[styles.headerSubtitle, { color: subtitleColor }]}
-              numberOfLines={1}
-            >
+              style={[styles.headerSubtitle, {color: subtitleColor}]}
+              numberOfLines={1}>
               {subtitle}
             </Text>
           )}
@@ -175,27 +188,39 @@ const LayoutHeader: React.FC<{
         {/* Right Section */}
         <View style={styles.headerRightSection}>
           {rightElement}
-          {!rightElement && actions && actions.map((action, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={action.onPress}
-              style={[styles.headerIconButton, index > 0 && { marginLeft: Spacing.xs }]}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityLabel={action.accessibilityLabel || action.icon}
-              accessibilityRole="button"
-            >
-              <View style={[styles.headerIconWrapper, { backgroundColor: dark ? 'rgba(255,255,255,0.1)' : Colors.background.secondary }]}>
-                <Icon name={action.icon} size="sm" color={iconColor} />
-                {action.badge !== undefined && action.badge > 0 && (
-                  <View style={styles.headerBadge}>
-                    <Text style={styles.headerBadgeText}>
-                      {action.badge > 99 ? '99+' : action.badge}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
-          ))}
+          {!rightElement &&
+            actions &&
+            actions.map((action, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={action.onPress}
+                style={[
+                  styles.headerIconButton,
+                  index > 0 && {marginLeft: Spacing.xs},
+                ]}
+                hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+                accessibilityLabel={action.accessibilityLabel || action.icon}
+                accessibilityRole="button">
+                <View
+                  style={[
+                    styles.headerIconWrapper,
+                    {
+                      backgroundColor: dark
+                        ? 'rgba(255,255,255,0.1)'
+                        : Colors.background.secondary,
+                    },
+                  ]}>
+                  <Icon name={action.icon} size="sm" color={iconColor} />
+                  {action.badge !== undefined && action.badge > 0 && (
+                    <View style={styles.headerBadge}>
+                      <Text style={styles.headerBadgeText}>
+                        {action.badge > 99 ? '99+' : action.badge}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
         </View>
       </View>
     </View>
@@ -209,17 +234,18 @@ const LayoutFooter: React.FC<{
   children?: ReactNode;
   style?: ViewStyle;
   insetBottom: number;
-}> = ({ children, style, insetBottom }) => {
-  if (!children) return null;
+}> = ({children, style, insetBottom}) => {
+  if (!children) {
+    return null;
+  }
 
   return (
     <View
       style={[
         styles.footer,
-        { paddingBottom: Math.max(insetBottom, Spacing.base) },
+        {paddingBottom: Math.max(insetBottom, Spacing.base)},
         style,
-      ]}
-    >
+      ]}>
       {children}
     </View>
   );
@@ -240,40 +266,41 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   headerActions,
   headerTransparent = false,
   headerDark = false,
-  
+
   // Footer
   showFooter = false,
   footerElement,
-  
+
   // Content
   children,
   scrollable = true,
   scrollRef,
   onScroll,
   refreshControl,
-  
+
   // Background
   backgroundColor = Colors.background.secondary,
-  
+
   // Keyboard
   keyboardAvoiding = true,
-  
+
   // Styles
   contentStyle,
   headerStyle,
   footerStyle,
-  
+
   // Safe area
   edges = ['top', 'bottom'],
-  
+
   // Status bar
   statusBarStyle,
 }) => {
   const insets = useSafeAreaInsets();
-  
+
   // Determine status bar style
-  const resolvedStatusBarStyle = statusBarStyle || (headerDark ? 'light-content' : 'dark-content');
-  
+  const resolvedStatusBarStyle =
+    statusBarStyle || (headerDark ? 'light-content' : 'dark-content');
+
   // Calculate safe area padding
   const topInset = edges.includes('top') ? insets.top : 0;
   const bottomInset = edges.includes('bottom') ? insets.bottom : 0;
@@ -288,7 +315,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         showsVerticalScrollIndicator: false,
         contentContainerStyle: [
           styles.scrollContent,
-          { paddingBottom: showFooter ? Spacing.lg : Math.max(bottomInset, Spacing.lg) },
+          {
+            paddingBottom: showFooter
+              ? Spacing.lg
+              : Math.max(bottomInset, Spacing.lg),
+          },
           contentStyle,
         ],
         keyboardShouldPersistTaps: 'handled' as const,
@@ -306,7 +337,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         backgroundColor="transparent"
         translucent
       />
-      
+
       {/* Header */}
       {showHeader && (
         <LayoutHeader
@@ -323,12 +354,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           insetTop={topInset}
         />
       )}
-      
+
       {/* Main Content */}
-      <ContentWrapper {...contentWrapperProps}>
-        {children}
-      </ContentWrapper>
-      
+      <ContentWrapper {...contentWrapperProps}>{children}</ContentWrapper>
+
       {/* Footer */}
       {showFooter && (
         <LayoutFooter style={footerStyle} insetBottom={bottomInset}>
@@ -342,19 +371,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   if (keyboardAvoiding && Platform.OS === 'ios') {
     return (
       <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor }]}
+        style={[styles.container, {backgroundColor}]}
         behavior="padding"
-        keyboardVerticalOffset={0}
-      >
+        keyboardVerticalOffset={0}>
         {MainContent}
       </KeyboardAvoidingView>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
-      {MainContent}
-    </View>
+    <View style={[styles.container, {backgroundColor}]}>{MainContent}</View>
   );
 };
 
@@ -363,30 +389,37 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 // ============================================
 
 // Screen with standard header
-export const ScreenLayout: React.FC<Omit<MainLayoutProps, 'showHeader'> & { showHeader?: boolean }> = (props) => (
-  <MainLayout showHeader={true} {...props} />
-);
+export const ScreenLayout: React.FC<
+  Omit<MainLayoutProps, 'showHeader'> & {showHeader?: boolean}
+> = props => <MainLayout showHeader={true} {...props} />;
 
 // Screen with back button
-export const DetailLayout: React.FC<Omit<MainLayoutProps, 'showHeader' | 'showBackButton'>> = (props) => (
-  <MainLayout showHeader={true} showBackButton={true} {...props} />
-);
+export const DetailLayout: React.FC<
+  Omit<MainLayoutProps, 'showHeader' | 'showBackButton'>
+> = props => <MainLayout showHeader={true} showBackButton={true} {...props} />;
 
 // Full screen (no header)
-export const FullScreenLayout: React.FC<Omit<MainLayoutProps, 'showHeader'>> = (props) => (
-  <MainLayout showHeader={false} edges={['bottom']} {...props} />
-);
+export const FullScreenLayout: React.FC<
+  Omit<MainLayoutProps, 'showHeader'>
+> = props => <MainLayout showHeader={false} edges={['bottom']} {...props} />;
 
 // Modal screen
-export const ModalLayout: React.FC<Omit<MainLayoutProps, 'showHeader' | 'showBackButton'> & { onClose?: () => void }> = ({
-  onClose,
-  headerActions,
-  ...props
-}) => (
+export const ModalLayout: React.FC<
+  Omit<MainLayoutProps, 'showHeader' | 'showBackButton'> & {
+    onClose?: () => void;
+  }
+> = ({onClose, headerActions, ...props}) => (
   <MainLayout
     showHeader={true}
     showBackButton={false}
-    headerActions={onClose ? [{ icon: 'close', onPress: onClose, accessibilityLabel: 'Close' }, ...(headerActions || [])] : headerActions}
+    headerActions={
+      onClose
+        ? [
+            {icon: 'close', onPress: onClose, accessibilityLabel: 'Close'},
+            ...(headerActions || []),
+          ]
+        : headerActions
+    }
     backgroundColor={Colors.background.primary}
     {...props}
   />
@@ -399,7 +432,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  
+
   // Header styles
   header: {
     width: '100%',
@@ -468,7 +501,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.xs - 2,
     fontWeight: Typography.fontWeight.bold,
   },
-  
+
   // Content styles
   content: {
     flex: 1,
@@ -478,7 +511,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.base,
     paddingTop: Spacing.base,
   },
-  
+
   // Footer styles
   footer: {
     width: '100%',
@@ -516,8 +549,7 @@ export const FooterWithAction: React.FC<{
       <TouchableOpacity
         style={footerStyles.secondaryButton}
         onPress={onSecondaryPress}
-        activeOpacity={0.7}
-      >
+        activeOpacity={0.7}>
         <Text style={footerStyles.secondaryButtonText}>{secondaryLabel}</Text>
       </TouchableOpacity>
     )}
@@ -525,19 +557,19 @@ export const FooterWithAction: React.FC<{
       style={[
         footerStyles.primaryButton,
         primaryDisabled && footerStyles.primaryButtonDisabled,
-        !secondaryLabel && { flex: 1 },
+        !secondaryLabel && {flex: 1},
       ]}
       onPress={onPrimaryPress}
       disabled={primaryDisabled || primaryLoading}
-      activeOpacity={0.8}
-    >
+      activeOpacity={0.8}>
       {primaryLoading ? (
         <View style={footerStyles.loadingIndicator} />
       ) : (
-        <Text style={[
-          footerStyles.primaryButtonText,
-          primaryDisabled && footerStyles.primaryButtonTextDisabled,
-        ]}>
+        <Text
+          style={[
+            footerStyles.primaryButtonText,
+            primaryDisabled && footerStyles.primaryButtonTextDisabled,
+          ]}>
           {primaryLabel}
         </Text>
       )}

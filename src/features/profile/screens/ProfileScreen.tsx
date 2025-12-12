@@ -14,7 +14,13 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useAuth, useSubscription, useUser} from '@/shared/contexts';
 import {RootStackParamList} from '@/shared/types';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Icon} from '@/shared/components';
 import {SUBSCRIPTION_PLANS, TRIAL_SCAN_LIMIT} from '@/shared/utils/constants';
 import {formatCurrency, formatDate} from '@/shared/utils/helpers';
@@ -79,17 +85,25 @@ const MenuItem = ({
   };
 
   return (
-    <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
-      <View style={[styles.menuIconContainer, {backgroundColor: cardColors[iconColor]}]}>
+    <TouchableOpacity
+      style={styles.menuItem}
+      onPress={onPress}
+      activeOpacity={0.7}>
+      <View
+        style={[
+          styles.menuIconContainer,
+          {backgroundColor: cardColors[iconColor]},
+        ]}>
         <Icon name={icon} size="sm" color={Colors.text.primary} />
       </View>
       <View style={styles.menuContent}>
         <Text style={styles.menuTitle}>{title}</Text>
         {subtitle && <Text style={styles.menuSubtitle}>{subtitle}</Text>}
       </View>
-      {rightElement || (showChevron && (
-        <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} />
-      ))}
+      {rightElement ||
+        (showChevron && (
+          <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} />
+        ))}
     </TouchableOpacity>
   );
 };
@@ -136,7 +150,8 @@ export function ProfileScreen() {
         setUserStats(prev => ({...prev, loading: true, error: null}));
         // Call the getUserStats function in europe-west1 region
         const functionsInstance = firebase.app().functions('europe-west1');
-        const getUserStatsCallable = functionsInstance.httpsCallable('getUserStats');
+        const getUserStatsCallable =
+          functionsInstance.httpsCallable('getUserStats');
         const result = await getUserStatsCallable();
         const data = result.data as {
           totalReceipts: number;
@@ -177,7 +192,6 @@ export function ProfileScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        
         {/* Profile Header */}
         <View style={styles.header}>
           <View style={styles.avatarContainer}>
@@ -192,7 +206,9 @@ export function ProfileScreen() {
               </View>
             )}
           </View>
-          <Text style={styles.userName}>{user?.displayName || 'Utilisateur'}</Text>
+          <Text style={styles.userName}>
+            {user?.displayName || 'Utilisateur'}
+          </Text>
           <Text style={styles.userEmail}>{user?.email}</Text>
         </View>
 
@@ -206,37 +222,49 @@ export function ProfileScreen() {
           />
           <StatCard
             icon="trending-down"
-            value={userStats.loading ? '—' : formatCurrency(userStats.totalSavings)}
+            value={
+              userStats.loading ? '—' : formatCurrency(userStats.totalSavings)
+            }
             label="Économies"
             color="green"
           />
         </View>
 
         {/* Subscription Card */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
             styles.subscriptionCard,
-            isPremium ? styles.subscriptionCardPremium : styles.subscriptionCardFree
+            isPremium
+              ? styles.subscriptionCardPremium
+              : styles.subscriptionCardFree,
           ]}
           onPress={() => navigation.navigate('Subscription')}
           activeOpacity={0.8}>
           <View style={styles.subscriptionLeft}>
-            <View style={[styles.planBadge, isPremium && styles.planBadgePremium]}>
-              <Icon 
-                name={isPremium ? 'star' : 'gift'} 
-                size="xs" 
-                color={isPremium ? Colors.white : Colors.text.primary} 
+            <View
+              style={[styles.planBadge, isPremium && styles.planBadgePremium]}>
+              <Icon
+                name={isPremium ? 'star' : 'gift'}
+                size="xs"
+                color={isPremium ? Colors.white : Colors.text.primary}
               />
-              <Text style={[styles.planBadgeText, isPremium && styles.planBadgeTextPremium]}>
+              <Text
+                style={[
+                  styles.planBadgeText,
+                  isPremium && styles.planBadgeTextPremium,
+                ]}>
                 {isPremium ? 'Premium' : 'Essai gratuit'}
               </Text>
             </View>
             <Text style={styles.subscriptionTitle}>{currentPlan.name}</Text>
             <Text style={styles.subscriptionStatus}>
-              {isPremium 
-                ? `Actif jusqu'au ${subscription?.expiryDate ? formatDate(subscription.expiryDate) : '—'}`
-                : `${trialRemaining} scans restants`
-              }
+              {isPremium
+                ? `Actif jusqu'au ${
+                    subscription?.expiryDate
+                      ? formatDate(subscription.expiryDate)
+                      : '—'
+                  }`
+                : `${trialRemaining} scans restants`}
             </Text>
           </View>
           <Icon name="chevron-right" size="md" color={Colors.text.secondary} />
@@ -315,7 +343,6 @@ export function ProfileScreen() {
 
         {/* App Version */}
         <Text style={styles.versionText}>GoShopper AI v1.0.0</Text>
-
       </ScrollView>
     </SafeAreaView>
   );

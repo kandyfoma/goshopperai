@@ -36,7 +36,8 @@ import {Icon, Spinner} from '@/shared/components';
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
 export function AIAssistantScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const {user, isAuthenticated} = useAuth();
 
@@ -58,7 +59,7 @@ export function AIAssistantScreen() {
     naturalLanguageService.getSuggestedQueries(),
   );
   const flatListRef = useRef<FlatList>(null);
-  
+
   // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -87,7 +88,7 @@ export function AIAssistantScreen() {
   }, []);
 
   const handleSend = async () => {
-    if (!inputText.trim() || !user?.uid || isLoading) return;
+    if (!inputText.trim() || !user?.uid || isLoading) {return;}
 
     const query = inputText.trim();
     setInputText('');
@@ -237,8 +238,12 @@ export function AIAssistantScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
+
       {/* Header */}
       <View style={[styles.header, {paddingTop: insets.top + Spacing.md}]}>
         <TouchableOpacity
@@ -298,7 +303,11 @@ export function AIAssistantScreen() {
                   onPress={() => handleSuggestionPress(suggestion.fr)}
                   activeOpacity={0.8}>
                   <View style={styles.suggestionIconContainer}>
-                    <Icon name="message-circle" size="sm" color={Colors.primary} />
+                    <Icon
+                      name="message-circle"
+                      size="sm"
+                      color={Colors.primary}
+                    />
                   </View>
                   <View style={styles.suggestionTextContainer}>
                     <Text style={styles.welcomeSuggestionText}>
@@ -310,7 +319,11 @@ export function AIAssistantScreen() {
                       </Text>
                     )}
                   </View>
-                  <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} />
+                  <Icon
+                    name="chevron-right"
+                    size="sm"
+                    color={Colors.text.tertiary}
+                  />
                 </TouchableOpacity>
               ))}
             </View>
@@ -355,7 +368,11 @@ export function AIAssistantScreen() {
         )}
 
         {/* Input Area */}
-        <View style={[styles.inputContainer, {paddingBottom: insets.bottom + Spacing.sm}]}>
+        <View
+          style={[
+            styles.inputContainer,
+            {paddingBottom: insets.bottom + Spacing.sm},
+          ]}>
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.textInput}
@@ -381,7 +398,11 @@ export function AIAssistantScreen() {
               <Spinner size="small" color={Colors.white} />
             ) : (
               <LinearGradient
-                colors={inputText.trim() ? [Colors.primary, Colors.primaryDark] : [Colors.border, Colors.border]}
+                colors={
+                  inputText.trim()
+                    ? [Colors.primary, Colors.primaryDark]
+                    : [Colors.border.light, Colors.border.light]
+                }
                 style={styles.sendButtonGradient}
                 start={{x: 0, y: 0}}
                 end={{x: 1, y: 1}}>
@@ -398,7 +419,7 @@ export function AIAssistantScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.secondary,
   },
   header: {
     flexDirection: 'row',
@@ -406,7 +427,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.md,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.background.secondary,
   },
   backButton: {
     width: 40,
@@ -458,7 +479,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   welcomeTitle: {
-    fontSize: Typography.fontSize.xxxl,
+    fontSize: Typography.fontSize['3xl'],
     fontFamily: Typography.fontFamily.bold,
     color: Colors.text.primary,
     marginBottom: Spacing.sm,
@@ -578,7 +599,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
     paddingTop: Spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: Colors.border.light,
   },
   chartPreview: {
     marginTop: Spacing.md,
@@ -632,7 +653,7 @@ const styles = StyleSheet.create({
   suggestionsBar: {
     backgroundColor: Colors.white,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: Colors.border.light,
   },
   suggestionsScroll: {
     paddingHorizontal: Spacing.md,
@@ -656,7 +677,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     backgroundColor: Colors.white,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: Colors.border.light,
     gap: Spacing.sm,
   },
   inputWrapper: {

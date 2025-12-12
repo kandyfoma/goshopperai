@@ -16,7 +16,13 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import LinearGradient from 'react-native-linear-gradient';
 import {RootStackParamList} from '@/shared/types';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Icon} from '@/shared/components';
 
 const {width: SLIDE_WIDTH} = Dimensions.get('window');
@@ -39,7 +45,8 @@ const SLIDES: OnboardingSlide[] = [
     iconName: 'sparkles',
     title: 'Bienvenue',
     subtitle: 'sur GoShopperAI',
-    description: 'Votre assistant intelligent pour des achats plus malins. Économisez sans effort grâce à l\'IA.',
+    description:
+      "Votre assistant intelligent pour des achats plus malins. Économisez sans effort grâce à l'IA.",
     accentColor: Colors.card.blue,
     gradientColors: ['#E8EDF5', '#D8DFE9'],
   },
@@ -48,7 +55,8 @@ const SLIDES: OnboardingSlide[] = [
     iconName: 'scan',
     title: 'Scannez',
     subtitle: 'en un instant',
-    description: 'Prenez simplement en photo vos tickets de caisse. Notre technologie fait le reste.',
+    description:
+      'Prenez simplement en photo vos tickets de caisse. Notre technologie fait le reste.',
     accentColor: Colors.card.green,
     gradientColors: ['#E5F0E3', '#CFDECA'],
   },
@@ -56,8 +64,9 @@ const SLIDES: OnboardingSlide[] = [
     id: '3',
     iconName: 'brain',
     title: 'Analysez',
-    subtitle: 'avec l\'IA',
-    description: 'Notre intelligence artificielle extrait et analyse chaque prix automatiquement.',
+    subtitle: "avec l'IA",
+    description:
+      'Notre intelligence artificielle extrait et analyse chaque prix automatiquement.',
     accentColor: Colors.card.yellow,
     gradientColors: ['#F7F8D8', '#EFF0A3'],
   },
@@ -66,7 +75,8 @@ const SLIDES: OnboardingSlide[] = [
     iconName: 'trending-up',
     title: 'Économisez',
     subtitle: 'au quotidien',
-    description: 'Suivez vos dépenses, comparez les prix et découvrez les meilleures offres près de chez vous.',
+    description:
+      'Suivez vos dépenses, comparez les prix et découvrez les meilleures offres près de chez vous.',
     accentColor: Colors.card.blue,
     gradientColors: ['#E8EDF5', '#D8DFE9'],
   },
@@ -105,7 +115,7 @@ const AnimatedIcon: React.FC<{
             duration: 1500,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
       float.start();
 
@@ -122,7 +132,7 @@ const AnimatedIcon: React.FC<{
             duration: 2000,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
       rotate.start();
 
@@ -154,7 +164,12 @@ const AnimatedIcon: React.FC<{
         },
       ]}>
       <View style={styles.iconInner}>
-        <Icon name={name} size="3xl" color={Colors.text.primary} variant="filled" />
+        <Icon
+          name={name}
+          size="3xl"
+          color={Colors.text.primary}
+          variant="filled"
+        />
       </View>
     </Animated.View>
   );
@@ -166,7 +181,11 @@ const Slide: React.FC<{
   index: number;
   scrollX: Animated.Value;
 }> = ({item, index, scrollX}) => {
-  const inputRange = [(index - 1) * SLIDE_WIDTH, index * SLIDE_WIDTH, (index + 1) * SLIDE_WIDTH];
+  const inputRange = [
+    (index - 1) * SLIDE_WIDTH,
+    index * SLIDE_WIDTH,
+    (index + 1) * SLIDE_WIDTH,
+  ];
 
   const opacity = scrollX.interpolate({
     inputRange,
@@ -246,7 +265,11 @@ const DotsIndicator: React.FC<{
 
         const dotColor = scrollX.interpolate({
           inputRange,
-          outputRange: [Colors.border.medium, Colors.primary, Colors.border.medium],
+          outputRange: [
+            Colors.border.medium,
+            Colors.primary,
+            Colors.border.medium,
+          ],
           extrapolate: 'clamp',
         });
 
@@ -274,7 +297,7 @@ export function WelcomeScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef<Animated.FlatList<OnboardingSlide>>(null);
-  
+
   // Entrance animations
   const headerOpacity = useRef(new Animated.Value(0)).current;
   const bottomOpacity = useRef(new Animated.Value(0)).current;
@@ -326,11 +349,13 @@ export function WelcomeScreen() {
     });
   }, [navigation]);
 
-  const onViewableItemsChanged = useRef(({viewableItems}: {viewableItems: Array<{index: number | null}>}) => {
-    if (viewableItems.length > 0 && viewableItems[0].index !== null) {
-      setCurrentIndex(viewableItems[0].index);
-    }
-  }).current;
+  const onViewableItemsChanged = useRef(
+    ({viewableItems}: {viewableItems: Array<{index: number | null}>}) => {
+      if (viewableItems.length > 0 && viewableItems[0].index !== null) {
+        setCurrentIndex(viewableItems[0].index);
+      }
+    },
+  ).current;
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 50,
@@ -340,8 +365,12 @@ export function WelcomeScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
+
       {/* Header */}
       <Animated.View
         style={[
@@ -357,7 +386,7 @@ export function WelcomeScreen() {
           </View>
           <Text style={styles.logoText}>GoShopperAI</Text>
         </View>
-        
+
         {!isLastSlide && (
           <TouchableOpacity
             style={styles.skipButton}
@@ -403,7 +432,6 @@ export function WelcomeScreen() {
             transform: [{translateY: bottomTranslateY}],
           },
         ]}>
-        
         {/* Dots */}
         <DotsIndicator scrollX={scrollX} slidesCount={SLIDES.length} />
 
@@ -437,7 +465,9 @@ export function WelcomeScreen() {
           </View>
           <View style={styles.trialTextContainer}>
             <Text style={styles.trialTitle}>Essai gratuit de 2 mois</Text>
-            <Text style={styles.trialSubtitle}>Aucune carte bancaire requise</Text>
+            <Text style={styles.trialSubtitle}>
+              Aucune carte bancaire requise
+            </Text>
           </View>
         </View>
       </Animated.View>
@@ -450,7 +480,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background.primary,
   },
-  
+
   // Header
   header: {
     flexDirection: 'row',
@@ -559,7 +589,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.lg,
     backgroundColor: Colors.background.primary,
   },
-  
+
   // Dots
   dotsContainer: {
     flexDirection: 'row',

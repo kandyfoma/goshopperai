@@ -14,7 +14,8 @@ class AuthService {
   constructor() {
     // Configure Google Sign-In
     GoogleSignin.configure({
-      webClientId: '889807854788-snap5tikvb7f50jp67h62f3g7iukbgr0.apps.googleusercontent.com',
+      webClientId:
+        '889807854788-snap5tikvb7f50jp67h62f3g7iukbgr0.apps.googleusercontent.com',
       offlineAccess: true,
     });
 
@@ -135,10 +136,10 @@ class AuthService {
 
       // Sign in with Google - v16+ returns { data: { idToken, user } }
       const response = await GoogleSignin.signIn();
-      
+
       // Extract idToken from the response (v16+ structure)
       const idToken = response.data?.idToken;
-      
+
       if (!idToken) {
         throw new Error('Google Sign-In failed - no ID token returned');
       }
@@ -176,7 +177,10 @@ class AuthService {
 
       // Create a Firebase credential from the response
       const {identityToken, nonce} = appleAuthRequestResponse;
-      const appleCredential = auth.AppleAuthProvider.credential(identityToken, nonce);
+      const appleCredential = auth.AppleAuthProvider.credential(
+        identityToken,
+        nonce,
+      );
 
       // Sign the user in with the credential
       const credential = await auth().signInWithCredential(appleCredential);
@@ -197,7 +201,9 @@ class AuthService {
       // It will return null if Firebase isn't ready yet
       const authInstance = auth();
       const firebaseUser = authInstance.currentUser;
-      if (!firebaseUser) return null;
+      if (!firebaseUser) {
+        return null;
+      }
       return this.mapFirebaseUser(firebaseUser);
     } catch (error) {
       console.warn('Get current user failed:', error);
@@ -246,7 +252,10 @@ class AuthService {
   /**
    * Confirm password reset with code from email
    */
-  async confirmPasswordReset(oobCode: string, newPassword: string): Promise<void> {
+  async confirmPasswordReset(
+    oobCode: string,
+    newPassword: string,
+  ): Promise<void> {
     try {
       await this.ensureInitialized();
       await auth().confirmPasswordReset(oobCode, newPassword);
@@ -264,7 +273,9 @@ class AuthService {
       const profileRef = firestore().doc(COLLECTIONS.userProfile(userId));
       const doc = await profileRef.get();
 
-      if (!doc.exists) return null;
+      if (!doc.exists) {
+        return null;
+      }
 
       const data = doc.data();
       return {
@@ -302,7 +313,10 @@ class AuthService {
   /**
    * Update user password (requires recent authentication)
    */
-  async updatePassword(currentPassword: string, newPassword: string): Promise<void> {
+  async updatePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
     try {
       await this.ensureInitialized();
       const user = auth().currentUser;
@@ -311,9 +325,12 @@ class AuthService {
       }
 
       // Re-authenticate user with current password
-      const credential = auth.EmailAuthProvider.credential(user.email, currentPassword);
+      const credential = auth.EmailAuthProvider.credential(
+        user.email,
+        currentPassword,
+      );
       await user.reauthenticateWithCredential(credential);
-      
+
       // Update password
       await user.updatePassword(newPassword);
     } catch (error) {

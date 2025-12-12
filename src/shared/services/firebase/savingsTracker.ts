@@ -337,10 +337,16 @@ class SavingsTrackerService {
         const data = doc.data();
         totalScans++;
 
-        if (data.total) totalSpent += data.total;
-        if (data.savings) totalSavings += data.savings;
+        if (data.total) {
+          totalSpent += data.total;
+        }
+        if (data.savings) {
+          totalSavings += data.savings;
+        }
 
-        if (data.storeName) shopsVisited.add(data.storeName);
+        if (data.storeName) {
+          shopsVisited.add(data.storeName);
+        }
 
         if (data.items && Array.isArray(data.items)) {
           itemsScanned += data.items.length;
@@ -727,7 +733,9 @@ class SavingsTrackerService {
     const unlockedIds = new Set(unlockedSnapshot.docs.map(d => d.id));
 
     for (const achievement of ACHIEVEMENTS) {
-      if (unlockedIds.has(achievement.id)) continue;
+      if (unlockedIds.has(achievement.id)) {
+        continue;
+      }
 
       const progress = this.getAchievementProgress(achievement.type, stats);
 

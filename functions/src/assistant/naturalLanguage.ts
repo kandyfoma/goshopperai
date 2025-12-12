@@ -92,11 +92,22 @@ async function gatherSpendingContext(userId: string): Promise<string> {
     const twoMonthsAgo = new Date(now);
     twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
 
-    recentReceipts = await db
-      .collection(collections.receipts(userId))
-      .where('scannedAt', '>=', twoMonthsAgo)
-      .orderBy('scannedAt', 'desc')
-      .get();
+    // Try the filtered query first
+    try {
+      recentReceipts = await db
+        .collection(collections.receipts(userId))
+        .where('scannedAt', '>=', twoMonthsAgo)
+        .orderBy('scannedAt', 'desc')
+        .get();
+    } catch (filterError) {
+      console.warn('Filtered query failed, trying simple query:', filterError);
+      // Fallback to simple query without filtering
+      recentReceipts = await db
+        .collection(collections.receipts(userId))
+        .orderBy('scannedAt', 'desc')
+        .limit(50) // Limit to avoid too many results
+        .get();
+    }
   } catch (error) {
     console.warn('Failed to query recent receipts:', error);
     recentReceipts = {docs: []};
@@ -108,11 +119,6 @@ async function gatherSpendingContext(userId: string): Promise<string> {
     return scannedAt && scannedAt >= thisMonth;
   });
 
-  const lastMonthReceipts = recentReceipts.docs.filter(doc => {
-    const scannedAt = doc.data().scannedAt?.toDate();
-    return scannedAt && scannedAt >= lastMonth && scannedAt < thisMonth;
-  });
-
   // Calculate statistics
   let thisMonthTotal = 0;
   let lastMonthTotal = 0;
@@ -120,16 +126,25 @@ async function gatherSpendingContext(userId: string): Promise<string> {
   const storeTotals: {[key: string]: number} = {};
   const items: {name: string; price: number; store: string}[] = [];
 
-  thisMonthReceipts.forEach(doc => {
+  // Collect items from ALL recent receipts (not just this month)
+  recentReceipts.docs.forEach(doc => {
     const data = doc.data();
-    thisMonthTotal += data.total || 0;
-    storeTotals[data.storeName] =
-      (storeTotals[data.storeName] || 0) + data.total;
+    
+    // Add to monthly totals based on date
+    const scannedAt = data.scannedAt?.toDate();
+    if (scannedAt && scannedAt >= thisMonth) {
+      thisMonthTotal += data.total || 0;
+    } else if (scannedAt && scannedAt >= lastMonth && scannedAt < thisMonth) {
+      lastMonthTotal += data.total || 0;
+    }
 
+    // Add to store totals
+    storeTotals[data.storeName] = (storeTotals[data.storeName] || 0) + (data.total || 0);
+
+    // Collect ALL items from recent receipts
     (data.items || []).forEach((item: any) => {
       const cat = item.category || 'Autres';
-      categoryTotals[cat] =
-        (categoryTotals[cat] || 0) + item.unitPrice * item.quantity;
+      categoryTotals[cat] = (categoryTotals[cat] || 0) + (item.unitPrice * item.quantity);
       items.push({
         name: item.name,
         price: item.unitPrice,
@@ -138,9 +153,7 @@ async function gatherSpendingContext(userId: string): Promise<string> {
     });
   });
 
-  lastMonthReceipts.forEach(doc => {
-    lastMonthTotal += doc.data().total || 0;
-  });
+  console.log(`Found ${recentReceipts.docs.length} receipts with ${items.length} total items`);
 
   // Build context string
   const context = `

@@ -218,7 +218,9 @@ export function UserProvider({children}: UserProviderProps) {
   );
 
   const refreshProfile = useCallback(async () => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      return;
+    }
 
     setIsLoading(true);
     try {

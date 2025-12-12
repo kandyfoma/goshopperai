@@ -13,7 +13,13 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {useAuth} from '@/shared/contexts';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Icon} from '@/shared/components';
 import firestore from '@react-native-firebase/firestore';
 
@@ -63,7 +69,6 @@ const DRC_CITIES = [
   'Lukolela',
   'Irebu',
   'Kiri',
-  'Lukolela',
   'Ingende',
   'Oshwe',
   'Befale',
@@ -90,7 +95,6 @@ const DRC_CITIES = [
   'Ndjili',
   'Lemba',
   'Kingasani',
-  'Ndjili',
   'Kimwenza',
   'Mbanza-Ngungu',
   'Kasangulu',
@@ -101,7 +105,6 @@ const DRC_CITIES = [
   'Lukaya',
   'Tshela',
   'Luozi',
-  'Mbanza-Ngungu',
   'Noki',
   'Kimvula',
   'Lukula',
@@ -110,27 +113,8 @@ const DRC_CITIES = [
   'Inga',
   'Kisantu',
   'Mbanza-Mputu',
-  'Mbanza-Ngungu',
   'Lukala',
-  'Madimba',
-  'Kimpese',
-  'Boko',
-  'Songololo',
-  'Lukaya',
-  'Tshelia',
-  'Luozi',
-  'Mbanza-Ngungu',
-  'Noki',
-  'Kimvula',
-  'Lukula',
-  'Seke-Banza',
-  'Kwamouth',
-  'Inga',
-  'Kisantu',
-  'Mbanza-Mputu',
-  'Mbanza-Ngungu',
-  'Lukala',
-];
+].sort();
 
 export function CitySelectionScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -139,7 +123,9 @@ export function CitySelectionScreen() {
   const [isSaving, setIsSaving] = useState(false);
 
   const handleCitySelect = async () => {
-    if (!selectedCity || !user?.uid) return;
+    if (!selectedCity || !user?.uid) {
+      return;
+    }
 
     setIsSaving(true);
     try {

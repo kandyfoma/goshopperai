@@ -1,4 +1,5 @@
-// Update Profile Screen - Allow users to update their profile information
+// Update Profile Screen - Urbanist Design System
+// GoShopperAI - Soft Pastel Colors with Clean Typography
 import React, {useState, useEffect} from 'react';
 import {
   View,
@@ -9,13 +10,23 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {useAuth, useUser} from '@/shared/contexts';
-import {COLORS} from '@/shared/utils/constants';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
+import {Icon, Spinner} from '@/shared/components';
 import firestore from '@react-native-firebase/firestore';
 import {analyticsService} from '@/shared/services/analytics';
 
@@ -43,110 +54,27 @@ const DRC_CITIES = [
   'Bandundu',
   'Matadi',
   'Boma',
-  'Inongo',
-  'Boende',
-  'Lusambo',
-  'Kabinda',
-  'Lubao',
-  'Ilebo',
-  'Mweka',
-  'Basankusu',
-  'Libenge',
-  'Bumba',
-  'Yangambi',
-  'Aketi',
-  'Lisala',
-  'Bondo',
-  'Poko',
-  'Bosobolo',
-  'Yumbi',
-  'Bolomba',
-  'Makanza',
-  'Lukolela',
-  'Irebu',
-  'Kiri',
-  'Lukolela',
-  'Ingende',
-  'Oshwe',
-  'Befale',
-  'Lukunga',
-  'Mont-Ngafula',
-  'Kintambo',
-  'Ngaliema',
-  'Gombe',
-  'Barumbu',
-  'Lingwala',
-  'Makala',
-  'Selembao',
-  'Masina',
-  'Righini',
-  'Nsele',
-  'Maluku',
-  'Kimbanseke',
-  'Ngaba',
-  'Mont-Amba',
-  'Binza',
-  'Limete',
-  'Matete',
-  'Kasa-Vubu',
-  'Ndjili',
-  'Lemba',
-  'Kingasani',
-  'Ndjili',
-  'Kimwenza',
-  'Mbanza-Ngungu',
-  'Kasangulu',
-  'Madimba',
-  'Kimpese',
-  'Boko',
-  'Songololo',
-  'Lukaya',
-  'Tshela',
-  'Luozi',
-  'Mbanza-Ngungu',
-  'Noki',
-  'Kimvula',
-  'Lukula',
-  'Seke-Banza',
-  'Kwamouth',
-  'Inga',
-  'Kisantu',
-  'Mbanza-Mputu',
-  'Mbanza-Ngungu',
-  'Lukala',
-  'Madimba',
-  'Kimpese',
-  'Boko',
-  'Songololo',
-  'Lukaya',
-  'Tshelia',
-  'Luozi',
-  'Mbanza-Ngungu',
-  'Noki',
-  'Kimvula',
-  'Lukula',
-  'Seke-Banza',
-  'Kwamouth',
-  'Inga',
-  'Kisantu',
-  'Mbanza-Mputu',
-  'Mbanza-Ngungu',
-  'Lukala',
+];
+
+const SEX_OPTIONS = [
+  {value: '', label: 'Non spécifié', icon: 'user'},
+  {value: 'male', label: 'Homme', icon: 'user'},
+  {value: 'female', label: 'Femme', icon: 'user'},
+  {value: 'other', label: 'Autre', icon: 'user'},
 ];
 
 export function UpdateProfileScreen() {
   const navigation = useNavigation<NavigationProp>();
   const {user, isAuthenticated} = useAuth();
-  const {profile, updateProfile} = useUser();
+  const {profile} = useUser();
+  const insets = useSafeAreaInsets();
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
       navigation.navigate('Login');
     }
   }, [isAuthenticated, navigation]);
 
-  // Don't render anything if not authenticated
   if (!isAuthenticated) {
     return null;
   }
@@ -163,6 +91,7 @@ export function UpdateProfileScreen() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [showCityPicker, setShowCityPicker] = useState(false);
+  const [citySearch, setCitySearch] = useState('');
 
   useEffect(() => {
     if (profile) {
@@ -183,22 +112,35 @@ export function UpdateProfileScreen() {
   };
 
   const handleSave = async () => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      return;
+    }
 
     setIsLoading(true);
     try {
       const updateData: any = {};
 
-      // Only include non-empty fields
-      if (formData.name.trim()) updateData.name = formData.name.trim();
-      if (formData.surname.trim()) updateData.surname = formData.surname.trim();
-      if (formData.age.trim()) updateData.age = parseInt(formData.age.trim());
-      if (formData.sex) updateData.sex = formData.sex;
-      if (formData.phoneNumber.trim())
+      if (formData.name.trim()) {
+        updateData.name = formData.name.trim();
+      }
+      if (formData.surname.trim()) {
+        updateData.surname = formData.surname.trim();
+      }
+      if (formData.age.trim()) {
+        updateData.age = parseInt(formData.age.trim());
+      }
+      if (formData.sex) {
+        updateData.sex = formData.sex;
+      }
+      if (formData.phoneNumber.trim()) {
         updateData.phoneNumber = formData.phoneNumber.trim();
-      if (formData.monthlyBudget.trim())
+      }
+      if (formData.monthlyBudget.trim()) {
         updateData.monthlyBudget = parseFloat(formData.monthlyBudget.trim());
-      if (formData.city.trim()) updateData.defaultCity = formData.city.trim();
+      }
+      if (formData.city.trim()) {
+        updateData.defaultCity = formData.city.trim();
+      }
 
       updateData.updatedAt = firestore.FieldValue.serverTimestamp();
 
@@ -209,7 +151,6 @@ export function UpdateProfileScreen() {
         .doc(user.uid)
         .set(updateData, {merge: true});
 
-      // Track successful profile update
       analyticsService.logCustomEvent('profile_updated', {
         fields_updated: Object.keys(updateData).filter(
           key => key !== 'updatedAt',
@@ -235,72 +176,52 @@ export function UpdateProfileScreen() {
     }
   };
 
-  const renderInput = (
-    label: string,
-    field: keyof typeof formData,
-    placeholder: string,
-    keyboardType: 'default' | 'numeric' | 'phone-pad' = 'default',
-    multiline = false,
-  ) => (
-    <View style={styles.inputGroup}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        style={[styles.input, multiline && styles.multilineInput]}
-        value={formData[field]}
-        onChangeText={value => handleInputChange(field, value)}
-        placeholder={placeholder}
-        placeholderTextColor={COLORS.gray[400]}
-        keyboardType={keyboardType}
-        multiline={multiline}
-        numberOfLines={multiline ? 3 : 1}
-      />
-    </View>
+  const filteredCities = DRC_CITIES.filter(city =>
+    city.toLowerCase().includes(citySearch.toLowerCase()),
   );
 
-  const renderSelect = (
-    label: string,
-    field: keyof typeof formData,
-    options: {value: string; label: string}[],
-  ) => (
-    <View style={styles.inputGroup}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.selectContainer}>
-        {options.map(option => (
-          <TouchableOpacity
-            key={option.value}
-            style={[
-              styles.selectOption,
-              formData[field] === option.value && styles.selectOptionSelected,
-            ]}
-            onPress={() => handleInputChange(field, option.value)}>
-            <Text
-              style={[
-                styles.selectOptionText,
-                formData[field] === option.value &&
-                  styles.selectOptionTextSelected,
-              ]}>
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-
+  // City Picker Screen
   if (showCityPicker) {
     return (
       <SafeAreaView style={styles.container}>
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => setShowCityPicker(false)}>
-            <Text style={styles.backButtonText}>← Retour</Text>
+            onPress={() => setShowCityPicker(false)}
+            activeOpacity={0.7}>
+            <Icon name="chevron-left" size="md" color={Colors.text.primary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Sélectionner une ville</Text>
+          <View style={styles.headerSpacer} />
         </View>
 
-        <ScrollView style={styles.cityPickerContainer}>
-          {DRC_CITIES.map(city => (
+        {/* Search Input */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputWrapper}>
+            <Icon name="search" size="sm" color={Colors.text.tertiary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Rechercher une ville..."
+              placeholderTextColor={Colors.text.tertiary}
+              value={citySearch}
+              onChangeText={setCitySearch}
+              autoFocus
+            />
+            {citySearch.length > 0 && (
+              <TouchableOpacity onPress={() => setCitySearch('')}>
+                <Icon name="x" size="sm" color={Colors.text.tertiary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* City List */}
+        <ScrollView
+          style={styles.cityList}
+          contentContainerStyle={styles.cityListContent}
+          showsVerticalScrollIndicator={false}>
+          {filteredCities.map(city => (
             <TouchableOpacity
               key={city}
               style={[
@@ -310,14 +231,36 @@ export function UpdateProfileScreen() {
               onPress={() => {
                 handleInputChange('city', city);
                 setShowCityPicker(false);
-              }}>
-              <Text
-                style={[
-                  styles.cityOptionText,
-                  formData.city === city && styles.cityOptionTextSelected,
-                ]}>
-                {city}
-              </Text>
+                setCitySearch('');
+              }}
+              activeOpacity={0.7}>
+              <View style={styles.cityOptionLeft}>
+                <View
+                  style={[
+                    styles.cityIconContainer,
+                    formData.city === city && styles.cityIconContainerSelected,
+                  ]}>
+                  <Icon
+                    name="map-pin"
+                    size="sm"
+                    color={
+                      formData.city === city
+                        ? Colors.white
+                        : Colors.text.secondary
+                    }
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.cityOptionText,
+                    formData.city === city && styles.cityOptionTextSelected,
+                  ]}>
+                  {city}
+                </Text>
+              </View>
+              {formData.city === city && (
+                <Icon name="check" size="sm" color={Colors.primary} />
+              )}
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -325,207 +268,480 @@ export function UpdateProfileScreen() {
     );
   }
 
+  // Main Profile Form
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>← Retour</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Modifier le profil</Text>
-      </View>
+    <View style={[styles.container, {paddingTop: insets.top}]}>
+      <StatusBar />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardView}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}>
+          {/* Avatar Section */}
+          <View style={styles.avatarSection}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {formData.name?.charAt(0)?.toUpperCase() ||
+                  user?.displayName?.charAt(0)?.toUpperCase() ||
+                  'U'}
+              </Text>
+            </View>
+            <Text style={styles.avatarLabel}>Photo de profil</Text>
+          </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}>
-        {renderInput('Prénom', 'name', 'Votre prénom')}
-        {renderInput('Nom', 'surname', 'Votre nom de famille')}
-        {renderInput('Âge', 'age', 'Votre âge', 'numeric')}
-        {renderInput(
-          'Numéro de téléphone',
-          'phoneNumber',
-          'Votre numéro',
-          'phone-pad',
-        )}
-        {renderInput(
-          'Budget mensuel (FC)',
-          'monthlyBudget',
-          'Votre budget mensuel',
-          'numeric',
-        )}
+          {/* Personal Info Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Informations personnelles</Text>
 
-        {renderSelect('Sexe', 'sex', [
-          {value: '', label: 'Non spécifié'},
-          {value: 'male', label: 'Homme'},
-          {value: 'female', label: 'Femme'},
-          {value: 'other', label: 'Autre'},
-        ])}
+            {/* Name Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Prénom</Text>
+              <View style={styles.inputWrapper}>
+                <Icon name="user" size="sm" color={Colors.text.tertiary} />
+                <TextInput
+                  style={styles.input}
+                  value={formData.name}
+                  onChangeText={value => handleInputChange('name', value)}
+                  placeholder="Votre prénom"
+                  placeholderTextColor={Colors.text.tertiary}
+                />
+              </View>
+            </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Ville</Text>
+            {/* Surname Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Nom</Text>
+              <View style={styles.inputWrapper}>
+                <Icon name="user" size="sm" color={Colors.text.tertiary} />
+                <TextInput
+                  style={styles.input}
+                  value={formData.surname}
+                  onChangeText={value => handleInputChange('surname', value)}
+                  placeholder="Votre nom de famille"
+                  placeholderTextColor={Colors.text.tertiary}
+                />
+              </View>
+            </View>
+
+            {/* Age Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Âge</Text>
+              <View style={styles.inputWrapper}>
+                <Icon name="calendar" size="sm" color={Colors.text.tertiary} />
+                <TextInput
+                  style={styles.input}
+                  value={formData.age}
+                  onChangeText={value => handleInputChange('age', value)}
+                  placeholder="Votre âge"
+                  placeholderTextColor={Colors.text.tertiary}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            {/* Sex Selection */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Sexe</Text>
+              <View style={styles.optionsRow}>
+                {SEX_OPTIONS.map(option => (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.optionButton,
+                      formData.sex === option.value &&
+                        styles.optionButtonSelected,
+                    ]}
+                    onPress={() => handleInputChange('sex', option.value)}
+                    activeOpacity={0.7}>
+                    <Text
+                      style={[
+                        styles.optionButtonText,
+                        formData.sex === option.value &&
+                          styles.optionButtonTextSelected,
+                      ]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+
+          {/* Contact Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Contact</Text>
+
+            {/* Phone Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Numéro de téléphone</Text>
+              <View style={styles.inputWrapper}>
+                <Icon
+                  name="smartphone"
+                  size="sm"
+                  color={Colors.text.tertiary}
+                />
+                <TextInput
+                  style={styles.input}
+                  value={formData.phoneNumber}
+                  onChangeText={value =>
+                    handleInputChange('phoneNumber', value)
+                  }
+                  placeholder="+243 XXX XXX XXX"
+                  placeholderTextColor={Colors.text.tertiary}
+                  keyboardType="phone-pad"
+                />
+              </View>
+            </View>
+
+            {/* City Selection */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Ville</Text>
+              <TouchableOpacity
+                style={styles.selectButton}
+                onPress={() => setShowCityPicker(true)}
+                activeOpacity={0.7}>
+                <View style={styles.selectButtonLeft}>
+                  <Icon name="map-pin" size="sm" color={Colors.text.tertiary} />
+                  <Text
+                    style={[
+                      styles.selectButtonText,
+                      !formData.city && styles.selectButtonPlaceholder,
+                    ]}>
+                    {formData.city || 'Sélectionner une ville'}
+                  </Text>
+                </View>
+                <Icon
+                  name="chevron-right"
+                  size="sm"
+                  color={Colors.text.tertiary}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Financial Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Budget</Text>
+
+            {/* Monthly Budget Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Budget mensuel (FC)</Text>
+              <View style={styles.inputWrapper}>
+                <Icon name="wallet" size="sm" color={Colors.text.tertiary} />
+                <TextInput
+                  style={styles.input}
+                  value={formData.monthlyBudget}
+                  onChangeText={value =>
+                    handleInputChange('monthlyBudget', value)
+                  }
+                  placeholder="Ex: 500000"
+                  placeholderTextColor={Colors.text.tertiary}
+                  keyboardType="numeric"
+                />
+                <Text style={styles.inputSuffix}>FC</Text>
+              </View>
+              <Text style={styles.inputHint}>
+                Ce budget nous aide à vous suggérer des économies personnalisées
+              </Text>
+            </View>
+          </View>
+
+          {/* Save Button */}
           <TouchableOpacity
-            style={styles.citySelector}
-            onPress={() => setShowCityPicker(true)}>
-            <Text
-              style={
-                formData.city
-                  ? styles.citySelectorText
-                  : styles.citySelectorPlaceholder
-              }>
-              {formData.city || 'Sélectionner une ville'}
-            </Text>
-            <Text style={styles.citySelectorArrow}>▼</Text>
+            style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={isLoading}
+            activeOpacity={0.8}>
+            {isLoading ? (
+              <Spinner size="small" color={Colors.white} />
+            ) : (
+              <>
+                <Icon name="check" size="sm" color={Colors.white} />
+                <Text style={styles.saveButtonText}>
+                  Enregistrer les modifications
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={isLoading}>
-          {isLoading ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.saveButtonText}>Enregistrer</Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.background.primary,
   },
+  keyboardView: {
+    flex: 1,
+  },
+
+  // Header (for city picker modal)
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.base,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[200],
+    borderBottomColor: Colors.border.light,
   },
   backButton: {
-    marginRight: 16,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: COLORS.primary[500],
-    fontWeight: '500',
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.background.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
+    fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.primary,
   },
+  headerSpacer: {
+    width: 40,
+  },
+
+  // Scroll
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    padding: Spacing.lg,
+    paddingBottom: Spacing['3xl'],
   },
+
+  // Avatar Section
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: Colors.card.blue,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+    ...Shadows.md,
+  },
+  avatarText: {
+    fontSize: 36,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
+  },
+  avatarLabel: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.tertiary,
+  },
+
+  // Section
+  section: {
+    marginBottom: Spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.tertiary,
+    textTransform: 'uppercase',
+    letterSpacing: Typography.letterSpacing.wide,
+    marginBottom: Spacing.base,
+    marginLeft: Spacing.xs,
+  },
+
+  // Input Group
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: Spacing.base,
   },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.gray[700],
-    marginBottom: 8,
+  inputLabel: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.xs,
+    marginLeft: Spacing.xs,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    gap: Spacing.sm,
+    ...Shadows.sm,
   },
   input: {
-    borderWidth: 1,
-    borderColor: COLORS.gray[300],
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: COLORS.gray[900],
+    flex: 1,
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.primary,
+    paddingVertical: Spacing.xs,
   },
-  multilineInput: {
-    height: 80,
-    textAlignVertical: 'top',
+  inputSuffix: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.tertiary,
   },
-  selectContainer: {
+  inputHint: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.xs,
+    marginLeft: Spacing.xs,
+  },
+
+  // Options Row (Sex selection)
+  optionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: Spacing.sm,
   },
-  selectOption: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+  optionButton: {
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.white,
     borderWidth: 1,
-    borderColor: COLORS.gray[300],
-    backgroundColor: '#fff',
+    borderColor: Colors.border.light,
+    ...Shadows.sm,
   },
-  selectOptionSelected: {
-    borderColor: COLORS.primary[500],
-    backgroundColor: COLORS.primary[50],
+  optionButtonSelected: {
+    backgroundColor: Colors.card.blue,
+    borderColor: Colors.primary,
   },
-  selectOptionText: {
-    fontSize: 14,
-    color: COLORS.gray[700],
+  optionButtonText: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.secondary,
   },
-  selectOptionTextSelected: {
-    color: COLORS.primary[600],
-    fontWeight: '500',
+  optionButtonTextSelected: {
+    color: Colors.text.primary,
+    fontFamily: Typography.fontFamily.semiBold,
   },
-  citySelector: {
+
+  // Select Button
+  selectButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.base,
     borderWidth: 1,
-    borderColor: COLORS.gray[300],
-    borderRadius: 8,
-    padding: 12,
+    borderColor: Colors.border.light,
+    ...Shadows.sm,
   },
-  citySelectorText: {
-    fontSize: 16,
-    color: COLORS.gray[900],
-  },
-  citySelectorPlaceholder: {
-    fontSize: 16,
-    color: COLORS.gray[400],
-  },
-  citySelectorArrow: {
-    fontSize: 12,
-    color: COLORS.gray[500],
-  },
-  cityPickerContainer: {
-    flex: 1,
-    padding: 16,
-  },
-  cityOption: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[200],
-  },
-  cityOptionSelected: {
-    backgroundColor: COLORS.primary[50],
-  },
-  cityOptionText: {
-    fontSize: 16,
-    color: COLORS.gray[900],
-  },
-  cityOptionTextSelected: {
-    color: COLORS.primary[600],
-    fontWeight: '500',
-  },
-  saveButton: {
-    backgroundColor: COLORS.primary[500],
-    borderRadius: 8,
-    padding: 16,
+  selectButtonLeft: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 40,
+    gap: Spacing.sm,
+  },
+  selectButtonText: {
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.primary,
+  },
+  selectButtonPlaceholder: {
+    color: Colors.text.tertiary,
+  },
+
+  // Save Button
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.xl,
+    paddingVertical: Spacing.base,
+    marginTop: Spacing.lg,
+    gap: Spacing.sm,
+    ...Shadows.md,
   },
   saveButtonDisabled: {
-    backgroundColor: COLORS.gray[300],
+    backgroundColor: Colors.border.medium,
   },
   saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.white,
+  },
+
+  // City Picker
+  searchContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.base,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.xl,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.primary,
+    paddingVertical: Spacing.xs,
+  },
+  cityList: {
+    flex: 1,
+  },
+  cityListContent: {
+    padding: Spacing.lg,
+  },
+  cityOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.base,
+    marginBottom: Spacing.sm,
+    ...Shadows.sm,
+  },
+  cityOptionSelected: {
+    backgroundColor: Colors.card.blue,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  cityOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.base,
+  },
+  cityIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.background.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cityIconContainerSelected: {
+    backgroundColor: Colors.primary,
+  },
+  cityOptionText: {
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.primary,
+  },
+  cityOptionTextSelected: {
+    fontFamily: Typography.fontFamily.semiBold,
   },
 });

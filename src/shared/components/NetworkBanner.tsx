@@ -56,7 +56,8 @@ export function NetworkBanner({networkState, onRetry}: NetworkBannerProps) {
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
-  const shouldShow = !networkState.isConnected || networkState.isInternetReachable === false;
+  const shouldShow =
+    !networkState.isConnected || networkState.isInternetReachable === false;
 
   useEffect(() => {
     if (shouldShow) {
@@ -112,16 +113,22 @@ export function NetworkBanner({networkState, onRetry}: NetworkBannerProps) {
   }
 
   const isNoConnection = !networkState.isConnected;
-  const statusColor = isNoConnection ? URBANIST_COLORS.error : URBANIST_COLORS.warning;
-  const bgColor = isNoConnection ? URBANIST_COLORS.errorBg : URBANIST_COLORS.warningBg;
-  const accentColor = isNoConnection ? URBANIST_COLORS.errorAccent : URBANIST_COLORS.warningAccent;
+  const statusColor = isNoConnection
+    ? URBANIST_COLORS.error
+    : URBANIST_COLORS.warning;
+  const bgColor = isNoConnection
+    ? URBANIST_COLORS.errorBg
+    : URBANIST_COLORS.warningBg;
+  const accentColor = isNoConnection
+    ? URBANIST_COLORS.errorAccent
+    : URBANIST_COLORS.warningAccent;
 
   const getMessage = () => {
     if (!networkState.isConnected) {
       return 'Pas de connexion réseau';
     }
     if (networkState.isInternetReachable === false) {
-      return 'Pas d\'accès à Internet';
+      return "Pas d'accès à Internet";
     }
     return 'Connexion limitée';
   };
@@ -144,7 +151,7 @@ export function NetworkBanner({networkState, onRetry}: NetworkBannerProps) {
         },
       ]}>
       <View style={[styles.accentBar, {backgroundColor: statusColor}]} />
-      
+
       <View style={styles.bannerContent}>
         <Animated.View
           style={[
@@ -153,19 +160,21 @@ export function NetworkBanner({networkState, onRetry}: NetworkBannerProps) {
           ]}>
           <Icon name={getIcon()} size="sm" color={statusColor} />
         </Animated.View>
-        
+
         <View style={styles.textContainer}>
           <Text style={styles.bannerText}>{getMessage()}</Text>
           <Text style={styles.bannerSubtext}>Vérifiez votre connexion</Text>
         </View>
-        
+
         {onRetry && (
           <TouchableOpacity
             onPress={onRetry}
             style={[styles.retryButton, {backgroundColor: accentColor}]}
             activeOpacity={0.7}>
-            <Icon name="refresh-line" size="sm" color={statusColor} />
-            <Text style={[styles.retryText, {color: statusColor}]}>Réessayer</Text>
+            <Icon name="refresh" size="sm" color={statusColor} />
+            <Text style={[styles.retryText, {color: statusColor}]}>
+              Réessayer
+            </Text>
           </TouchableOpacity>
         )}
       </View>

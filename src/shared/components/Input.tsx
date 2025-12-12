@@ -1,10 +1,10 @@
 /**
  * Input Component
- * 
+ *
  * A styled text input with label and error states
  */
 
-import React, { useState, useRef } from 'react';
+import React, {useState, useRef} from 'react';
 import {
   View,
   TextInput,
@@ -15,7 +15,14 @@ import {
   ViewStyle,
   TextInputProps,
 } from 'react-native';
-import { Colors, Typography, BorderRadius, Spacing, Layout, Animations } from '../theme/theme';
+import {
+  Colors,
+  Typography,
+  BorderRadius,
+  Spacing,
+  Layout,
+  Animations,
+} from '../theme/theme';
 import Icon from './Icon';
 
 interface InputProps extends TextInputProps {
@@ -70,15 +77,14 @@ const Input: React.FC<InputProps> = ({
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={styles.label}>{label}</Text>}
-      
+
       <Animated.View
         style={[
           styles.inputContainer,
-          { borderColor },
+          {borderColor},
           isFocused && styles.inputFocused,
           error ? styles.inputError : null,
-        ]}
-      >
+        ]}>
         {leftIcon && (
           <View style={styles.leftIcon}>
             <Icon
@@ -88,7 +94,7 @@ const Input: React.FC<InputProps> = ({
             />
           </View>
         )}
-        
+
         <TextInput
           {...textInputProps}
           style={[
@@ -100,22 +106,17 @@ const Input: React.FC<InputProps> = ({
           onFocus={handleFocus}
           onBlur={handleBlur}
         />
-        
+
         {rightIcon && (
           <TouchableOpacity
             onPress={onRightIconPress}
             style={styles.rightIcon}
-            disabled={!onRightIconPress}
-          >
-            <Icon
-              name={rightIcon}
-              size="sm"
-              color={Colors.text.tertiary}
-            />
+            disabled={!onRightIconPress}>
+            <Icon name={rightIcon} size="sm" color={Colors.text.tertiary} />
           </TouchableOpacity>
         )}
       </Animated.View>
-      
+
       {(error || hint) && (
         <Text style={[styles.helperText, error ? styles.errorText : null]}>
           {error || hint}

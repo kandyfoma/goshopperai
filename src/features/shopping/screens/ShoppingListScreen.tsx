@@ -38,7 +38,8 @@ import {Icon, Spinner} from '@/shared/components';
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
 export function ShoppingListScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const {user, isAuthenticated} = useAuth();
 
@@ -66,7 +67,7 @@ export function ShoppingListScreen() {
     null,
   );
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  
+
   // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -95,7 +96,7 @@ export function ShoppingListScreen() {
   }, [user?.uid]);
 
   const loadLists = async () => {
-    if (!user?.uid) return;
+    if (!user?.uid) {return;}
 
     try {
       const loadedLists = await shoppingListService.getLists(user.uid);
@@ -112,7 +113,7 @@ export function ShoppingListScreen() {
   };
 
   const loadSuggestions = async () => {
-    if (!user?.uid) return;
+    if (!user?.uid) {return;}
 
     try {
       const items = await shoppingListService.getQuickSuggestions(user.uid);
@@ -123,7 +124,7 @@ export function ShoppingListScreen() {
   };
 
   const handleCreateList = useCallback(async () => {
-    if (!user?.uid || !newListName.trim()) return;
+    if (!user?.uid || !newListName.trim()) {return;}
 
     setIsCreating(true);
     try {
@@ -144,7 +145,7 @@ export function ShoppingListScreen() {
   }, [user?.uid, newListName]);
 
   const handleAddItem = useCallback(async () => {
-    if (!user?.uid || !selectedList || !newItemName.trim()) return;
+    if (!user?.uid || !selectedList || !newItemName.trim()) {return;}
 
     setIsCreating(true);
     try {
@@ -182,14 +183,14 @@ export function ShoppingListScreen() {
 
   const handleToggleItem = useCallback(
     async (itemId: string) => {
-      if (!user?.uid || !selectedList) return;
+      if (!user?.uid || !selectedList) {return;}
 
       try {
         await shoppingListService.toggleItem(user.uid, selectedList.id, itemId);
 
         // Update local state
         setSelectedList(prev => {
-          if (!prev) return prev;
+          if (!prev) {return prev;}
           return {
             ...prev,
             items: prev.items.map(item =>
@@ -206,7 +207,7 @@ export function ShoppingListScreen() {
 
   const handleRemoveItem = useCallback(
     async (itemId: string) => {
-      if (!user?.uid || !selectedList) return;
+      if (!user?.uid || !selectedList) {return;}
 
       Alert.alert('Supprimer ?', 'Supprimer cet article de la liste ?', [
         {text: 'Annuler', style: 'cancel'},
@@ -222,7 +223,7 @@ export function ShoppingListScreen() {
               );
 
               setSelectedList(prev => {
-                if (!prev) return prev;
+                if (!prev) {return prev;}
                 return {
                   ...prev,
                   items: prev.items.filter(item => item.id !== itemId),
@@ -239,7 +240,7 @@ export function ShoppingListScreen() {
   );
 
   const handleOptimize = useCallback(async () => {
-    if (!user?.uid || !selectedList) return;
+    if (!user?.uid || !selectedList) {return;}
 
     setIsLoading(true);
     try {
@@ -270,9 +271,15 @@ export function ShoppingListScreen() {
     setShowAddItemModal(true);
   }, []);
 
-  const renderItem = ({item, index}: {item: ShoppingListItem; index: number}) => {
+  const renderItem = ({
+    item,
+    index,
+  }: {
+    item: ShoppingListItem;
+    index: number;
+  }) => {
     const itemAnim = new Animated.Value(1);
-    
+
     return (
       <Animated.View
         style={[
@@ -335,8 +342,12 @@ export function ShoppingListScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
+
       {/* Header */}
       <View style={[styles.header, {paddingTop: insets.top + Spacing.md}]}>
         <TouchableOpacity
@@ -412,10 +423,16 @@ export function ShoppingListScreen() {
                 start={{x: 0, y: 0}}
                 end={{x: 1, y: 1}}>
                 <View style={styles.savingsIconContainer}>
-                  <Icon name="trending-down" size="lg" color={Colors.status.success} />
+                  <Icon
+                    name="trending-down"
+                    size="lg"
+                    color={Colors.status.success}
+                  />
                 </View>
                 <View style={styles.savingsInfo}>
-                  <Text style={styles.savingsTitle}>Économies potentielles</Text>
+                  <Text style={styles.savingsTitle}>
+                    Économies potentielles
+                  </Text>
                   <Text style={styles.savingsAmount}>
                     ${selectedList.potentialSavings.toFixed(2)}
                   </Text>
@@ -467,7 +484,11 @@ export function ShoppingListScreen() {
           {selectedList.items.length === 0 ? (
             <View style={styles.emptyList}>
               <View style={styles.emptyIconContainer}>
-                <Icon name="shopping-cart" size="3xl" color={Colors.text.tertiary} />
+                <Icon
+                  name="shopping-cart"
+                  size="3xl"
+                  color={Colors.text.tertiary}
+                />
               </View>
               <Text style={styles.emptyText}>Liste vide</Text>
               <Text style={styles.emptySubtext}>
@@ -557,7 +578,11 @@ export function ShoppingListScreen() {
         animationType="slide"
         onRequestClose={() => setShowNewListModal(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, {paddingBottom: insets.bottom + Spacing.lg}]}>
+          <View
+            style={[
+              styles.modalContent,
+              {paddingBottom: insets.bottom + Spacing.lg},
+            ]}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Nouvelle Liste</Text>
 
@@ -611,7 +636,11 @@ export function ShoppingListScreen() {
         animationType="slide"
         onRequestClose={() => setShowAddItemModal(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, {paddingBottom: insets.bottom + Spacing.lg}]}>
+          <View
+            style={[
+              styles.modalContent,
+              {paddingBottom: insets.bottom + Spacing.lg},
+            ]}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Ajouter Article</Text>
 

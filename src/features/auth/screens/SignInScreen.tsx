@@ -38,7 +38,9 @@ export function SignInScreen() {
   const [isSigningIn, setIsSigningIn] = useState(false);
 
   const handleGoogleSignIn = async () => {
-    if (isSigningIn) return;
+    if (isSigningIn) {
+      return;
+    }
 
     setIsSigningIn(true);
     try {
@@ -46,17 +48,16 @@ export function SignInScreen() {
       showToast('Connexion réussie avec Google', 'success');
     } catch (err: any) {
       console.error('Google sign-in error:', err);
-      showToast(
-        err?.message || 'Échec de la connexion Google',
-        'error'
-      );
+      showToast(err?.message || 'Échec de la connexion Google', 'error');
     } finally {
       setIsSigningIn(false);
     }
   };
 
   const handleAppleSignIn = async () => {
-    if (isSigningIn) return;
+    if (isSigningIn) {
+      return;
+    }
 
     setIsSigningIn(true);
     try {
@@ -64,10 +65,7 @@ export function SignInScreen() {
       showToast('Connexion réussie avec Apple', 'success');
     } catch (err: any) {
       console.error('Apple sign-in error:', err);
-      showToast(
-        err?.message || 'Échec de la connexion Apple',
-        'error'
-      );
+      showToast(err?.message || 'Échec de la connexion Apple', 'error');
     } finally {
       setIsSigningIn(false);
     }
@@ -80,7 +78,10 @@ export function SignInScreen() {
 
   return (
     <View style={[styles.container, {paddingTop: insets.top}]}>
-      <StatusBar barStyle="dark-content" backgroundColor={URBANIST_COLORS.background} />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={URBANIST_COLORS.background}
+      />
 
       {/* Header */}
       <View style={styles.header}>
@@ -93,17 +94,20 @@ export function SignInScreen() {
       </View>
 
       {/* Main Content */}
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.content, {paddingBottom: insets.bottom + 24}]}
+        contentContainerStyle={[
+          styles.content,
+          {paddingBottom: insets.bottom + 24},
+        ]}
         showsVerticalScrollIndicator={false}>
-        
         {/* Title Section */}
         <View style={styles.titleContainer}>
           <Text style={styles.welcomeText}>Bienvenue sur</Text>
           <Text style={styles.appName}>GoShopperAI</Text>
           <Text style={styles.description}>
-            Votre assistant intelligent pour économiser sur vos courses au quotidien
+            Votre assistant intelligent pour économiser sur vos courses au
+            quotidien
           </Text>
         </View>
 
@@ -132,8 +136,8 @@ export function SignInScreen() {
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             En vous connectant, vous acceptez nos{' '}
-            <Text style={styles.linkText}>Conditions d'utilisation</Text>
-            {' '}et notre{' '}
+            <Text style={styles.linkText}>Conditions d'utilisation</Text> et
+            notre{' '}
             <Text style={styles.linkText}>Politique de confidentialité</Text>
           </Text>
         </View>

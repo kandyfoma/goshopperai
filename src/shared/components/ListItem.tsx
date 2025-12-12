@@ -1,10 +1,10 @@
 /**
  * ListItem Component
- * 
+ *
  * Reusable list item with icon, title, subtitle, and action
  */
 
-import React, { useRef } from 'react';
+import React, {useRef} from 'react';
 import {
   View,
   Text,
@@ -13,8 +13,15 @@ import {
   Animated,
   ViewStyle,
 } from 'react-native';
-import { Colors, Typography, BorderRadius, Spacing, Shadows, Animations } from '../theme/theme';
-import Icon, { IconBox } from './Icon';
+import {
+  Colors,
+  Typography,
+  BorderRadius,
+  Spacing,
+  Shadows,
+  Animations,
+} from '../theme/theme';
+import Icon, {IconBox} from './Icon';
 
 interface ListItemProps {
   title: string;
@@ -73,11 +80,10 @@ const ListItem: React.FC<ListItemProps> = ({
     <Animated.View
       style={[
         styles.container,
-        { transform: [{ scale: scaleAnim }] },
+        {transform: [{scale: scaleAnim}]},
         disabled && styles.disabled,
         style,
-      ]}
-    >
+      ]}>
       {/* Left section */}
       {(leftIcon || leftElement) && (
         <View style={styles.leftSection}>
@@ -86,7 +92,9 @@ const ListItem: React.FC<ListItemProps> = ({
               name={leftIcon!}
               size="sm"
               color={destructive ? Colors.status.error : leftIconColor}
-              backgroundColor={destructive ? Colors.status.errorLight : leftIconBgColor}
+              backgroundColor={
+                destructive ? Colors.status.errorLight : leftIconBgColor
+              }
             />
           )}
         </View>
@@ -100,8 +108,7 @@ const ListItem: React.FC<ListItemProps> = ({
             destructive && styles.destructiveText,
             disabled && styles.disabledText,
           ]}
-          numberOfLines={1}
-        >
+          numberOfLines={1}>
           {title}
         </Text>
         {subtitle && (
@@ -114,15 +121,9 @@ const ListItem: React.FC<ListItemProps> = ({
       {/* Right section */}
       <View style={styles.rightSection}>
         {rightElement}
-        {rightText && (
-          <Text style={styles.rightText}>{rightText}</Text>
-        )}
+        {rightText && <Text style={styles.rightText}>{rightText}</Text>}
         {showArrow && onPress && (
-          <Icon
-            name="chevron-right"
-            size="sm"
-            color={Colors.text.tertiary}
-          />
+          <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} />
         )}
       </View>
     </Animated.View>
@@ -135,8 +136,7 @@ const ListItem: React.FC<ListItemProps> = ({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={disabled}
-        activeOpacity={1}
-      >
+        activeOpacity={1}>
         {content}
       </TouchableOpacity>
     );

@@ -27,7 +27,8 @@ export function SocialSignInButtons({
           onPress={onGoogleSignIn}
           disabled={disabled || isLoading}>
           <Text style={styles.googleIcon}>G</Text>
-          <Text style={[styles.googleButtonText, disabled && styles.disabledText]}>
+          <Text
+            style={[styles.googleButtonText, disabled && styles.disabledText]}>
             Continuer avec Google
           </Text>
         </TouchableOpacity>
@@ -39,8 +40,9 @@ export function SocialSignInButtons({
           style={[styles.appleButton, disabled && styles.disabledButton]}
           onPress={onAppleSignIn}
           disabled={disabled || isLoading}>
-          <Icon name="apple-fill" size="sm" color={Colors.white} />
-          <Text style={[styles.appleButtonText, disabled && styles.disabledText]}>
+          <Icon name="apple" size="sm" color={Colors.white} />
+          <Text
+            style={[styles.appleButtonText, disabled && styles.disabledText]}>
             Continuer avec Apple
           </Text>
         </TouchableOpacity>

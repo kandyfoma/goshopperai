@@ -1,13 +1,20 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, StatusBar } from 'react-native';
-import { SvgXml } from 'react-native-svg';
-import { logoIconSvg, Colors } from '../../../assets/logo-icon';
+import React, {useEffect, useRef} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Animated,
+  Easing,
+  StatusBar,
+} from 'react-native';
+import {SvgXml} from 'react-native-svg';
+import {logoIconSvg, Colors} from '../../../assets/logo-icon';
 
 interface SplashScreenProps {
   onAnimationComplete?: () => void;
 }
 
-const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
+const SplashScreen: React.FC<SplashScreenProps> = ({onAnimationComplete}) => {
   const logoScale = useRef(new Animated.Value(0.5)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const textOpacity = useRef(new Animated.Value(0)).current;
@@ -57,38 +64,36 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
-      
+
       {/* Main logo */}
-      <Animated.View 
+      <Animated.View
         style={[
           styles.logoContainer,
-          { 
-            transform: [{ scale: logoScale }],
+          {
+            transform: [{scale: logoScale}],
             opacity: logoOpacity,
-          }
-        ]}
-      >
+          },
+        ]}>
         <View style={styles.logoShadow}>
           <SvgXml xml={logoIconSvg} width={120} height={120} />
         </View>
       </Animated.View>
 
       {/* App name */}
-      <Animated.View 
+      <Animated.View
         style={[
           styles.textContainer,
-          { 
+          {
             opacity: textOpacity,
-            transform: [{ translateY: textTranslateY }],
-          }
-        ]}
-      >
+            transform: [{translateY: textTranslateY}],
+          },
+        ]}>
         <Text style={styles.appName}>GoShopper</Text>
         <Text style={styles.tagline}>Smart Shopping</Text>
       </Animated.View>
 
       {/* Loading indicator */}
-      <Animated.View style={[styles.loadingContainer, { opacity: textOpacity }]}>
+      <Animated.View style={[styles.loadingContainer, {opacity: textOpacity}]}>
         <View style={styles.loadingBar}>
           <LoadingProgress />
         </View>
@@ -116,12 +121,7 @@ const LoadingProgress: React.FC = () => {
   });
 
   return (
-    <Animated.View 
-      style={[
-        styles.loadingProgress, 
-        { width: animatedWidth }
-      ]} 
-    />
+    <Animated.View style={[styles.loadingProgress, {width: animatedWidth}]} />
   );
 };
 
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   },
   logoShadow: {
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 12 },
+    shadowOffset: {width: 0, height: 12},
     shadowOpacity: 0.15,
     shadowRadius: 24,
     elevation: 12,

@@ -19,7 +19,13 @@ import {geminiService} from '@/shared/services/ai/gemini';
 import {analyticsService} from '@/shared/services/analytics';
 import {duplicateDetectionService} from '@/shared/services/duplicateDetection';
 import {offlineQueueService} from '@/shared/services/firebase';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Icon, FadeIn, SlideIn} from '@/shared/components';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -69,7 +75,7 @@ export function ScannerScreen() {
     offlineQueueService.init();
 
     // Subscribe to queue updates
-    const unsubscribe = offlineQueueService.subscribe((queue) => {
+    const unsubscribe = offlineQueueService.subscribe(queue => {
       setQueueCount(queue.length);
     });
 
@@ -225,7 +231,7 @@ export function ScannerScreen() {
               );
 
               userMessage =
-                'Pas de connexion internet. Votre reçu a été mis en file d\'attente et sera traité automatiquement quand vous serez en ligne.';
+                "Pas de connexion internet. Votre reçu a été mis en file d'attente et sera traité automatiquement quand vous serez en ligne.";
               setState('success'); // Show success state for queued items
             } catch (queueError) {
               console.error('Failed to queue receipt:', queueError);
@@ -414,14 +420,14 @@ export function ScannerScreen() {
       {/* Offline banner */}
       {(isOffline || queueCount > 0) && state === 'idle' && (
         <View style={styles.offlineBanner}>
-          <Icon 
-            name={isOffline ? 'alert' : 'clock'} 
-            size="sm" 
-            color={Colors.status.warning} 
+          <Icon
+            name={isOffline ? 'alert' : 'clock'}
+            size="sm"
+            color={Colors.status.warning}
           />
           <View style={styles.offlineTextContainer}>
             <Text style={styles.offlineTitle}>
-              {isOffline ? 'Mode hors ligne' : 'File d\'attente active'}
+              {isOffline ? 'Mode hors ligne' : "File d'attente active"}
             </Text>
             <Text style={styles.offlineDesc}>
               {isOffline

@@ -18,7 +18,13 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import LinearGradient from 'react-native-linear-gradient';
 import {useAuth, useUser, useSubscription, useTheme} from '@/shared/contexts';
 import {RootStackParamList} from '@/shared/types';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Icon, FadeIn, SlideIn} from '@/shared/components';
 import {SUBSCRIPTION_PLANS, TRIAL_SCAN_LIMIT} from '@/shared/utils/constants';
 import {formatDate} from '@/shared/utils/helpers';
@@ -52,12 +58,17 @@ function SettingItem({
       onPress={onPress}
       disabled={!onPress}
       activeOpacity={onPress ? 0.7 : 1}>
-      <View style={[
-        styles.settingIconWrapper, 
-        danger && styles.settingIconWrapperDanger,
-        iconBgColor && {backgroundColor: iconBgColor}
-      ]}>
-        <Icon name={icon} size="sm" color={danger ? Colors.status.error : Colors.text.primary} />
+      <View
+        style={[
+          styles.settingIconWrapper,
+          danger && styles.settingIconWrapperDanger,
+          iconBgColor && {backgroundColor: iconBgColor},
+        ]}>
+        <Icon
+          name={icon}
+          size="sm"
+          color={danger ? Colors.status.error : Colors.text.primary}
+        />
       </View>
       <View style={styles.settingContent}>
         <Text
@@ -67,7 +78,9 @@ function SettingItem({
         {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
       </View>
       {rightElement}
-      {showArrow && onPress && <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} />}
+      {showArrow && onPress && (
+        <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} />
+      )}
     </TouchableOpacity>
   );
 }
@@ -188,11 +201,15 @@ export function SettingsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
+
       {/* Header */}
       <View style={[styles.header, {paddingTop: insets.top + Spacing.md}]}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
@@ -201,15 +218,15 @@ export function SettingsScreen() {
         <Text style={styles.headerTitle}>Paramètres</Text>
         <View style={styles.headerRight} />
       </View>
-      
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        
+
         {/* Profile Card */}
         <SlideIn delay={100}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.profileCard}
             onPress={() => navigation.navigate('Profile' as any)}
             activeOpacity={0.9}>
@@ -255,7 +272,11 @@ export function SettingsScreen() {
                     {currentPlan.name}
                   </Text>
                 </View>
-                <Icon name="chevron-right" size="sm" color="rgba(255,255,255,0.8)" />
+                <Icon
+                  name="chevron-right"
+                  size="sm"
+                  color="rgba(255,255,255,0.8)"
+                />
               </View>
 
               {subscription?.planId === 'free' ? (
@@ -267,7 +288,11 @@ export function SettingsScreen() {
                     <View
                       style={[
                         styles.trialBarFill,
-                        {width: `${(trialRemaining / TRIAL_SCAN_LIMIT) * 100}%`},
+                        {
+                          width: `${
+                            (trialRemaining / TRIAL_SCAN_LIMIT) * 100
+                          }%`,
+                        },
                       ]}
                     />
                   </View>
@@ -460,7 +485,7 @@ const styles = StyleSheet.create({
     padding: Spacing.lg,
     paddingBottom: Spacing['3xl'],
   },
-  
+
   // Profile Card
   profileCard: {
     marginBottom: Spacing.lg,
@@ -503,7 +528,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
+
   // Subscription Card
   subscriptionCard: {
     marginBottom: Spacing.xl,
@@ -580,7 +605,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.md,
     fontWeight: Typography.fontWeight.semiBold,
   },
-  
+
   // Setting Section
   section: {
     marginBottom: Spacing.lg,
@@ -600,7 +625,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Shadows.sm,
   },
-  
+
   // Setting Item
   settingItem: {
     flexDirection: 'row',
@@ -637,7 +662,7 @@ const styles = StyleSheet.create({
     color: Colors.text.tertiary,
     marginTop: 2,
   },
-  
+
   // App Info
   appInfo: {
     alignItems: 'center',

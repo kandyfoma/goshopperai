@@ -161,7 +161,9 @@ class ShoppingListService {
       .doc(listId)
       .get();
 
-    if (!doc.exists) return null;
+    if (!doc.exists) {
+      return null;
+    }
     return this.docToList(doc);
   }
 
@@ -199,7 +201,9 @@ class ShoppingListService {
     item: Partial<ShoppingListItem>,
   ): Promise<ShoppingListItem> {
     const list = await this.getList(userId, listId);
-    if (!list) throw new Error('List not found');
+    if (!list) {
+      throw new Error('List not found');
+    }
 
     const newItem: ShoppingListItem = {
       id: `item_${Date.now()}`,
@@ -245,7 +249,9 @@ class ShoppingListService {
     itemId: string,
   ): Promise<void> {
     const list = await this.getList(userId, listId);
-    if (!list) throw new Error('List not found');
+    if (!list) {
+      throw new Error('List not found');
+    }
 
     const updatedItems = list.items.filter(item => item.id !== itemId);
 
@@ -270,7 +276,9 @@ class ShoppingListService {
     itemId: string,
   ): Promise<void> {
     const list = await this.getList(userId, listId);
-    if (!list) throw new Error('List not found');
+    if (!list) {
+      throw new Error('List not found');
+    }
 
     const updatedItems = list.items.map(item => {
       if (item.id === itemId) {
@@ -302,7 +310,9 @@ class ShoppingListService {
     quantity: number,
   ): Promise<void> {
     const list = await this.getList(userId, listId);
-    if (!list) throw new Error('List not found');
+    if (!list) {
+      throw new Error('List not found');
+    }
 
     const updatedItems = list.items.map(item => {
       if (item.id === itemId) {
@@ -323,9 +333,7 @@ class ShoppingListService {
   /**
    * Get price data for an item
    */
-  private async getItemPriceData(
-    nameNormalized: string,
-  ): Promise<{
+  private async getItemPriceData(nameNormalized: string): Promise<{
     bestPrice: number;
     bestStore: string;
     averagePrice: number;
@@ -337,7 +345,9 @@ class ShoppingListService {
       .limit(20)
       .get();
 
-    if (snapshot.empty) return null;
+    if (snapshot.empty) {
+      return null;
+    }
 
     const prices = snapshot.docs.map(doc => ({
       price: doc.data().price as number,
@@ -360,7 +370,9 @@ class ShoppingListService {
     listId: string,
   ): Promise<OptimizationResult | null> {
     const list = await this.getList(userId, listId);
-    if (!list || list.items.length === 0) return null;
+    if (!list || list.items.length === 0) {
+      return null;
+    }
 
     // Get prices for all items
     const itemPrices = await Promise.all(
@@ -433,7 +445,9 @@ class ShoppingListService {
     let multiStoreTotal = 0;
 
     itemPrices.forEach(({item, nameNormalized, quantity, prices}) => {
-      if (prices.length === 0) return;
+      if (prices.length === 0) {
+        return;
+      }
 
       const best = prices.reduce((a, b) => (a.price < b.price ? a : b));
       multiStoreTotal += best.price * quantity;

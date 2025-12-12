@@ -18,7 +18,13 @@ import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {useAuth} from '@/shared/contexts';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Icon} from '@/shared/components';
 import firestore from '@react-native-firebase/firestore';
 
@@ -69,34 +75,85 @@ export function ProfileSetupScreen() {
   const route = useRoute<ProfileSetupRouteProp>();
   const {user} = useAuth();
 
-  // Pre-fill from social login if available
-  const [firstName, setFirstName] = useState(route.params?.firstName || '');
-  const [surname, setSurname] = useState(route.params?.surname || '');
+  // Extract names from displayName if available
+  const extractNamesFromDisplayName = (displayName: string | null) => {
+    if (!displayName) {
+      return {firstName: '', surname: ''};
+    }
+
+    const parts = displayName.trim().split(' ');
+    if (parts.length === 1) {
+      return {firstName: parts[0], surname: ''};
+    } else {
+      return {
+        firstName: parts[0],
+        surname: parts.slice(1).join(' '),
+      };
+    }
+  };
+
+  const displayNameParts = extractNamesFromDisplayName(
+    user?.displayName || null,
+  );
+
+  // Pre-fill from social login or displayName
+  const [firstName, setFirstName] = useState(
+    route.params?.firstName || displayNameParts.firstName,
+  );
+  const [surname, setSurname] = useState(
+    route.params?.surname || displayNameParts.surname,
+  );
+  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
   const [selectedCity, setSelectedCity] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{firstName?: string; surname?: string; city?: string}>({});
+  const [errors, setErrors] = useState<{
+    firstName?: string;
+    surname?: string;
+    phoneNumber?: string;
+    city?: string;
+  }>({});
+
+  // Check if names are pre-filled from social login
+  const namesPreFilled = !!(
+    route.params?.firstName || displayNameParts.firstName
+  );
 
   // Filter cities based on search
   const filteredCities = DRC_CITIES.filter(city =>
-    city.toLowerCase().includes(searchQuery.toLowerCase())
+    city.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   // Validate form
   const validateForm = (): boolean => {
-    const newErrors: {firstName?: string; surname?: string; city?: string} = {};
+    const newErrors: {
+      firstName?: string;
+      surname?: string;
+      phoneNumber?: string;
+      city?: string;
+    } = {};
 
-    if (!firstName.trim()) {
-      newErrors.firstName = 'Le prénom est requis';
-    } else if (firstName.trim().length < 2) {
-      newErrors.firstName = 'Le prénom doit contenir au moins 2 caractères';
+    // Only validate names if not pre-filled
+    if (!namesPreFilled) {
+      if (!firstName.trim()) {
+        newErrors.firstName = 'Le prénom est requis';
+      } else if (firstName.trim().length < 2) {
+        newErrors.firstName = 'Le prénom doit contenir au moins 2 caractères';
+      }
+
+      if (!surname.trim()) {
+        newErrors.surname = 'Le nom est requis';
+      } else if (surname.trim().length < 2) {
+        newErrors.surname = 'Le nom doit contenir au moins 2 caractères';
+      }
     }
 
-    if (!surname.trim()) {
-      newErrors.surname = 'Le nom est requis';
-    } else if (surname.trim().length < 2) {
-      newErrors.surname = 'Le nom doit contenir au moins 2 caractères';
+    // Validate phone number
+    if (!phoneNumber.trim()) {
+      newErrors.phoneNumber = 'Le numéro de téléphone est requis';
+    } else if (!/^\+?[0-9\s\-\(\)]{8,}$/.test(phoneNumber.trim())) {
+      newErrors.phoneNumber = 'Format de numéro de téléphone invalide';
     }
 
     if (!selectedCity) {
@@ -109,7 +166,9 @@ export function ProfileSetupScreen() {
 
   // Handle profile completion
   const handleComplete = async () => {
-    if (!validateForm() || !user?.uid) return;
+    if (!validateForm() || !user?.uid) {
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -124,6 +183,7 @@ export function ProfileSetupScreen() {
             firstName: firstName.trim(),
             surname: surname.trim(),
             displayName: `${firstName.trim()} ${surname.trim()}`,
+            phoneNumber: phoneNumber.trim(),
             defaultCity: selectedCity,
             profileCompleted: true,
             updatedAt: firestore.FieldValue.serverTimestamp(),
@@ -198,7 +258,9 @@ export function ProfileSetupScreen() {
               <Icon
                 name="map-pin"
                 size="md"
-                color={selectedCity === item ? Colors.primary : Colors.text.secondary}
+                color={
+                  selectedCity === item ? Colors.primary : Colors.text.secondary
+                }
               />
               <Text
                 style={[
@@ -237,11 +299,22 @@ export function ProfileSetupScreen() {
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.iconContainer}>
-              <Icon name="user" size="2xl" color={Colors.text.primary} variant="filled" />
+              <Icon
+                name="user"
+                size="2xl"
+                color={Colors.text.primary}
+                variant="filled"
+              />
             </View>
-            <Text style={styles.title}>Complétez votre profil</Text>
+            <Text style={styles.title}>
+              {namesPreFilled
+                ? 'Finalisez votre profil'
+                : 'Complétez votre profil'}
+            </Text>
             <Text style={styles.subtitle}>
-              Ces informations nous aideront à personnaliser votre expérience
+              {namesPreFilled
+                ? 'Ajoutez votre numéro de téléphone et ville pour continuer'
+                : 'Ces informations nous aideront à personnaliser votre expérience'}
             </Text>
           </View>
 
@@ -249,25 +322,35 @@ export function ProfileSetupScreen() {
           <View style={styles.form}>
             {/* First Name */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Prénom</Text>
+              <Text style={styles.label}>
+                Prénom {namesPreFilled && '(auto-rempli)'}
+              </Text>
               <View
                 style={[
                   styles.inputWrapper,
                   errors.firstName ? styles.inputError : null,
+                  namesPreFilled && styles.inputDisabled,
                 ]}>
                 <Icon name="user" size="md" color={Colors.text.secondary} />
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    namesPreFilled && styles.inputTextDisabled,
+                  ]}
                   placeholder="Entrez votre prénom"
                   placeholderTextColor={Colors.text.tertiary}
                   value={firstName}
                   onChangeText={text => {
-                    setFirstName(text);
-                    if (errors.firstName) setErrors(prev => ({...prev, firstName: undefined}));
+                    if (!namesPreFilled) {
+                      setFirstName(text);
+                      if (errors.firstName) {
+                        setErrors(prev => ({...prev, firstName: undefined}));
+                      }
+                    }
                   }}
                   autoCapitalize="words"
                   autoCorrect={false}
-                  editable={!isLoading}
+                  editable={!isLoading && !namesPreFilled}
                 />
               </View>
               {errors.firstName && (
@@ -277,29 +360,70 @@ export function ProfileSetupScreen() {
 
             {/* Surname */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Nom de famille</Text>
+              <Text style={styles.label}>
+                Nom de famille {namesPreFilled && '(auto-rempli)'}
+              </Text>
               <View
                 style={[
                   styles.inputWrapper,
                   errors.surname ? styles.inputError : null,
+                  namesPreFilled && styles.inputDisabled,
                 ]}>
                 <Icon name="user" size="md" color={Colors.text.secondary} />
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    namesPreFilled && styles.inputTextDisabled,
+                  ]}
                   placeholder="Entrez votre nom"
                   placeholderTextColor={Colors.text.tertiary}
                   value={surname}
                   onChangeText={text => {
-                    setSurname(text);
-                    if (errors.surname) setErrors(prev => ({...prev, surname: undefined}));
+                    if (!namesPreFilled) {
+                      setSurname(text);
+                      if (errors.surname) {
+                        setErrors(prev => ({...prev, surname: undefined}));
+                      }
+                    }
                   }}
                   autoCapitalize="words"
                   autoCorrect={false}
-                  editable={!isLoading}
+                  editable={!isLoading && !namesPreFilled}
                 />
               </View>
               {errors.surname && (
                 <Text style={styles.errorText}>{errors.surname}</Text>
+              )}
+            </View>
+
+            {/* Phone Number */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Numéro de téléphone</Text>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  errors.phoneNumber ? styles.inputError : null,
+                ]}>
+                <Icon name="phone" size="md" color={Colors.text.secondary} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="+243 XX XXX XXXX"
+                  placeholderTextColor={Colors.text.tertiary}
+                  value={phoneNumber}
+                  onChangeText={text => {
+                    setPhoneNumber(text);
+                    if (errors.phoneNumber) {
+                      setErrors(prev => ({...prev, phoneNumber: undefined}));
+                    }
+                  }}
+                  keyboardType="phone-pad"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isLoading}
+                />
+              </View>
+              {errors.phoneNumber && (
+                <Text style={styles.errorText}>{errors.phoneNumber}</Text>
               )}
             </View>
 
@@ -322,7 +446,11 @@ export function ProfileSetupScreen() {
                   ]}>
                   {selectedCity || 'Sélectionnez votre ville'}
                 </Text>
-                <Icon name="chevron-down" size="md" color={Colors.text.secondary} />
+                <Icon
+                  name="chevron-down"
+                  size="md"
+                  color={Colors.text.secondary}
+                />
               </TouchableOpacity>
               {errors.city && (
                 <Text style={styles.errorText}>{errors.city}</Text>
@@ -333,7 +461,8 @@ export function ProfileSetupScreen() {
             <View style={styles.infoBox}>
               <Icon name="info" size="md" color={Colors.primary} />
               <Text style={styles.infoText}>
-                Votre ville nous aide à vous montrer les prix et offres près de chez vous
+                Votre ville nous aide à vous montrer les prix et offres près de
+                chez vous
               </Text>
             </View>
 
@@ -431,6 +560,13 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: Colors.status.error,
     backgroundColor: 'rgba(239, 68, 68, 0.05)',
+  },
+  inputDisabled: {
+    backgroundColor: Colors.background.secondary,
+    borderColor: Colors.border.light,
+  },
+  inputTextDisabled: {
+    color: Colors.text.secondary,
   },
   input: {
     flex: 1,

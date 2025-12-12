@@ -11,14 +11,22 @@ import {
   Alert,
   SafeAreaView,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {useSubscription, useAuth} from '@/shared/contexts';
 import {useToast} from '@/shared/contexts';
 import {cameraService, imageCompressionService} from '@/shared/services/camera';
-import {COLORS} from '@/shared/utils/constants';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Spinner} from '@/shared/components';
 import functions from '@react-native-firebase/functions';
 
@@ -40,6 +48,7 @@ export function MultiPhotoScannerScreen() {
   const {user} = useAuth();
   const {canScan, recordScan} = useSubscription();
   const {showToast} = useToast();
+  const insets = useSafeAreaInsets();
 
   const [photos, setPhotos] = useState<CapturedPhoto[]>([]);
   const [state, setState] = useState<ScanState>('capturing');
@@ -96,7 +105,9 @@ export function MultiPhotoScannerScreen() {
   const handleRetakePhoto = useCallback(async (photoId: string) => {
     const result = await cameraService.captureFromCamera();
 
-    if (!result.success || !result.uri) return;
+    if (!result.success || !result.uri) {
+      return;
+    }
 
     const base64 = await imageCompressionService.compressToBase64(result.uri);
 
@@ -164,7 +175,10 @@ export function MultiPhotoScannerScreen() {
 
         // Navigate to receipt detail
         setTimeout(() => {
-          navigation.replace('ReceiptDetail', {receiptId: result.receiptId!, receipt: result.receipt});
+          navigation.replace('ReceiptDetail', {
+            receiptId: result.receiptId!,
+            receipt: result.receipt,
+          });
         }, 1500);
       } else {
         throw new Error(result.error || 'Échec du traitement');
@@ -219,151 +233,146 @@ export function MultiPhotoScannerScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => navigation.goBack()}>
-          <Text style={styles.headerButtonText}>←</Text>
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Longue Facture</Text>
-          <Text style={styles.headerSubtitle}>Mokanda molai</Text>
+    <View style={[styles.container, {paddingTop: insets.top}]}>
+      <StatusBar />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
+        {/* Instructions */}
+        <View style={styles.instructions}>
+          {state === 'capturing' && photos.length === 0 && (
+            <>
+              <Text style={styles.instructionEmoji}>📄</Text>
+              <Text style={styles.instructionTitle}>Facture trop longue?</Text>
+              <Text style={styles.instructionText}>
+                Prenez plusieurs photos de haut en bas.
+                {'\n'}Nous les fusionnerons automatiquement!
+              </Text>
+              <Text style={styles.instructionTextLingala}>
+                Zwa bafoto ebele, tokosangisa yango!
+              </Text>
+            </>
+          )}
+          {state === 'reviewing' && (
+            <>
+              <Text style={styles.instructionTitle}>
+                {photos.length} photo{photos.length > 1 ? 's' : ''} capturée
+                {photos.length > 1 ? 's' : ''}
+              </Text>
+              <Text style={styles.instructionText}>
+                Ajoutez plus ou traitez maintenant
+              </Text>
+            </>
+          )}
+          {state === 'processing' && (
+            <>
+              <ActivityIndicator size="large" color={Colors.primary} />
+              <Text style={styles.instructionTitle}>Analyse en cours...</Text>
+              <Text style={styles.instructionText}>
+                Traitement de {photos.length} photo
+                {photos.length > 1 ? 's' : ''}
+              </Text>
+            </>
+          )}
+          {state === 'success' && (
+            <>
+              <Text style={styles.successEmoji}>✅</Text>
+              <Text style={styles.instructionTitle}>Succès!</Text>
+              <Text style={styles.instructionText}>
+                Facture analysée avec succès
+              </Text>
+            </>
+          )}
+          {state === 'error' && (
+            <>
+              <Text style={styles.errorEmoji}>❌</Text>
+              <Text style={styles.instructionTitle}>Erreur</Text>
+              <Text style={styles.errorText}>{error}</Text>
+            </>
+          )}
         </View>
-        <View style={styles.headerButton} />
-      </View>
 
-      {/* Instructions */}
-      <View style={styles.instructions}>
-        {state === 'capturing' && photos.length === 0 && (
-          <>
-            <Text style={styles.instructionEmoji}>📄</Text>
-            <Text style={styles.instructionTitle}>Facture trop longue?</Text>
-            <Text style={styles.instructionText}>
-              Prenez plusieurs photos de haut en bas.
-              {'\n'}Nous les fusionnerons automatiquement!
-            </Text>
-            <Text style={styles.instructionTextLingala}>
-              Zwa bafoto ebele, tokosangisa yango!
-            </Text>
-          </>
-        )}
-        {state === 'reviewing' && (
-          <>
-            <Text style={styles.instructionTitle}>
-              {photos.length} photo{photos.length > 1 ? 's' : ''} capturée
-              {photos.length > 1 ? 's' : ''}
-            </Text>
-            <Text style={styles.instructionText}>
-              Ajoutez plus ou traitez maintenant
-            </Text>
-          </>
-        )}
-        {state === 'processing' && (
-          <>
-            <ActivityIndicator size="large" color={COLORS.primary[500]} />
-            <Text style={styles.instructionTitle}>Analyse en cours...</Text>
-            <Text style={styles.instructionText}>
-              Traitement de {photos.length} photo{photos.length > 1 ? 's' : ''}
-            </Text>
-          </>
-        )}
-        {state === 'success' && (
-          <>
-            <Text style={styles.successEmoji}>✅</Text>
-            <Text style={styles.instructionTitle}>Succès!</Text>
-            <Text style={styles.instructionText}>
-              Facture analysée avec succès
-            </Text>
-          </>
-        )}
-        {state === 'error' && (
-          <>
-            <Text style={styles.errorEmoji}>❌</Text>
-            <Text style={styles.instructionTitle}>Erreur</Text>
-            <Text style={styles.errorText}>{error}</Text>
-          </>
-        )}
-      </View>
+        {/* Photo Thumbnails */}
+        {photos.length > 0 && (
+          <ScrollView
+            horizontal
+            style={styles.thumbnailsScroll}
+            contentContainerStyle={styles.thumbnailsContainer}
+            showsHorizontalScrollIndicator={false}>
+            {photos.map((photo, index) => renderPhotoThumbnail(photo, index))}
 
-      {/* Photo Thumbnails */}
-      {photos.length > 0 && (
-        <ScrollView
-          horizontal
-          style={styles.thumbnailsScroll}
-          contentContainerStyle={styles.thumbnailsContainer}
-          showsHorizontalScrollIndicator={false}>
-          {photos.map((photo, index) => renderPhotoThumbnail(photo, index))}
+            {/* Add More Button */}
+            {state === 'reviewing' && photos.length < MAX_PHOTOS && (
+              <TouchableOpacity
+                style={styles.addMoreButton}
+                onPress={() => handleAddPhoto(false)}>
+                <Text style={styles.addMoreIcon}>+</Text>
+                <Text style={styles.addMoreText}>Ajouter</Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+        )}
 
-          {/* Add More Button */}
-          {state === 'reviewing' && photos.length < MAX_PHOTOS && (
-            <TouchableOpacity
-              style={styles.addMoreButton}
-              onPress={() => handleAddPhoto(false)}>
-              <Text style={styles.addMoreIcon}>+</Text>
-              <Text style={styles.addMoreText}>Ajouter</Text>
+        {/* Actions */}
+        <View style={styles.actions}>
+          {(state === 'capturing' || state === 'reviewing') && (
+            <>
+              {photos.length === 0 ? (
+                <>
+                  <TouchableOpacity
+                    style={styles.captureButton}
+                    onPress={() => handleAddPhoto(false)}>
+                    <Text style={styles.captureButtonIcon}>📸</Text>
+                    <Text style={styles.captureButtonText}>
+                      Prendre Photo 1
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.galleryButton}
+                    onPress={() => handleAddPhoto(true)}>
+                    <Text style={styles.galleryButtonText}>
+                      📁 Choisir de la galerie
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.processButton}
+                    onPress={handleProcessAll}>
+                    <Text style={styles.processButtonIcon}>✨</Text>
+                    <Text style={styles.processButtonText}>
+                      Analyser {photos.length} photo
+                      {photos.length > 1 ? 's' : ''}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View style={styles.secondaryActions}>
+                    <TouchableOpacity
+                      style={styles.secondaryButton}
+                      onPress={() => handleAddPhoto(false)}>
+                      <Text style={styles.secondaryButtonText}>📸 + Photo</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.secondaryButton}
+                      onPress={() => handleAddPhoto(true)}>
+                      <Text style={styles.secondaryButtonText}>📁 Galerie</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+            </>
+          )}
+
+          {state === 'error' && (
+            <TouchableOpacity style={styles.retryButton} onPress={handleReset}>
+              <Text style={styles.retryButtonText}>🔄 Réessayer</Text>
             </TouchableOpacity>
           )}
-        </ScrollView>
-      )}
-
-      {/* Actions */}
-      <View style={styles.actions}>
-        {(state === 'capturing' || state === 'reviewing') && (
-          <>
-            {photos.length === 0 ? (
-              <>
-                <TouchableOpacity
-                  style={styles.captureButton}
-                  onPress={() => handleAddPhoto(false)}>
-                  <Text style={styles.captureButtonIcon}>📸</Text>
-                  <Text style={styles.captureButtonText}>Prendre Photo 1</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.galleryButton}
-                  onPress={() => handleAddPhoto(true)}>
-                  <Text style={styles.galleryButtonText}>
-                    📁 Choisir de la galerie
-                  </Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={styles.processButton}
-                  onPress={handleProcessAll}>
-                  <Text style={styles.processButtonIcon}>✨</Text>
-                  <Text style={styles.processButtonText}>
-                    Analyser {photos.length} photo{photos.length > 1 ? 's' : ''}
-                  </Text>
-                </TouchableOpacity>
-
-                <View style={styles.secondaryActions}>
-                  <TouchableOpacity
-                    style={styles.secondaryButton}
-                    onPress={() => handleAddPhoto(false)}>
-                    <Text style={styles.secondaryButtonText}>📸 + Photo</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.secondaryButton}
-                    onPress={() => handleAddPhoto(true)}>
-                    <Text style={styles.secondaryButtonText}>📁 Galerie</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-          </>
-        )}
-
-        {state === 'error' && (
-          <TouchableOpacity style={styles.retryButton} onPress={handleReset}>
-            <Text style={styles.retryButtonText}>🔄 Réessayer</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+        </View>
+      </ScrollView>
 
       {/* Tips */}
       {state === 'capturing' && photos.length === 0 && (
@@ -378,47 +387,17 @@ export function MultiPhotoScannerScreen() {
           </Text>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0fdf4',
+    backgroundColor: Colors.background.primary,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray[200],
-    backgroundColor: '#ffffff',
-  },
-  headerButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerButtonText: {
-    fontSize: 24,
-    color: COLORS.gray[700],
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: COLORS.primary[600],
-    fontStyle: 'italic',
+  scrollContent: {
+    flexGrow: 1,
   },
   instructions: {
     alignItems: 'center',
@@ -426,28 +405,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   instructionEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
+    fontSize: Typography.fontSize.xl,
+    marginBottom: Spacing.md,
   },
   instructionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.gray[900],
+    fontSize: Typography.fontSize.xl,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.primary,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: Spacing.sm,
   },
   instructionText: {
-    fontSize: 16,
-    color: COLORS.gray[600],
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.secondary,
     textAlign: 'center',
     lineHeight: 24,
   },
   instructionTextLingala: {
-    fontSize: 14,
-    color: COLORS.primary[600],
+    fontSize: Typography.fontSize.sm,
+    color: Colors.primary,
     textAlign: 'center',
     fontStyle: 'italic',
-    marginTop: 8,
+    marginTop: Spacing.sm,
   },
   successEmoji: {
     fontSize: 64,
@@ -477,7 +456,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: COLORS.gray[200],
+    backgroundColor: Colors.background.secondary,
   },
   thumbnail: {
     width: '100%',
@@ -491,7 +470,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: COLORS.primary[500],
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -540,19 +519,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: COLORS.primary[400],
-    backgroundColor: COLORS.primary[50],
+    borderColor: Colors.primary,
+    backgroundColor: Colors.background.secondary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   addMoreIcon: {
     fontSize: 32,
-    color: COLORS.primary[500],
+    color: Colors.primary,
     fontWeight: 'bold',
   },
   addMoreText: {
     fontSize: 12,
-    color: COLORS.primary[600],
+    color: Colors.primary,
     marginTop: 4,
   },
   actions: {
@@ -561,14 +540,14 @@ const styles = StyleSheet.create({
   },
   captureButton: {
     flexDirection: 'row',
-    backgroundColor: COLORS.primary[500],
+    backgroundColor: Colors.primary,
     borderRadius: 20,
     paddingVertical: 18,
     paddingHorizontal: 32,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
-    shadowColor: COLORS.primary[500],
+    shadowColor: Colors.primary,
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -590,11 +569,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: COLORS.gray[300],
+    borderColor: Colors.border.light,
   },
   galleryButtonText: {
     fontSize: 16,
-    color: COLORS.gray[700],
+    color: Colors.text.primary,
   },
   processButton: {
     flexDirection: 'row',
@@ -631,15 +610,15 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: COLORS.gray[300],
+    borderColor: Colors.border.light,
   },
   secondaryButtonText: {
     fontSize: 14,
-    color: COLORS.gray[700],
+    color: Colors.text.primary,
     fontWeight: '600',
   },
   retryButton: {
-    backgroundColor: COLORS.primary[500],
+    backgroundColor: Colors.primary,
     borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 32,
@@ -659,12 +638,12 @@ const styles = StyleSheet.create({
   tipsTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: COLORS.gray[800],
+    color: Colors.text.primary,
     marginBottom: 12,
   },
   tipItem: {
     fontSize: 14,
-    color: COLORS.gray[600],
+    color: Colors.text.secondary,
     marginBottom: 6,
   },
 });

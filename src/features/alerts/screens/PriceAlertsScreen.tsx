@@ -20,7 +20,13 @@ import LinearGradient from 'react-native-linear-gradient';
 import {useAuth} from '@/shared/contexts';
 import {useToast} from '@/shared/contexts';
 import {priceAlertsService, PriceAlert} from '@/shared/services/firebase';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Icon, Spinner} from '@/shared/components';
 
 export function PriceAlertsScreen() {
@@ -77,7 +83,7 @@ export function PriceAlertsScreen() {
 
   // Load alerts
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid) {return;}
 
     const unsubscribe = priceAlertsService.subscribeToAlerts(
       user.uid,
@@ -91,7 +97,7 @@ export function PriceAlertsScreen() {
   }, [user?.uid]);
 
   const handleCreateAlert = useCallback(async () => {
-    if (!user?.uid || !newProductName.trim() || !newTargetPrice) return;
+    if (!user?.uid || !newProductName.trim() || !newTargetPrice) {return;}
 
     setIsCreating(true);
     try {
@@ -116,7 +122,7 @@ export function PriceAlertsScreen() {
 
   const handleDeleteAlert = useCallback(
     async (alertId: string) => {
-      if (!user?.uid) return;
+      if (!user?.uid) {return;}
 
       Alert.alert("Supprimer l'alerte ?", 'Cette action est irréversible.', [
         {text: 'Annuler', style: 'cancel'},
@@ -140,7 +146,7 @@ export function PriceAlertsScreen() {
 
   const handleToggleAlert = useCallback(
     async (alertId: string, isActive: boolean) => {
-      if (!user?.uid) return;
+      if (!user?.uid) {return;}
 
       try {
         await priceAlertsService.updateAlert(user.uid, alertId, {
@@ -158,12 +164,18 @@ export function PriceAlertsScreen() {
     const hasPrice = item.currentLowestPrice !== undefined;
 
     return (
-      <Animated.View style={[styles.alertCard, isTriggered && styles.alertCardTriggered]}>
+      <Animated.View
+        style={[styles.alertCard, isTriggered && styles.alertCardTriggered]}>
         <View style={styles.alertHeader}>
-          <View style={[
-            styles.alertIconContainer, 
-            {backgroundColor: isTriggered ? Colors.card.green : Colors.card.blue}
-          ]}>
+          <View
+            style={[
+              styles.alertIconContainer,
+              {
+                backgroundColor: isTriggered
+                  ? Colors.card.green
+                  : Colors.card.blue,
+              },
+            ]}>
             <Icon name="bell" size="md" color={Colors.text.primary} />
           </View>
           <View style={styles.alertInfo}>
@@ -180,7 +192,11 @@ export function PriceAlertsScreen() {
           </View>
           {isTriggered && (
             <View style={styles.triggeredBadge}>
-              <Icon name="check-circle" size="xs" color={Colors.status.success} />
+              <Icon
+                name="check-circle"
+                size="xs"
+                color={Colors.status.success}
+              />
               <Text style={styles.triggeredBadgeText}>Atteint!</Text>
             </View>
           )}
@@ -209,15 +225,18 @@ export function PriceAlertsScreen() {
               !item.isActive && styles.toggleButtonInactive,
             ]}
             onPress={() => handleToggleAlert(item.id, item.isActive)}>
-            <Icon 
-              name={item.isActive ? 'check' : 'pause'} 
-              size="xs" 
-              color={item.isActive ? Colors.status.success : Colors.text.tertiary} 
+            <Icon
+              name={item.isActive ? 'check' : 'pause'}
+              size="xs"
+              color={
+                item.isActive ? Colors.status.success : Colors.text.tertiary
+              }
             />
-            <Text style={[
-              styles.toggleButtonText,
-              !item.isActive && styles.toggleButtonTextInactive
-            ]}>
+            <Text
+              style={[
+                styles.toggleButtonText,
+                !item.isActive && styles.toggleButtonTextInactive,
+              ]}>
               {item.isActive ? 'Active' : 'Inactive'}
             </Text>
           </TouchableOpacity>
@@ -245,11 +264,15 @@ export function PriceAlertsScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
+
       {/* Header */}
       <View style={[styles.header, {paddingTop: insets.top + Spacing.md}]}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
@@ -272,7 +295,8 @@ export function PriceAlertsScreen() {
           <View style={styles.infoTextContainer}>
             <Text style={styles.infoTitle}>Comment ça marche ?</Text>
             <Text style={styles.infoText}>
-              Définissez un prix cible pour un article. Nous vous alertons quand le prix baisse !
+              Définissez un prix cible pour un article. Nous vous alertons quand
+              le prix baisse !
             </Text>
           </View>
         </LinearGradient>
@@ -321,9 +345,13 @@ export function PriceAlertsScreen() {
         animationType="slide"
         onRequestClose={() => setShowAddModal(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, {paddingBottom: insets.bottom + Spacing.lg}]}>
+          <View
+            style={[
+              styles.modalContent,
+              {paddingBottom: insets.bottom + Spacing.lg},
+            ]}>
             <View style={styles.modalHandle} />
-            
+
             <Text style={styles.modalTitle}>Nouvelle Alerte</Text>
 
             <View style={styles.inputContainer}>

@@ -1,15 +1,15 @@
 /**
  * App Icon Generator Script
- * 
+ *
  * This script generates PNG app icons from SVG for both
  * Google Play Console and Apple App Store submission.
- * 
+ *
  * Urbanist Soft Pastel color scheme
- * 
+ *
  * Requirements:
  * - Node.js
  * - sharp (npm install sharp)
- * 
+ *
  * Usage: node scripts/generate-app-icons.js
  */
 
@@ -18,10 +18,10 @@ const path = require('path');
 
 async function generateIcons() {
   const outputDir = path.join(__dirname, '..', 'app-icons');
-  
+
   // Create output directory
   if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
+    fs.mkdirSync(outputDir, {recursive: true});
   }
 
   // Icon sizes needed for submission
@@ -33,7 +33,7 @@ async function generateIcons() {
     'play-store-96': 96,
     'play-store-72': 72,
     'play-store-48': 48,
-    
+
     // Apple App Store
     'app-store-1024': 1024,
     'iphone-180': 180,
@@ -42,7 +42,7 @@ async function generateIcons() {
     'ipad-167': 167,
     'ipad-152': 152,
     'ipad-76': 76,
-    
+
     // Android adaptive icons
     'android-foreground-432': 432,
     'android-foreground-324': 324,
@@ -61,7 +61,8 @@ async function generateIcons() {
   };
 
   // Generate SVG with Urbanist solid background (no search icon)
-  const generateSvg = () => `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  const generateSvg =
+    () => `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <!-- Solid background color -->
   <rect width="100" height="100" rx="22" fill="${colors.aliceBlue}"/>
   
@@ -74,33 +75,30 @@ async function generateIcons() {
 
   try {
     const sharp = require('sharp');
-    
+
     console.log('🎨 Generating PNG icons (Urbanist Soft Pastel)...\n');
-    
+
     const colorDir = path.join(outputDir, 'urbanist');
     if (!fs.existsSync(colorDir)) {
-      fs.mkdirSync(colorDir, { recursive: true });
+      fs.mkdirSync(colorDir, {recursive: true});
     }
-    
+
     const svg = generateSvg();
-    
+
     // Save SVG
     fs.writeFileSync(path.join(colorDir, 'logo-source.svg'), svg);
-    
+
     console.log('📁 URBANIST SOFT PASTEL');
     console.log('─'.repeat(40));
-    
+
     for (const [name, size] of Object.entries(iconSizes)) {
       const outputPath = path.join(colorDir, `${name}.png`);
-      
-      await sharp(Buffer.from(svg))
-        .resize(size, size)
-        .png()
-        .toFile(outputPath);
-      
+
+      await sharp(Buffer.from(svg)).resize(size, size).png().toFile(outputPath);
+
       console.log(`   ✓ ${name}.png (${size}x${size})`);
     }
-    
+
     console.log(`\n${'═'.repeat(50)}`);
     console.log('✅ ALL ICONS GENERATED SUCCESSFULLY!');
     console.log('═'.repeat(50));
@@ -109,7 +107,6 @@ async function generateIcons() {
     console.log('   Use urbanist/play-store-512.png\n');
     console.log('🍎 For Apple App Store:');
     console.log('   Use urbanist/app-store-1024.png\n');
-    
   } catch (err) {
     if (err.code === 'MODULE_NOT_FOUND') {
       console.log('\n⚠️  sharp module not found.');

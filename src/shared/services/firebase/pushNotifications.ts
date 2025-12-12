@@ -296,7 +296,9 @@ class PushNotificationService {
       const key = '@goshopperai/notifications';
       const data = await AsyncStorage.getItem(key);
 
-      if (!data) return [];
+      if (!data) {
+        return [];
+      }
 
       return JSON.parse(data).map((n: PushNotification) => ({
         ...n,
@@ -316,7 +318,9 @@ class PushNotificationService {
       const key = '@goshopperai/notifications';
       const data = await AsyncStorage.getItem(key);
 
-      if (!data) return;
+      if (!data) {
+        return;
+      }
 
       const notifications = JSON.parse(data);
       const updated = notifications.map((n: PushNotification) =>

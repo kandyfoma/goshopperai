@@ -17,7 +17,13 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import firestore from '@react-native-firebase/firestore';
 import {Receipt, RootStackParamList} from '@/shared/types';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Icon, FadeIn, SlideIn, EmptyState} from '@/shared/components';
 import {formatCurrency, formatDate} from '@/shared/utils/helpers';
 import {useAuth} from '@/shared/contexts';
@@ -72,9 +78,10 @@ export function HistoryScreen() {
           storeAddress: data.storeAddress,
           storePhone: data.storePhone,
           receiptNumber: data.receiptNumber,
-          date: data.date
-            ? new Date(data.date.seconds * 1000)
-            : data.scannedAt?.toDate() || new Date(),
+          date: data.scannedAt?.toDate() || 
+                (data.date && typeof data.date.toDate === 'function' ? data.date.toDate() : 
+                 data.date && typeof data.date === 'object' && data.date.seconds ? new Date(data.date.seconds * 1000) :
+                 new Date()),
           currency: data.currency || 'USD',
           items: (data.items || []).map((item: any) => ({
             id: item.id || Math.random().toString(36).substring(7),
@@ -131,9 +138,9 @@ export function HistoryScreen() {
     }
   }, [searchQuery, receipts]);
 
-  const handleReceiptPress = (receiptId: string) => {
+  const handleReceiptPress = (receiptId: string, receipt: Receipt) => {
     analyticsService.logCustomEvent('receipt_viewed', {receipt_id: receiptId});
-    navigation.navigate('ReceiptDetail', {receiptId});
+    navigation.navigate('ReceiptDetail', {receiptId, receipt});
   };
 
   const getStatusColor = (status: Receipt['status']) => {
@@ -167,7 +174,7 @@ export function HistoryScreen() {
       <SlideIn direction="left" delay={index * 50}>
         <TouchableOpacity
           style={styles.receiptCard}
-          onPress={() => handleReceiptPress(item.id)}
+          onPress={() => handleReceiptPress(item.id, item)}
           activeOpacity={0.7}>
           <View style={styles.receiptIcon}>
             <Icon name="receipt" size="lg" color={Colors.primary} />
@@ -181,7 +188,7 @@ export function HistoryScreen() {
             <View style={styles.dateRow}>
               <Icon name="calendar" size="xs" color={Colors.text.tertiary} />
               <Text style={styles.receiptDate}>
-                {formatDate(item.purchaseDate || item.date)}
+                {formatDate(item.date)}
               </Text>
             </View>
           </View>
@@ -199,7 +206,10 @@ export function HistoryScreen() {
                 </>
               ) : (
                 <Text style={styles.totalAmount}>
-                  {formatCurrency(item.totalAmount || item.total, item.currency)}
+                  {formatCurrency(
+                    item.totalAmount || item.total,
+                    item.currency,
+                  )}
                 </Text>
               )}
             </View>
@@ -209,11 +219,19 @@ export function HistoryScreen() {
                 {backgroundColor: getStatusColor(item.status) + '20'},
               ]}>
               <Text
-                style={[styles.statusText, {color: getStatusColor(item.status)}]}>
+                style={[
+                  styles.statusText,
+                  {color: getStatusColor(item.status)},
+                ]}>
                 {getStatusLabel(item.status)}
               </Text>
             </View>
-            <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} style={{marginTop: 4}} />
+            <Icon
+              name="chevron-right"
+              size="sm"
+              color={Colors.text.tertiary}
+              style={{marginTop: 4}}
+            />
           </View>
         </TouchableOpacity>
       </SlideIn>
@@ -289,9 +307,12 @@ export function HistoryScreen() {
               <Text style={styles.statValue}>
                 {formatCurrency(
                   filteredReceipts.reduce((sum, r) => {
-                    if (r.totalUSD !== undefined) return sum + r.totalUSD;
-                    if (r.currency === 'USD')
+                    if (r.totalUSD !== undefined) {
+                      return sum + r.totalUSD;
+                    }
+                    if (r.currency === 'USD') {
                       return sum + (r.totalAmount || r.total);
+                    }
                     return sum;
                   }, 0),
                 )}
@@ -303,9 +324,12 @@ export function HistoryScreen() {
               <Text style={styles.statValue}>
                 {formatCurrency(
                   filteredReceipts.reduce((sum, r) => {
-                    if (r.totalCDF !== undefined) return sum + r.totalCDF;
-                    if (r.currency === 'CDF')
+                    if (r.totalCDF !== undefined) {
+                      return sum + r.totalCDF;
+                    }
+                    if (r.currency === 'CDF') {
                       return sum + (r.totalAmount || r.total);
+                    }
                     return sum;
                   }, 0),
                   'CDF',
@@ -347,7 +371,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
+    paddingTop: Spacing.xl,
     paddingBottom: Spacing.sm,
   },
   headerTitle: {

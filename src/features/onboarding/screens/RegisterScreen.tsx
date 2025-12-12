@@ -17,7 +17,13 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {authService} from '@/shared/services/firebase';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Icon} from '@/shared/components';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -82,7 +88,12 @@ export function RegisterScreen() {
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Icon name="user-plus" size="2xl" color={Colors.text.primary} variant="filled" />
+              <Icon
+                name="user-plus"
+                size="2xl"
+                color={Colors.text.primary}
+                variant="filled"
+              />
             </View>
             <Text style={styles.title}>Créer un compte</Text>
             <Text style={styles.subtitle}>
@@ -171,9 +182,7 @@ export function RegisterScreen() {
               onPress={handleGoogleSignIn}
               disabled={loading}>
               <Text style={styles.googleIcon}>G</Text>
-              <Text style={styles.socialButtonText}>
-                Continuer avec Google
-              </Text>
+              <Text style={styles.socialButtonText}>Continuer avec Google</Text>
             </TouchableOpacity>
 
             {Platform.OS === 'ios' && (

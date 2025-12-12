@@ -1,6 +1,6 @@
 /**
  * Empty State Component - Urbanist Design
- * 
+ *
  * Modern empty state with soft pastels and clean typography
  */
 
@@ -88,10 +88,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
         },
       ]}>
       <Animated.View
-        style={[
-          styles.iconContainer,
-          {transform: [{translateY: iconBounce}]},
-        ]}>
+        style={[styles.iconContainer, {transform: [{translateY: iconBounce}]}]}>
         <View style={styles.iconInner}>
           <Icon name={icon} size="3xl" color={URBANIST_COLORS.purple} />
         </View>

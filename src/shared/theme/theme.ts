@@ -1,9 +1,9 @@
 /**
  * GoShopperAI Design System
- * 
+ *
  * Inspired by modern dashboard UI with soft pastel colors
  * Font: Urbanist-style (System fonts as fallback)
- * 
+ *
  * Color Palette:
  * - Alice Blue: #D8DFE9 (light accents)
  * - Honeydew: #CFDECA (success/positive)
@@ -20,20 +20,20 @@ export const Colors = {
   primary: '#212121',
   primaryDark: '#121212',
   primaryLight: '#424242',
-  
+
   // Secondary/Background - Ghost White
   secondary: '#F6F5FA',
   secondaryDark: '#ECEAF2',
-  
+
   // Accent - Vanilla Yellow (for highlights)
   accent: '#EFF0A3',
   accentLight: '#F5F6C4',
   accentDark: '#E2E386',
-  
+
   // Neutral colors
   white: '#FFFFFF',
   black: '#000000',
-  
+
   // Text colors
   text: {
     primary: '#212121',
@@ -42,7 +42,7 @@ export const Colors = {
     inverse: '#FFFFFF',
     accent: '#212121',
   },
-  
+
   // Background colors
   background: {
     primary: '#FFFFFF',
@@ -50,7 +50,7 @@ export const Colors = {
     tertiary: '#ECEAF2',
     dark: '#212121',
   },
-  
+
   // Card colors - Soft pastels
   cards: {
     blue: '#D8DFE9',
@@ -58,7 +58,7 @@ export const Colors = {
     yellow: '#EFF0A3',
     white: '#FFFFFF',
   },
-  
+
   // Card alias (same as cards for convenience)
   card: {
     blue: '#D8DFE9',
@@ -66,14 +66,14 @@ export const Colors = {
     yellow: '#EFF0A3',
     white: '#FFFFFF',
   },
-  
+
   // Border colors
   border: {
     light: '#F0EEF5',
     medium: '#E5E7EB',
     dark: '#D1D5DB',
   },
-  
+
   // Status colors
   status: {
     success: '#22C55E',
@@ -85,14 +85,14 @@ export const Colors = {
     info: '#3B82F6',
     infoLight: '#D8DFE9',
   },
-  
+
   // Gradient presets
   gradients: {
     primary: ['#212121', '#424242'],
     accent: ['#EFF0A3', '#E2E386'],
     card: ['#FFFFFF', '#F6F5FA'],
   },
-  
+
   // Shadow colors
   shadow: {
     light: 'rgba(33, 33, 33, 0.04)',
@@ -100,7 +100,7 @@ export const Colors = {
     dark: 'rgba(33, 33, 33, 0.12)',
     accent: 'rgba(239, 240, 163, 0.30)',
   },
-  
+
   // Overlay
   overlay: {
     light: 'rgba(0, 0, 0, 0.2)',
@@ -120,28 +120,28 @@ export const Typography = {
     semiBold: 'System',
     bold: 'System',
   },
-  
+
   // Font sizes - Based on mockup (36/24/20)
   fontSize: {
     xs: 12,
     sm: 14,
     md: 16,
     base: 18,
-    lg: 20,      // Body text
-    xl: 24,      // Sub-heading
+    lg: 20, // Body text
+    xl: 24, // Sub-heading
     '2xl': 28,
     '3xl': 32,
-    '4xl': 36,   // Heading 2
+    '4xl': 36, // Heading 2
     '5xl': 42,
   },
-  
+
   // Line heights
   lineHeight: {
     tight: 1.2,
     normal: 1.5,
     relaxed: 1.75,
   },
-  
+
   // Font weights
   fontWeight: {
     regular: '400' as const,
@@ -150,7 +150,7 @@ export const Typography = {
     bold: '700' as const,
     extraBold: '800' as const,
   },
-  
+
   // Letter spacing
   letterSpacing: {
     tight: -0.5,
@@ -197,42 +197,42 @@ export const BorderRadius = {
 export const Shadows = {
   none: {
     shadowColor: 'transparent',
-    shadowOffset: { width: 0, height: 0 },
+    shadowOffset: {width: 0, height: 0},
     shadowOpacity: 0,
     shadowRadius: 0,
     elevation: 0,
   },
   sm: {
     shadowColor: Colors.shadow.light,
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: {width: 0, height: 1},
     shadowOpacity: 1,
     shadowRadius: 2,
     elevation: 1,
   },
   md: {
     shadowColor: Colors.shadow.medium,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 1,
     shadowRadius: 4,
     elevation: 3,
   },
   lg: {
     shadowColor: Colors.shadow.medium,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 1,
     shadowRadius: 8,
     elevation: 5,
   },
   xl: {
     shadowColor: Colors.shadow.dark,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: {width: 0, height: 8},
     shadowOpacity: 1,
     shadowRadius: 16,
     elevation: 8,
   },
   accent: {
     shadowColor: Colors.accent,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
@@ -251,7 +251,7 @@ export const Animations = {
     slow: 500,
     slower: 800,
   },
-  
+
   // Spring configs for react-native Animated
   spring: {
     gentle: {
@@ -271,7 +271,7 @@ export const Animations = {
       friction: 12,
     },
   },
-  
+
   // Easing curves
   easing: {
     default: 'ease-in-out',
@@ -290,14 +290,14 @@ export const Layout = {
     horizontal: Spacing.base,
     vertical: Spacing.lg,
   },
-  
+
   // Card styles
   card: {
     padding: Spacing.base,
     borderRadius: BorderRadius.lg,
     gap: Spacing.md,
   },
-  
+
   // Button heights
   buttonHeight: {
     sm: 36,
@@ -305,14 +305,14 @@ export const Layout = {
     lg: 52,
     xl: 60,
   },
-  
+
   // Input heights
   inputHeight: {
     sm: 40,
     md: 48,
     lg: 56,
   },
-  
+
   // Icon sizes
   iconSize: {
     xs: 16,
@@ -323,18 +323,18 @@ export const Layout = {
     '2xl': 40,
     '3xl': 48,
   },
-  
+
   // Tab bar
   tabBar: {
     height: 80,
     iconSize: 24,
   },
-  
+
   // Header
   header: {
     height: 56,
   },
-  
+
   // Bottom sheet
   bottomSheet: {
     borderRadius: BorderRadius['2xl'],
@@ -352,7 +352,7 @@ export const ComponentStyles = {
     flex: 1,
     backgroundColor: Colors.background.secondary,
   },
-  
+
   // Card base
   card: {
     backgroundColor: Colors.white,
@@ -360,7 +360,7 @@ export const ComponentStyles = {
     padding: Spacing.base,
     ...Shadows.md,
   },
-  
+
   // Elevated card
   cardElevated: {
     backgroundColor: Colors.white,
@@ -368,7 +368,7 @@ export const ComponentStyles = {
     padding: Spacing.lg,
     ...Shadows.lg,
   },
-  
+
   // Primary button
   buttonPrimary: {
     backgroundColor: Colors.primary,
@@ -378,7 +378,7 @@ export const ComponentStyles = {
     justifyContent: 'center' as const,
     ...Shadows.md,
   },
-  
+
   // Secondary button
   buttonSecondary: {
     backgroundColor: Colors.white,
@@ -389,7 +389,7 @@ export const ComponentStyles = {
     borderWidth: 1.5,
     borderColor: Colors.primary,
   },
-  
+
   // Accent button
   buttonAccent: {
     backgroundColor: Colors.accent,
@@ -399,7 +399,7 @@ export const ComponentStyles = {
     justifyContent: 'center' as const,
     ...Shadows.accent,
   },
-  
+
   // Text input
   textInput: {
     backgroundColor: Colors.white,
@@ -411,7 +411,7 @@ export const ComponentStyles = {
     borderWidth: 1,
     borderColor: Colors.border.light,
   },
-  
+
   // Section header
   sectionHeader: {
     flexDirection: 'row' as const,
@@ -419,7 +419,7 @@ export const ComponentStyles = {
     alignItems: 'center' as const,
     marginBottom: Spacing.md,
   },
-  
+
   // List item
   listItem: {
     flexDirection: 'row' as const,
@@ -430,7 +430,7 @@ export const ComponentStyles = {
     marginBottom: Spacing.sm,
     ...Shadows.sm,
   },
-  
+
   // Badge
   badge: {
     paddingHorizontal: Spacing.sm,
@@ -438,14 +438,14 @@ export const ComponentStyles = {
     borderRadius: BorderRadius.full,
     backgroundColor: Colors.accent,
   },
-  
+
   // Divider
   divider: {
     height: 1,
     backgroundColor: Colors.border.light,
     marginVertical: Spacing.md,
   },
-  
+
   // Icon container
   iconContainer: {
     width: 48,
@@ -455,7 +455,7 @@ export const ComponentStyles = {
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },
-  
+
   // Avatar
   avatar: {
     width: 48,
@@ -496,7 +496,7 @@ export const TextStyles = {
     color: Colors.text.primary,
     lineHeight: Typography.fontSize.xl * Typography.lineHeight.normal,
   },
-  
+
   // Body text
   bodyLg: {
     fontSize: Typography.fontSize.lg,
@@ -516,7 +516,7 @@ export const TextStyles = {
     color: Colors.text.secondary,
     lineHeight: Typography.fontSize.md * Typography.lineHeight.normal,
   },
-  
+
   // Captions
   caption: {
     fontSize: Typography.fontSize.sm,
@@ -530,7 +530,7 @@ export const TextStyles = {
     color: Colors.text.secondary,
     lineHeight: Typography.fontSize.sm * Typography.lineHeight.normal,
   },
-  
+
   // Labels
   label: {
     fontSize: Typography.fontSize.md,
@@ -546,7 +546,7 @@ export const TextStyles = {
     textTransform: 'uppercase' as const,
     letterSpacing: Typography.letterSpacing.wide,
   },
-  
+
   // Special
   price: {
     fontSize: Typography.fontSize['2xl'],
@@ -577,7 +577,7 @@ export const IconNames = {
   items: 'package',
   profile: 'user',
   settings: 'settings',
-  
+
   // Actions
   scan: 'camera',
   search: 'search',
@@ -587,13 +587,13 @@ export const IconNames = {
   share: 'share',
   filter: 'filter',
   sort: 'sliders',
-  
+
   // Status
   success: 'check-circle',
   warning: 'alert-triangle',
   error: 'x-circle',
   info: 'info',
-  
+
   // UI
   arrowRight: 'chevron-right',
   arrowLeft: 'chevron-left',
@@ -602,7 +602,7 @@ export const IconNames = {
   close: 'x',
   menu: 'menu',
   more: 'more-horizontal',
-  
+
   // Features
   receipt: 'file-text',
   price: 'tag',

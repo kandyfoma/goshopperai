@@ -12,7 +12,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Icon, FadeIn, SlideIn} from '@/shared/components';
 import {formatCurrency} from '@/shared/utils/helpers';
 import {useAuth, useUser} from '@/shared/contexts';
@@ -50,23 +56,27 @@ export function ItemsScreen() {
 
   useEffect(() => {
     loadItemsData();
-  }, [user, userProfile]);
+  }, [user]);
 
   useEffect(() => {
     filterItems();
   }, [items, searchQuery]);
 
   const loadItemsData = async () => {
-    if (!user?.uid || !userProfile?.defaultCity) {
+    if (!user?.uid) {
       setIsLoading(false);
       return;
     }
 
     try {
-      // Get receipts for the user filtered by their city
+      // Get all receipts for the user (not filtered by city since receipts may not have city field)
       const receiptsSnapshot = await firestore()
-        .collection(`artifacts/goshopperai/users/${user.uid}/receipts`)
-        .where('city', '==', userProfile.defaultCity)
+        .collection('artifacts')
+        .doc('goshopperai')
+        .collection('users')
+        .doc(user.uid)
+        .collection('receipts')
+        .orderBy('scannedAt', 'desc')
         .get();
 
       const itemsMap = new Map<string, ItemData>();
@@ -77,10 +87,14 @@ export function ItemsScreen() {
 
         items.forEach((item: any) => {
           const itemName = item.name?.toLowerCase().trim();
-          if (!itemName) return;
+          if (!itemName) {
+            return;
+          }
 
           const price = item.unitPrice || 0;
-          if (price <= 0) return;
+          if (price <= 0) {
+            return;
+          }
 
           if (!itemsMap.has(itemName)) {
             itemsMap.set(itemName, {
@@ -161,7 +175,7 @@ export function ItemsScreen() {
       <TouchableOpacity style={styles.itemCard} activeOpacity={0.7}>
         <View style={styles.itemHeader}>
           <View style={styles.itemIconWrapper}>
-            <Icon name="cart" size="sm" color={Colors.primary} />
+            <Icon name="shopping-bag" size="sm" color={Colors.primary} />
           </View>
           <View style={styles.itemInfo}>
             <Text style={styles.itemName}>{item.name}</Text>
@@ -175,14 +189,14 @@ export function ItemsScreen() {
         <View style={styles.priceInfo}>
           <View style={styles.priceRow}>
             <View style={styles.priceItem}>
-              <Text style={styles.priceLabel}>Min</Text>
+            <Text style={styles.priceLabel}>Prix min</Text>
               <Text style={[styles.priceValue, styles.priceMin]}>
                 {formatCurrency(item.minPrice, item.currency)}
               </Text>
             </View>
             <View style={styles.priceDivider} />
             <View style={styles.priceItem}>
-              <Text style={styles.priceLabel}>Max</Text>
+              <Text style={styles.priceLabel}>Prix max</Text>
               <Text style={[styles.priceValue, styles.priceMax]}>
                 {formatCurrency(item.maxPrice, item.currency)}
               </Text>
@@ -205,7 +219,11 @@ export function ItemsScreen() {
             .map((price, index) => (
               <View key={index} style={styles.storePrice}>
                 <View style={styles.storeInfo}>
-                  <Icon name="location" size="xs" color={Colors.text.tertiary} />
+                  <Icon
+                    name="location"
+                    size="xs"
+                    color={Colors.text.tertiary}
+                  />
                   <Text style={styles.storeName}>{price.storeName}</Text>
                 </View>
                 <Text style={styles.storePriceValue}>
@@ -226,7 +244,7 @@ export function ItemsScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
+        <View style={styles.loading}>
           <ActivityIndicator size="large" color={Colors.primary} />
           <Text style={styles.loadingText}>Chargement des articles...</Text>
         </View>
@@ -302,42 +320,41 @@ export function ItemsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.background.primary,
+    backgroundColor: Colors.background.secondary,
   },
   header: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.md,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.sm,
   },
   title: {
-    fontSize: Typography.fontSize['3xl'],
+    fontSize: Typography.fontSize['2xl'],
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
     marginBottom: Spacing.xs,
   },
   subtitle: {
     fontSize: Typography.fontSize.md,
-    color: Colors.text.secondary,
+    color: Colors.text.tertiary,
   },
   searchContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingBottom: Spacing.md,
   },
   searchWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.white,
-    borderRadius: BorderRadius.xl,
+    borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    height: 48,
+    gap: Spacing.sm,
     ...Shadows.sm,
   },
   searchInput: {
     flex: 1,
-    fontSize: Typography.fontSize.md,
+    fontSize: Typography.fontSize.base,
     color: Colors.text.primary,
-    marginLeft: Spacing.sm,
-    paddingVertical: Spacing.sm,
   },
   statsContainer: {
     paddingHorizontal: Spacing.lg,
@@ -360,14 +377,14 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     padding: Spacing.lg,
-    paddingBottom: Spacing['3xl'],
+    paddingTop: Spacing.sm,
   },
   itemCard: {
     backgroundColor: Colors.white,
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     marginBottom: Spacing.md,
-    ...Shadows.md,
+    ...Shadows.sm,
   },
   itemHeader: {
     flexDirection: 'row',
@@ -375,10 +392,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   itemIconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.primaryLight,
+    width: 52,
+    height: 52,
+    borderRadius: BorderRadius.base,
+    backgroundColor: Colors.background.secondary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: Spacing.md,
@@ -406,6 +423,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  priceRowLast: {
+    marginBottom: 0,
   },
   priceItem: {
     flex: 1,
@@ -452,6 +473,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    backgroundColor: Colors.background.primary,
+    borderRadius: BorderRadius.sm,
     marginBottom: Spacing.xs,
   },
   storeInfo: {
@@ -473,9 +498,10 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.xs,
     color: Colors.text.tertiary,
     fontStyle: 'italic',
+    textAlign: 'center',
     marginTop: Spacing.xs,
   },
-  loadingContainer: {
+  loading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -505,11 +531,12 @@ const styles = StyleSheet.create({
     fontWeight: Typography.fontWeight.semiBold,
     color: Colors.text.primary,
     marginBottom: Spacing.sm,
+    textAlign: 'center',
   },
   emptyText: {
     fontSize: Typography.fontSize.md,
     color: Colors.text.tertiary,
     textAlign: 'center',
-    maxWidth: 250,
+    maxWidth: 280,
   },
 });

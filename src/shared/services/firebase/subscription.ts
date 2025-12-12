@@ -58,7 +58,9 @@ class SubscriptionService {
    * Get remaining trial days
    */
   getTrialDaysRemaining(subscription: Subscription): number {
-    if (!subscription.trialEndDate) return 0;
+    if (!subscription.trialEndDate) {
+      return 0;
+    }
 
     const now = new Date();
     const trialEnd = new Date(subscription.trialEndDate);
@@ -84,7 +86,9 @@ class SubscriptionService {
       // Check if subscription hasn't expired
       if (subscription.subscriptionEndDate) {
         const isValid = new Date(subscription.subscriptionEndDate) > new Date();
-        if (!isValid) return false;
+        if (!isValid) {
+          return false;
+        }
       }
 
       // Premium users have unlimited scans
@@ -97,7 +101,9 @@ class SubscriptionService {
         PLAN_SCAN_LIMITS[
           subscription.planId as keyof typeof PLAN_SCAN_LIMITS
         ] || 0;
-      if (planLimit === -1) return true; // Unlimited
+      if (planLimit === -1) {
+        return true;
+      } // Unlimited
 
       return (subscription.monthlyScansUsed || 0) < planLimit;
     }
@@ -127,7 +133,9 @@ class SubscriptionService {
         PLAN_SCAN_LIMITS[
           subscription.planId as keyof typeof PLAN_SCAN_LIMITS
         ] || 0;
-      if (planLimit === -1) return Infinity;
+      if (planLimit === -1) {
+        return Infinity;
+      }
 
       return Math.max(0, planLimit - (subscription.monthlyScansUsed || 0));
     }
@@ -140,7 +148,9 @@ class SubscriptionService {
    */
   async recordScanUsage(): Promise<void> {
     const user = authService.getCurrentUser();
-    if (!user) throw new Error('Not authenticated');
+    if (!user) {
+      throw new Error('Not authenticated');
+    }
 
     const subscription = await this.getStatus();
 
@@ -194,7 +204,9 @@ class SubscriptionService {
    */
   async extendTrial(): Promise<boolean> {
     const user = authService.getCurrentUser();
-    if (!user) throw new Error('Not authenticated');
+    if (!user) {
+      throw new Error('Not authenticated');
+    }
 
     const subscription = await this.getStatus();
 

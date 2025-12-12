@@ -6,7 +6,7 @@ import {authService} from './auth';
 const ALERTS_COLLECTION = (userId: string) =>
   `artifacts/goshopperai/users/${userId}/priceAlerts`;
 
-const PRICES_COLLECTION = `artifacts/goshopperai/prices`;
+const PRICES_COLLECTION = 'artifacts/goshopperai/prices';
 
 export interface PriceAlert {
   id: string;
@@ -137,12 +137,11 @@ class PriceAlertsService {
       query = query.where('storeLocation', '==', city);
     }
 
-    const pricesSnapshot = await query
-      .orderBy('price', 'asc')
-      .limit(1)
-      .get();
+    const pricesSnapshot = await query.orderBy('price', 'asc').limit(1).get();
 
-    if (pricesSnapshot.empty) return null;
+    if (pricesSnapshot.empty) {
+      return null;
+    }
 
     const doc = pricesSnapshot.docs[0].data();
     return {
@@ -181,7 +180,9 @@ class PriceAlertsService {
       .doc(alertId)
       .get();
 
-    if (!doc.exists) return null;
+    if (!doc.exists) {
+      return null;
+    }
 
     const data = doc.data()!;
     return {

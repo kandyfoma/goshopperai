@@ -15,7 +15,13 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {useSubscription, useUser} from '@/shared/contexts';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Icon} from '@/shared/components';
 import {analyticsService} from '@/shared/services';
 
@@ -33,10 +39,10 @@ const TimePeriodSelector = ({
   onSelect: (period: string) => void;
 }) => {
   const periods = ['Today', 'This Week', 'This Month'];
-  
+
   return (
     <View style={styles.periodContainer}>
-      {periods.map((period) => (
+      {periods.map(period => (
         <TouchableOpacity
           key={period}
           style={[
@@ -107,7 +113,13 @@ const StatCard = ({
 };
 
 // Main Scan Button - Clean, prominent
-const ScanButton = ({onPress, disabled}: {onPress: () => void; disabled: boolean}) => {
+const ScanButton = ({
+  onPress,
+  disabled,
+}: {
+  onPress: () => void;
+  disabled: boolean;
+}) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -129,7 +141,8 @@ const ScanButton = ({onPress, disabled}: {onPress: () => void; disabled: boolean
   };
 
   return (
-    <Animated.View style={[styles.scanButtonWrapper, {transform: [{scale: scaleAnim}]}]}>
+    <Animated.View
+      style={[styles.scanButtonWrapper, {transform: [{scale: scaleAnim}]}]}>
       <TouchableOpacity
         style={[styles.scanButton, disabled && styles.scanButtonDisabled]}
         onPress={onPress}
@@ -142,7 +155,9 @@ const ScanButton = ({onPress, disabled}: {onPress: () => void; disabled: boolean
           </View>
           <View style={styles.scanTextContainer}>
             <Text style={styles.scanButtonTitle}>Scanner un ticket</Text>
-            <Text style={styles.scanButtonSubtitle}>Comparez les prix instantanément</Text>
+            <Text style={styles.scanButtonSubtitle}>
+              Comparez les prix instantanément
+            </Text>
           </View>
         </View>
         <Icon name="chevron-right" size="md" color={Colors.text.tertiary} />
@@ -171,7 +186,9 @@ const QuickAction = ({
   }[color];
 
   return (
-    <TouchableOpacity style={[styles.quickAction, {backgroundColor: bgColor}]} onPress={onPress}>
+    <TouchableOpacity
+      style={[styles.quickAction, {backgroundColor: bgColor}]}
+      onPress={onPress}>
       <Icon name={icon} size="md" color={Colors.text.primary} />
       <Text style={styles.quickActionLabel}>{label}</Text>
     </TouchableOpacity>
@@ -180,7 +197,13 @@ const QuickAction = ({
 
 export function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const {canScan, subscription, isTrialActive, trialDaysRemaining, trialScansUsed} = useSubscription();
+  const {
+    canScan,
+    subscription,
+    isTrialActive,
+    trialDaysRemaining,
+    trialScansUsed,
+  } = useSubscription();
   const {profile: userProfile} = useUser();
   const [selectedPeriod, setSelectedPeriod] = useState('This Month');
 
@@ -207,8 +230,12 @@ export function HomeScreen() {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Bonjour';
-    if (hour < 18) return 'Bon après-midi';
+    if (hour < 12) {
+      return 'Bonjour';
+    }
+    if (hour < 18) {
+      return 'Bon après-midi';
+    }
     return 'Bonsoir';
   };
 
@@ -220,16 +247,13 @@ export function HomeScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {/* Empty space for balance */}
-          </View>
+          <View style={styles.headerLeft}>{/* Empty space for balance */}</View>
           <View style={styles.headerCenter}>
             {/* Logo or app name could go here */}
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.notificationButton}
             onPress={() => navigation.navigate('PriceAlerts')}>
             <Icon name="bell" size="md" color={Colors.text.primary} />
@@ -252,10 +276,16 @@ export function HomeScreen() {
             <StatCard
               title="Scans"
               value={trialScansUsed || 0}
-              subtitle={isPremium ? 'illimités' : `/${5 - (trialScansUsed || 0)} restants`}
+              subtitle={
+                isPremium
+                  ? 'illimités'
+                  : `/${5 - (trialScansUsed || 0)} restants`
+              }
               color="blue"
               icon="camera"
-              onPress={() => navigation.navigate('Main', {screen: 'History'} as any)}
+              onPress={() =>
+                navigation.navigate('Main', {screen: 'History'} as any)
+              }
             />
             <StatCard
               title="Économies"
@@ -263,7 +293,9 @@ export function HomeScreen() {
               subtitle="ce mois"
               color="green"
               icon="trending-down"
-              onPress={() => navigation.navigate('Main', {screen: 'Stats'} as any)}
+              onPress={() =>
+                navigation.navigate('Main', {screen: 'Stats'} as any)
+              }
             />
           </View>
           <View style={styles.statsRow}>
@@ -291,7 +323,7 @@ export function HomeScreen() {
 
         {/* Subscription Status */}
         {!isPremium && (
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.subscriptionBanner}
             onPress={() => navigation.navigate('Subscription')}>
             <View style={styles.subscriptionContent}>
@@ -303,8 +335,8 @@ export function HomeScreen() {
                   {isTrialActive ? 'Essai gratuit' : 'Passez à Premium'}
                 </Text>
                 <Text style={styles.subscriptionSubtitle}>
-                  {isTrialActive 
-                    ? `${trialDaysRemaining} jours restants` 
+                  {isTrialActive
+                    ? `${trialDaysRemaining} jours restants`
                     : 'Scans illimités & plus'}
                 </Text>
               </View>
@@ -341,7 +373,6 @@ export function HomeScreen() {
             color="white"
           />
         </View>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -354,7 +385,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.base,
+    paddingTop: Spacing.lg,
     paddingBottom: 120,
   },
 

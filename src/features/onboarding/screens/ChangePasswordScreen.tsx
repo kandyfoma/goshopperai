@@ -18,7 +18,13 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {authService} from '@/shared/services/firebase';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Icon} from '@/shared/components';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -35,9 +41,13 @@ export function ChangePasswordScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Error state
-  const [currentPasswordError, setCurrentPasswordError] = useState<string | null>(null);
+  const [currentPasswordError, setCurrentPasswordError] = useState<
+    string | null
+  >(null);
   const [newPasswordError, setNewPasswordError] = useState<string | null>(null);
-  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
+  const [confirmPasswordError, setConfirmPasswordError] = useState<
+    string | null
+  >(null);
 
   // UI state
   const [loading, setLoading] = useState(false);
@@ -98,7 +108,9 @@ export function ChangePasswordScreen() {
       return false;
     }
     if (value.length < 6) {
-      setNewPasswordError('Le mot de passe doit contenir au moins 6 caractères');
+      setNewPasswordError(
+        'Le mot de passe doit contenir au moins 6 caractères',
+      );
       return false;
     }
     if (value === currentPassword) {
@@ -145,12 +157,12 @@ export function ChangePasswordScreen() {
       const errorMessages: Record<string, string> = {
         'auth/wrong-password': 'Le mot de passe actuel est incorrect.',
         'auth/weak-password': 'Le nouveau mot de passe est trop faible.',
-        'auth/requires-recent-login':
-          'Veuillez vous reconnecter et réessayer.',
+        'auth/requires-recent-login': 'Veuillez vous reconnecter et réessayer.',
         'auth/too-many-requests': 'Trop de tentatives. Réessayez plus tard.',
       };
       setError(
-        errorMessages[err.code] || 'Une erreur est survenue. Veuillez réessayer.',
+        errorMessages[err.code] ||
+          'Une erreur est survenue. Veuillez réessayer.',
       );
       triggerShake();
     } finally {
@@ -163,7 +175,11 @@ export function ChangePasswordScreen() {
       <SafeAreaView style={styles.container}>
         <Animated.View style={[styles.successContainer, {opacity: fadeAnim}]}>
           <View style={styles.successIconContainer}>
-            <Icon name="check-circle" size="3xl" color={Colors.status.success} />
+            <Icon
+              name="check-circle"
+              size="3xl"
+              color={Colors.status.success}
+            />
           </View>
           <Text style={styles.successTitle}>Mot de passe modifié !</Text>
           <Text style={styles.successText}>
@@ -220,7 +236,11 @@ export function ChangePasswordScreen() {
                   styles.errorBanner,
                   {transform: [{translateX: shakeAnimation}]},
                 ]}>
-                <Icon name="alert-circle" size="md" color={Colors.status.error} />
+                <Icon
+                  name="alert-circle"
+                  size="md"
+                  color={Colors.status.error}
+                />
                 <Text style={styles.errorText}>{error}</Text>
               </Animated.View>
             )}
@@ -248,8 +268,12 @@ export function ChangePasswordScreen() {
                     value={currentPassword}
                     onChangeText={value => {
                       setCurrentPassword(value);
-                      if (currentPasswordError) setCurrentPasswordError(null);
-                      if (error) setError(null);
+                      if (currentPasswordError) {
+                        setCurrentPasswordError(null);
+                      }
+                      if (error) {
+                        setError(null);
+                      }
                     }}
                     secureTextEntry={!showCurrentPassword}
                     autoCapitalize="none"
@@ -291,8 +315,12 @@ export function ChangePasswordScreen() {
                     value={newPassword}
                     onChangeText={value => {
                       setNewPassword(value);
-                      if (newPasswordError) setNewPasswordError(null);
-                      if (error) setError(null);
+                      if (newPasswordError) {
+                        setNewPasswordError(null);
+                      }
+                      if (error) {
+                        setError(null);
+                      }
                     }}
                     secureTextEntry={!showNewPassword}
                     autoCapitalize="none"
@@ -318,7 +346,9 @@ export function ChangePasswordScreen() {
 
               {/* Confirm Password */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Confirmer le nouveau mot de passe</Text>
+                <Text style={styles.label}>
+                  Confirmer le nouveau mot de passe
+                </Text>
                 <View
                   style={[
                     styles.inputWrapper,
@@ -334,8 +364,12 @@ export function ChangePasswordScreen() {
                     value={confirmPassword}
                     onChangeText={value => {
                       setConfirmPassword(value);
-                      if (confirmPasswordError) setConfirmPasswordError(null);
-                      if (error) setError(null);
+                      if (confirmPasswordError) {
+                        setConfirmPasswordError(null);
+                      }
+                      if (error) {
+                        setError(null);
+                      }
                     }}
                     secureTextEntry={!showConfirmPassword}
                     autoCapitalize="none"
@@ -434,10 +468,7 @@ export function ChangePasswordScreen() {
 
               {/* Submit Button */}
               <TouchableOpacity
-                style={[
-                  styles.primaryButton,
-                  loading && styles.buttonDisabled,
-                ]}
+                style={[styles.primaryButton, loading && styles.buttonDisabled]}
                 onPress={handleChangePassword}
                 disabled={loading}
                 activeOpacity={0.8}>
@@ -448,7 +479,9 @@ export function ChangePasswordScreen() {
                   </View>
                 ) : (
                   <View style={styles.buttonInner}>
-                    <Text style={styles.buttonText}>Changer le mot de passe</Text>
+                    <Text style={styles.buttonText}>
+                      Changer le mot de passe
+                    </Text>
                     <Icon name="check" size="md" color={Colors.white} />
                   </View>
                 )}

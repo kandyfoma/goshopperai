@@ -60,10 +60,18 @@ export function formatRelativeTime(date: Date | string): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return "À l'instant";
-  if (diffMins < 60) return `Il y a ${diffMins} min`;
-  if (diffHours < 24) return `Il y a ${diffHours}h`;
-  if (diffDays < 7) return `Il y a ${diffDays}j`;
+  if (diffMins < 1) {
+    return "À l'instant";
+  }
+  if (diffMins < 60) {
+    return `Il y a ${diffMins} min`;
+  }
+  if (diffHours < 24) {
+    return `Il y a ${diffHours}h`;
+  }
+  if (diffDays < 7) {
+    return `Il y a ${diffDays}j`;
+  }
 
   return formatDate(d);
 }
@@ -75,7 +83,9 @@ export function calculatePercentageDiff(
   currentPrice: number,
   comparePrice: number,
 ): number {
-  if (comparePrice === 0) return 0;
+  if (comparePrice === 0) {
+    return 0;
+  }
   return ((currentPrice - comparePrice) / comparePrice) * 100;
 }
 
@@ -83,7 +93,9 @@ export function calculatePercentageDiff(
  * Truncate text with ellipsis
  */
 export function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
+  if (text.length <= maxLength) {
+    return text;
+  }
   return text.substring(0, maxLength - 3) + '...';
 }
 
@@ -91,7 +103,9 @@ export function truncateText(text: string, maxLength: number): string {
  * Capitalize first letter
  */
 export function capitalizeFirst(text: string): string {
-  if (!text) return '';
+  if (!text) {
+    return '';
+  }
   return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
 }
 
@@ -105,7 +119,9 @@ export function debounce<T extends (...args: any[]) => any>(
   let timeout: ReturnType<typeof setTimeout> | null = null;
 
   return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
+    if (timeout) {
+      clearTimeout(timeout);
+    }
     timeout = setTimeout(() => func(...args), wait);
   };
 }
@@ -121,10 +137,18 @@ export function sleep(ms: number): Promise<void> {
  * Check if value is empty (null, undefined, empty string, empty array/object)
  */
 export function isEmpty(value: any): boolean {
-  if (value === null || value === undefined) return true;
-  if (typeof value === 'string') return value.trim() === '';
-  if (Array.isArray(value)) return value.length === 0;
-  if (typeof value === 'object') return Object.keys(value).length === 0;
+  if (value === null || value === undefined) {
+    return true;
+  }
+  if (typeof value === 'string') {
+    return value.trim() === '';
+  }
+  if (Array.isArray(value)) {
+    return value.length === 0;
+  }
+  if (typeof value === 'object') {
+    return Object.keys(value).length === 0;
+  }
   return false;
 }
 

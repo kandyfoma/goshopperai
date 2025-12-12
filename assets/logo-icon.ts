@@ -1,23 +1,23 @@
 /**
  * GoShopperAI Logo Variants
- * 
+ *
  * Color Palette Options:
- * 
+ *
  * OPTION 1 - Trust & Prosperity (Blue + Gold) [RECOMMENDED]
  * - Primary (60%): #1E3A5F (Deep Navy Blue)
  * - Secondary (30%): #F5F7FA (Off-White)
  * - Accent (10%): #D4AF37 (Gold)
- * 
+ *
  * OPTION 2 - Energy & Savings (Purple + Orange)
  * - Primary (60%): #5B21B6 (Deep Purple)
  * - Secondary (30%): #F8F5FF (Lavender Tint)
  * - Accent (10%): #F97316 (Vibrant Orange)
- * 
+ *
  * OPTION 3 - Growth & Action (Teal + Coral)
  * - Primary (60%): #0F766E (Deep Teal)
  * - Secondary (30%): #F0FDFA (Mint Tint)
  * - Accent (10%): #EF4444 (Coral Red)
- * 
+ *
  * OPTION 4 - Urbanist (Soft Pastel) [NEW]
  * - Primary (60%): #212121 (Eerie Black)
  * - Secondary (30%): #F6F5FA (Ghost White)
@@ -203,9 +203,9 @@ export const logoFullSvg = `<svg width="280" height="80" viewBox="0 0 280 80" xm
 export const ColorPalette = {
   // Option 4: Urbanist Soft Pastel (New Default)
   urbanist: {
-    primary: '#212121',     // Eerie Black
-    secondary: '#F6F5FA',   // Ghost White
-    accentBlue: '#D8DFE9',  // Alice Blue
+    primary: '#212121', // Eerie Black
+    secondary: '#F6F5FA', // Ghost White
+    accentBlue: '#D8DFE9', // Alice Blue
     accentGreen: '#CFDECA', // Honeydew
     accentYellow: '#EFF0A3', // Vanilla
     text: '#212121',

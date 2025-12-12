@@ -11,7 +11,6 @@ import {
   Dimensions,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
@@ -32,12 +31,12 @@ import {Icon, Spinner} from '@/shared/components';
 
 // Urbanist Design Colors
 const URBANIST_COLORS = {
-  background: '#F6F5FA',     // Ghost White
+  background: '#F6F5FA', // Ghost White
   cardBg: '#FFFFFF',
-  primaryAccent: '#D8DFE9',  // Alice Blue
+  primaryAccent: '#D8DFE9', // Alice Blue
   secondaryAccent: '#CFDECA', // Honeydew
   highlightAccent: '#EFF0A3', // Vanilla
-  textPrimary: '#212121',    // Eerie Black
+  textPrimary: '#212121', // Eerie Black
   textSecondary: '#6B7280',
   textMuted: '#9CA3AF',
   success: '#10B981',
@@ -50,7 +49,8 @@ const URBANIST_COLORS = {
 };
 
 export function AchievementsScreen() {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const {user, isAuthenticated} = useAuth();
 
@@ -122,7 +122,9 @@ export function AchievementsScreen() {
   }, [isLoading]);
 
   const loadData = async () => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      return;
+    }
 
     try {
       const [userStats, userAchievements] = await Promise.all([
@@ -142,7 +144,10 @@ export function AchievementsScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, {paddingTop: insets.top}]}>
-        <StatusBar barStyle="dark-content" backgroundColor={URBANIST_COLORS.background} />
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor={URBANIST_COLORS.background}
+        />
         <View style={styles.loadingContainer}>
           <Animated.View
             style={[
@@ -158,7 +163,7 @@ export function AchievementsScreen() {
                 ],
               },
             ]}>
-            <Spinner size={48} color={URBANIST_COLORS.purple} />
+            <Spinner size="large" color={URBANIST_COLORS.purple} />
           </Animated.View>
           <Text style={styles.loadingText}>Chargement de vos succès...</Text>
         </View>
@@ -174,21 +179,21 @@ export function AchievementsScreen() {
 
   const statItems = [
     {
-      icon: 'scan-line' as const,
+      icon: 'camera' as const,
       value: stats?.totalScans || 0,
       label: 'Scans',
       color: URBANIST_COLORS.blue,
       bgColor: URBANIST_COLORS.primaryAccent,
     },
     {
-      icon: 'money-dollar-circle-line' as const,
+      icon: 'dollar-sign' as const,
       value: `$${(stats?.totalSavings || 0).toFixed(0)}`,
       label: 'Économisé',
       color: URBANIST_COLORS.success,
       bgColor: URBANIST_COLORS.secondaryAccent,
     },
     {
-      icon: 'fire-line' as const,
+      icon: 'zap' as const,
       value: stats?.currentStreak || 0,
       label: 'Série',
       color: URBANIST_COLORS.warning,
@@ -198,7 +203,10 @@ export function AchievementsScreen() {
 
   return (
     <View style={[styles.container, {paddingTop: insets.top}]}>
-      <StatusBar barStyle="dark-content" backgroundColor={URBANIST_COLORS.background} />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor={URBANIST_COLORS.background}
+      />
 
       {/* Header */}
       <Animated.View
@@ -213,19 +221,27 @@ export function AchievementsScreen() {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}>
-          <Icon name="arrow-left-line" size={24} color={URBANIST_COLORS.textPrimary} />
+          <Icon
+            name="chevron-left"
+            size="md"
+            color={URBANIST_COLORS.textPrimary}
+          />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Mes Succès</Text>
         <View style={styles.headerBadge}>
-          <Icon name="trophy-line" size={18} color={URBANIST_COLORS.gold} />
-          <Text style={styles.headerBadgeText}>{unlockedCount}/{achievements.length}</Text>
+          <Icon name="trophy" size="sm" color={URBANIST_COLORS.gold} />
+          <Text style={styles.headerBadgeText}>
+            {unlockedCount}/{achievements.length}
+          </Text>
         </View>
       </Animated.View>
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, {paddingBottom: insets.bottom + 24}]}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {paddingBottom: insets.bottom + 24},
+        ]}
         showsVerticalScrollIndicator={false}>
-        
         {/* Level Card */}
         {stats && levelInfo && (
           <Animated.View
@@ -236,9 +252,18 @@ export function AchievementsScreen() {
                 transform: [{scale: levelCardScale}],
               },
             ]}>
-            <View style={[styles.levelGlow, {backgroundColor: levelInfo.color + '20'}]} />
+            <View
+              style={[
+                styles.levelGlow,
+                {backgroundColor: levelInfo.color + '20'},
+              ]}
+            />
             <View style={styles.levelHeader}>
-              <View style={[styles.levelIconContainer, {backgroundColor: levelInfo.color + '20'}]}>
+              <View
+                style={[
+                  styles.levelIconContainer,
+                  {backgroundColor: levelInfo.color + '20'},
+                ]}>
                 <Text style={styles.levelIcon}>{levelInfo.icon}</Text>
               </View>
               <View style={styles.levelInfo}>
@@ -247,7 +272,11 @@ export function AchievementsScreen() {
                   {levelInfo.titleLingala}
                 </Text>
               </View>
-              <View style={[styles.levelBadge, {backgroundColor: levelInfo.color + '15'}]}>
+              <View
+                style={[
+                  styles.levelBadge,
+                  {backgroundColor: levelInfo.color + '15'},
+                ]}>
                 <Text style={[styles.levelNumber, {color: levelInfo.color}]}>
                   Niv. {stats.level}
                 </Text>
@@ -301,8 +330,12 @@ export function AchievementsScreen() {
                     ],
                   },
                 ]}>
-                <View style={[styles.statIconContainer, {backgroundColor: stat.color + '20'}]}>
-                  <Icon name={stat.icon} size={20} color={stat.color} />
+                <View
+                  style={[
+                    styles.statIconContainer,
+                    {backgroundColor: stat.color + '20'},
+                  ]}>
+                  <Icon name={stat.icon} size="md" color={stat.color} />
                 </View>
                 <Text style={styles.statValue}>{stat.value}</Text>
                 <Text style={styles.statLabel}>{stat.label}</Text>
@@ -315,7 +348,7 @@ export function AchievementsScreen() {
         <View style={styles.achievementsSection}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleRow}>
-              <Icon name="trophy-line" size={22} color={URBANIST_COLORS.gold} />
+              <Icon name="trophy" size="md" color={URBANIST_COLORS.gold} />
               <Text style={styles.sectionTitle}>Accomplissements</Text>
             </View>
             <View style={styles.sectionBadge}>
@@ -328,12 +361,16 @@ export function AchievementsScreen() {
           {/* Unlocked Achievements */}
           <View style={styles.achievementGroup}>
             <View style={styles.groupHeader}>
-              <Icon name="checkbox-circle-line" size={18} color={URBANIST_COLORS.success} />
+              <Icon
+                name="check-circle"
+                size="sm"
+                color={URBANIST_COLORS.success}
+              />
               <Text style={styles.groupTitle}>Débloqués</Text>
             </View>
             {achievements.filter(a => a.isUnlocked).length === 0 ? (
               <View style={styles.emptyCard}>
-                <Icon name="gift-2-line" size={40} color={URBANIST_COLORS.textMuted} />
+                <Icon name="gift" size="xl" color={URBANIST_COLORS.textMuted} />
                 <Text style={styles.emptyText}>
                   Continuez à scanner pour débloquer des succès !
                 </Text>
@@ -375,7 +412,11 @@ export function AchievementsScreen() {
                       </Text>
                     </View>
                     <View style={styles.achievementXP}>
-                      <Icon name="star-fill" size={14} color={URBANIST_COLORS.gold} />
+                      <Icon
+                        name="star"
+                        size="xs"
+                        color={URBANIST_COLORS.gold}
+                      />
                       <Text style={styles.achievementXPText}>
                         +{achievement.xpReward}
                       </Text>
@@ -388,8 +429,11 @@ export function AchievementsScreen() {
           {/* Locked Achievements */}
           <View style={styles.achievementGroup}>
             <View style={styles.groupHeader}>
-              <Icon name="lock-line" size={18} color={URBANIST_COLORS.textMuted} />
-              <Text style={[styles.groupTitle, {color: URBANIST_COLORS.textMuted}]}>À débloquer</Text>
+              <Icon name="lock" size="sm" color={URBANIST_COLORS.textMuted} />
+              <Text
+                style={[styles.groupTitle, {color: URBANIST_COLORS.textMuted}]}>
+                À débloquer
+              </Text>
             </View>
             {achievements
               .filter(a => !a.isUnlocked)
@@ -411,7 +455,11 @@ export function AchievementsScreen() {
                       styles.achievementIcon,
                       styles.achievementIconLocked,
                     ]}>
-                    <Icon name="lock-line" size={22} color={URBANIST_COLORS.textMuted} />
+                    <Icon
+                      name="lock"
+                      size="md"
+                      color={URBANIST_COLORS.textMuted}
+                    />
                   </View>
                   <View style={styles.achievementInfo}>
                     <Text
@@ -446,7 +494,11 @@ export function AchievementsScreen() {
                     </View>
                   </View>
                   <View style={styles.achievementXPLocked}>
-                    <Icon name="star-line" size={14} color={URBANIST_COLORS.textMuted} />
+                    <Icon
+                      name="star"
+                      size="xs"
+                      color={URBANIST_COLORS.textMuted}
+                    />
                     <Text style={styles.achievementXPTextLocked}>
                       +{achievement.xpReward}
                     </Text>
@@ -467,7 +519,7 @@ export function AchievementsScreen() {
               },
             ]}>
             <View style={styles.streakIconContainer}>
-              <Icon name="fire-fill" size={28} color={URBANIST_COLORS.warning} />
+              <Icon name="zap" size="lg" color={URBANIST_COLORS.warning} />
             </View>
             <View style={styles.streakInfo}>
               <Text style={styles.streakTitle}>Plus longue série</Text>
@@ -476,7 +528,7 @@ export function AchievementsScreen() {
               </Text>
             </View>
             <View style={styles.streakBadge}>
-              <Icon name="medal-line" size={20} color={URBANIST_COLORS.gold} />
+              <Icon name="trophy" size="md" color={URBANIST_COLORS.gold} />
             </View>
           </Animated.View>
         )}

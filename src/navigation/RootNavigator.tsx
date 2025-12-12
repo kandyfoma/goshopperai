@@ -44,7 +44,9 @@ const ONBOARDING_KEY = '@goshopperai_onboarding_complete';
 export function RootNavigator() {
   const {isAuthenticated, isLoading, user} = useAuth();
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
-  const [isProfileComplete, setIsProfileComplete] = useState<boolean | null>(null);
+  const [isProfileComplete, setIsProfileComplete] = useState<boolean | null>(
+    null,
+  );
   const [checkingProfile, setCheckingProfile] = useState(false);
 
   console.log(
@@ -91,19 +93,25 @@ export function RootNavigator() {
           .get();
 
         const userData = userDoc.data();
-        // Profile is complete if they have firstName, surname, and city
+        // Profile is complete if they have firstName, surname, phoneNumber, and city
         const isComplete = !!(
           userData?.profileCompleted ||
-          (userData?.firstName && userData?.surname && userData?.defaultCity)
+          (userData?.firstName &&
+            userData?.surname &&
+            userData?.phoneNumber &&
+            userData?.defaultCity)
         );
-        
+
         console.log('👤 Profile check:', {
           exists: userDoc.exists,
           profileCompleted: userData?.profileCompleted,
           firstName: userData?.firstName,
+          surname: userData?.surname,
+          phoneNumber: userData?.phoneNumber,
+          defaultCity: userData?.defaultCity,
           isComplete,
         });
-        
+
         setIsProfileComplete(isComplete);
       } catch (error) {
         console.error('Error checking profile:', error);
@@ -118,7 +126,11 @@ export function RootNavigator() {
   }, [isAuthenticated, user?.uid]);
 
   // Show loading screen while checking first launch status or auth
-  if (isFirstLaunch === null || isLoading || (isAuthenticated && checkingProfile)) {
+  if (
+    isFirstLaunch === null ||
+    isLoading ||
+    (isAuthenticated && checkingProfile)
+  ) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -127,11 +139,17 @@ export function RootNavigator() {
   }
 
   // Always show main app - allow anonymous access
-  console.log('✅ Showing main app (allowing anonymous access), authenticated:', isAuthenticated, 'profileComplete:', isProfileComplete);
-  
+  console.log(
+    '✅ Showing main app (allowing anonymous access), authenticated:',
+    isAuthenticated,
+    'profileComplete:',
+    isProfileComplete,
+  );
+
   // If authenticated and profile is not complete, show profile setup first
-  const initialRoute = isAuthenticated && isProfileComplete === false ? 'ProfileSetup' : 'Main';
-  
+  const initialRoute =
+    isAuthenticated && isProfileComplete === false ? 'ProfileSetup' : 'Main';
+
   return (
     <Stack.Navigator
       initialRouteName={initialRoute}
@@ -198,6 +216,7 @@ export function RootNavigator() {
         component={UpdateProfileScreen}
         options={{
           animation: 'slide_from_right',
+          headerShown: false,
         }}
       />
       <Stack.Screen
@@ -211,7 +230,7 @@ export function RootNavigator() {
       <Stack.Screen
         name="ReceiptDetail"
         component={ReceiptDetailScreen}
-        options={{headerShown: true, title: 'Détails'}}
+        options={{headerShown: false}}
       />
       <Stack.Screen
         name="PriceComparison"

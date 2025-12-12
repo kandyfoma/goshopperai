@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, Easing, ViewStyle } from 'react-native';
-import { SvgXml } from 'react-native-svg';
-import { 
-  logoIconSvg, 
-  logoIconWhiteSvg, 
+import React, {useEffect, useRef} from 'react';
+import {View, StyleSheet, Animated, Easing, ViewStyle} from 'react-native';
+import {SvgXml} from 'react-native-svg';
+import {
+  logoIconSvg,
+  logoIconWhiteSvg,
   logoIconMinimalSvg,
   logoFullSvg,
   logoBlueGoldSvg,
@@ -11,7 +11,14 @@ import {
   logoTealCoralSvg,
 } from '../../../assets/logo-icon';
 
-type LogoVariant = 'default' | 'white' | 'minimal' | 'full' | 'blueGold' | 'purpleOrange' | 'tealCoral';
+type LogoVariant =
+  | 'default'
+  | 'white'
+  | 'minimal'
+  | 'full'
+  | 'blueGold'
+  | 'purpleOrange'
+  | 'tealCoral';
 
 interface LogoProps {
   size?: number;
@@ -21,9 +28,9 @@ interface LogoProps {
   pulseOnLoad?: boolean;
 }
 
-const Logo: React.FC<LogoProps> = ({ 
-  size = 100, 
-  style, 
+const Logo: React.FC<LogoProps> = ({
+  size = 100,
+  style,
   variant = 'default',
   animated = false,
   pulseOnLoad = false,
@@ -66,7 +73,7 @@ const Logo: React.FC<LogoProps> = ({
             easing: Easing.inOut(Easing.ease),
             useNativeDriver: true,
           }),
-        ])
+        ]),
       ).start();
     }
   }, [animated, pulseOnLoad, scaleAnim]);
@@ -93,25 +100,20 @@ const Logo: React.FC<LogoProps> = ({
   const getAspectRatio = () => {
     // Full logo has different aspect ratio
     if (variant === 'full') {
-      return { width: size * 2.8, height: size * 0.8 };
+      return {width: size * 2.8, height: size * 0.8};
     }
-    return { width: size, height: size };
+    return {width: size, height: size};
   };
 
   const dimensions = getAspectRatio();
 
   return (
-    <Animated.View 
-      style={[
-        styles.container, 
-        style,
-        { transform: [{ scale: scaleAnim }] }
-      ]}
-    >
-      <SvgXml 
-        xml={getLogoSvg()} 
-        width={dimensions.width} 
-        height={dimensions.height} 
+    <Animated.View
+      style={[styles.container, style, {transform: [{scale: scaleAnim}]}]}>
+      <SvgXml
+        xml={getLogoSvg()}
+        width={dimensions.width}
+        height={dimensions.height}
       />
     </Animated.View>
   );

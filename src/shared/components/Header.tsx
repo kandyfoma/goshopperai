@@ -1,6 +1,6 @@
 /**
  * Header Component
- * 
+ *
  * A flexible header component for screens
  */
 
@@ -13,8 +13,8 @@ import {
   StatusBar,
   Platform,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Typography, Spacing, Layout, TextStyles } from '../theme/theme';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {Colors, Typography, Spacing, Layout, TextStyles} from '../theme/theme';
 import Icon from './Icon';
 
 interface HeaderProps {
@@ -41,7 +41,7 @@ const Header: React.FC<HeaderProps> = ({
   dark = false,
 }) => {
   const insets = useSafeAreaInsets();
-  
+
   const textColor = dark ? Colors.white : Colors.text.primary;
   const iconColor = dark ? Colors.white : Colors.text.primary;
 
@@ -51,16 +51,17 @@ const Header: React.FC<HeaderProps> = ({
         styles.container,
         {
           paddingTop: insets.top + Spacing.sm,
-          backgroundColor: transparent ? 'transparent' : Colors.background.primary,
+          backgroundColor: transparent
+            ? 'transparent'
+            : Colors.background.primary,
         },
-      ]}
-    >
+      ]}>
       <StatusBar
         barStyle={dark ? 'light-content' : 'dark-content'}
         backgroundColor="transparent"
         translucent
       />
-      
+
       <View style={styles.content}>
         {/* Left section */}
         <View style={styles.leftSection}>
@@ -68,8 +69,7 @@ const Header: React.FC<HeaderProps> = ({
             <TouchableOpacity
               onPress={onLeftPress}
               style={styles.iconButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
+              hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
               <Icon name={leftIcon} size="md" color={iconColor} />
             </TouchableOpacity>
           )}
@@ -78,18 +78,17 @@ const Header: React.FC<HeaderProps> = ({
         {/* Center section */}
         <View style={styles.centerSection}>
           {title && (
-            <Text
-              style={[styles.title, { color: textColor }]}
-              numberOfLines={1}
-            >
+            <Text style={[styles.title, {color: textColor}]} numberOfLines={1}>
               {title}
             </Text>
           )}
           {subtitle && (
             <Text
-              style={[styles.subtitle, { color: dark ? Colors.text.tertiary : Colors.text.secondary }]}
-              numberOfLines={1}
-            >
+              style={[
+                styles.subtitle,
+                {color: dark ? Colors.text.tertiary : Colors.text.secondary},
+              ]}
+              numberOfLines={1}>
               {subtitle}
             </Text>
           )}
@@ -102,8 +101,7 @@ const Header: React.FC<HeaderProps> = ({
             <TouchableOpacity
               onPress={onRightPress}
               style={styles.iconButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
+              hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
               <Icon name={rightIcon} size="md" color={iconColor} />
             </TouchableOpacity>
           )}

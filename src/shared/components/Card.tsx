@@ -1,10 +1,10 @@
 /**
  * Card Component
- * 
+ *
  * A flexible card component with multiple variants and animation support
  */
 
-import React, { useRef } from 'react';
+import React, {useRef} from 'react';
 import {
   View,
   StyleSheet,
@@ -12,7 +12,13 @@ import {
   TouchableOpacity,
   ViewStyle,
 } from 'react-native';
-import { Colors, BorderRadius, Spacing, Shadows, Animations } from '../theme/theme';
+import {
+  Colors,
+  BorderRadius,
+  Spacing,
+  Shadows,
+  Animations,
+} from '../theme/theme';
 
 type CardVariant = 'default' | 'elevated' | 'outlined' | 'gradient' | 'accent';
 
@@ -120,9 +126,8 @@ const Card: React.FC<CardProps> = ({
       style={[
         getCardStyles(),
         style,
-        animated && onPress ? { transform: [{ scale: scaleAnim }] } : {},
-      ]}
-    >
+        animated && onPress ? {transform: [{scale: scaleAnim}]} : {},
+      ]}>
       {children}
     </Animated.View>
   );
@@ -133,8 +138,7 @@ const Card: React.FC<CardProps> = ({
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        activeOpacity={1}
-      >
+        activeOpacity={1}>
         {content}
       </TouchableOpacity>
     );

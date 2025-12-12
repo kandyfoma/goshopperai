@@ -53,6 +53,6 @@ export const COLLECTIONS = {
     `artifacts/${APP_ID}/users/${userId}/subscription/status`,
   subscriptionStatus: (userId: string) =>
     `artifacts/${APP_ID}/users/${userId}/subscription/status`,
-  prices: `artifacts/${APP_ID}/public/prices/data`,
-  stores: `artifacts/${APP_ID}/public/stores/list`,
+  prices: `artifacts/${APP_ID}/prices`,
+  stores: '', // Disabled - stores collection not yet configured
 } as const;

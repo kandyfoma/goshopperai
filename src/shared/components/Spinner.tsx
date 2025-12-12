@@ -82,7 +82,9 @@ export function LoadingOverlay({
   backgroundColor = 'rgba(0, 0, 0, 0.5)',
   spinnerColor = Colors.primary[500],
 }: LoadingOverlayProps) {
-  if (!visible) return null;
+  if (!visible) {
+    return null;
+  }
 
   return (
     <View style={[styles.overlay, {backgroundColor}]}>

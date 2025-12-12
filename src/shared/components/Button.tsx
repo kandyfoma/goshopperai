@@ -1,10 +1,10 @@
 /**
  * Button Component
- * 
+ *
  * A versatile, animated button component with multiple variants
  */
 
-import React, { useRef } from 'react';
+import React, {useRef} from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -15,7 +15,15 @@ import {
   TextStyle,
   View,
 } from 'react-native';
-import { Colors, Typography, BorderRadius, Spacing, Shadows, Layout, Animations } from '../theme/theme';
+import {
+  Colors,
+  Typography,
+  BorderRadius,
+  Spacing,
+  Shadows,
+  Layout,
+  Animations,
+} from '../theme/theme';
 
 type ButtonVariant = 'primary' | 'secondary' | 'accent' | 'ghost' | 'outline';
 type ButtonSize = 'sm' | 'md' | 'lg' | 'xl';
@@ -119,19 +127,29 @@ const Button: React.FC<ButtonProps> = ({
   const getTextStyles = (): TextStyle => {
     const baseStyle: TextStyle = {
       fontWeight: Typography.fontWeight.semiBold,
-      fontSize: size === 'sm' ? Typography.fontSize.md : Typography.fontSize.base,
+      fontSize:
+        size === 'sm' ? Typography.fontSize.md : Typography.fontSize.base,
     };
 
     switch (variant) {
       case 'primary':
       case 'accent':
-        return { ...baseStyle, color: Colors.white };
+        return {...baseStyle, color: Colors.white};
       case 'secondary':
-        return { ...baseStyle, color: disabled ? Colors.text.tertiary : Colors.primary };
+        return {
+          ...baseStyle,
+          color: disabled ? Colors.text.tertiary : Colors.primary,
+        };
       case 'ghost':
-        return { ...baseStyle, color: disabled ? Colors.text.tertiary : Colors.primary };
+        return {
+          ...baseStyle,
+          color: disabled ? Colors.text.tertiary : Colors.primary,
+        };
       case 'outline':
-        return { ...baseStyle, color: disabled ? Colors.text.tertiary : Colors.text.primary };
+        return {
+          ...baseStyle,
+          color: disabled ? Colors.text.tertiary : Colors.text.primary,
+        };
       default:
         return baseStyle;
     }
@@ -142,30 +160,37 @@ const Button: React.FC<ButtonProps> = ({
       return (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' || variant === 'accent' ? Colors.white : Colors.primary}
+          color={
+            variant === 'primary' || variant === 'accent'
+              ? Colors.white
+              : Colors.primary
+          }
         />
       );
     }
 
     return (
       <>
-        {icon && iconPosition === 'left' && <View style={styles.iconLeft}>{icon}</View>}
+        {icon && iconPosition === 'left' && (
+          <View style={styles.iconLeft}>{icon}</View>
+        )}
         <Text style={[getTextStyles(), textStyle]}>{title}</Text>
-        {icon && iconPosition === 'right' && <View style={styles.iconRight}>{icon}</View>}
+        {icon && iconPosition === 'right' && (
+          <View style={styles.iconRight}>{icon}</View>
+        )}
       </>
     );
   };
 
   return (
-    <Animated.View style={[{ transform: [{ scale: scaleAnim }] }, style]}>
+    <Animated.View style={[{transform: [{scale: scaleAnim}]}, style]}>
       <TouchableOpacity
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={disabled || loading}
         activeOpacity={0.9}
-        style={getButtonStyles()}
-      >
+        style={getButtonStyles()}>
         {renderContent()}
       </TouchableOpacity>
     </Animated.View>

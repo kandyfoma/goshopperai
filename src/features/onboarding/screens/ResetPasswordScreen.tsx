@@ -18,7 +18,13 @@ import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {authService} from '@/shared/services/firebase';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Icon} from '@/shared/components';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -37,7 +43,9 @@ export function ResetPasswordScreen() {
 
   // Error state
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
+  const [confirmPasswordError, setConfirmPasswordError] = useState<
+    string | null
+  >(null);
 
   // UI state
   const [loading, setLoading] = useState(false);
@@ -133,12 +141,15 @@ export function ResetPasswordScreen() {
     } catch (err: any) {
       console.error('Reset password error:', err);
       const errorMessages: Record<string, string> = {
-        'auth/expired-action-code': 'Le lien a expiré. Demandez un nouveau lien.',
-        'auth/invalid-action-code': 'Le lien est invalide ou a déjà été utilisé.',
+        'auth/expired-action-code':
+          'Le lien a expiré. Demandez un nouveau lien.',
+        'auth/invalid-action-code':
+          'Le lien est invalide ou a déjà été utilisé.',
         'auth/weak-password': 'Le mot de passe est trop faible.',
       };
       setError(
-        errorMessages[err.code] || 'Une erreur est survenue. Veuillez réessayer.',
+        errorMessages[err.code] ||
+          'Une erreur est survenue. Veuillez réessayer.',
       );
       triggerShake();
     } finally {
@@ -148,14 +159,22 @@ export function ResetPasswordScreen() {
 
   const handlePasswordChange = (value: string) => {
     setPassword(value);
-    if (passwordError) setPasswordError(null);
-    if (error) setError(null);
+    if (passwordError) {
+      setPasswordError(null);
+    }
+    if (error) {
+      setError(null);
+    }
   };
 
   const handleConfirmPasswordChange = (value: string) => {
     setConfirmPassword(value);
-    if (confirmPasswordError) setConfirmPasswordError(null);
-    if (error) setError(null);
+    if (confirmPasswordError) {
+      setConfirmPasswordError(null);
+    }
+    if (error) {
+      setError(null);
+    }
   };
 
   if (success) {
@@ -163,7 +182,11 @@ export function ResetPasswordScreen() {
       <SafeAreaView style={styles.container}>
         <Animated.View style={[styles.successContainer, {opacity: fadeAnim}]}>
           <View style={styles.successIconContainer}>
-            <Icon name="check-circle" size="3xl" color={Colors.status.success} />
+            <Icon
+              name="check-circle"
+              size="3xl"
+              color={Colors.status.success}
+            />
           </View>
           <Text style={styles.successTitle}>Mot de passe réinitialisé !</Text>
           <Text style={styles.successText}>
@@ -212,7 +235,11 @@ export function ResetPasswordScreen() {
                   styles.errorBanner,
                   {transform: [{translateX: shakeAnimation}]},
                 ]}>
-                <Icon name="alert-circle" size="md" color={Colors.status.error} />
+                <Icon
+                  name="alert-circle"
+                  size="md"
+                  color={Colors.status.error}
+                />
                 <Text style={styles.errorText}>{error}</Text>
               </Animated.View>
             )}
@@ -280,7 +307,8 @@ export function ResetPasswordScreen() {
                     value={confirmPassword}
                     onChangeText={handleConfirmPasswordChange}
                     onBlur={() =>
-                      confirmPassword && validateConfirmPassword(confirmPassword)
+                      confirmPassword &&
+                      validateConfirmPassword(confirmPassword)
                     }
                     secureTextEntry={!showConfirmPassword}
                     autoCapitalize="none"
@@ -355,19 +383,14 @@ export function ResetPasswordScreen() {
 
               {/* Submit Button */}
               <TouchableOpacity
-                style={[
-                  styles.primaryButton,
-                  loading && styles.buttonDisabled,
-                ]}
+                style={[styles.primaryButton, loading && styles.buttonDisabled]}
                 onPress={handleResetPassword}
                 disabled={loading}
                 activeOpacity={0.8}>
                 {loading ? (
                   <View style={styles.loadingContent}>
                     <ActivityIndicator color={Colors.white} size="small" />
-                    <Text style={styles.loadingText}>
-                      Réinitialisation...
-                    </Text>
+                    <Text style={styles.loadingText}>Réinitialisation...</Text>
                   </View>
                 ) : (
                   <View style={styles.buttonInner}>

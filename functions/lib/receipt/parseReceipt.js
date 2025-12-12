@@ -144,6 +144,7 @@ function normalizeStoreName(name) {
  * Parse receipt image using Gemini AI
  */
 async function parseWithGemini(imageBase64, mimeType) {
+    var _a, _b, _c, _d;
     const model = getGeminiAI().getGenerativeModel({ model: config_1.config.gemini.model });
     const result = await model.generateContent([
         PARSING_PROMPT,
@@ -176,21 +177,21 @@ async function parseWithGemini(imageBase64, mimeType) {
         category: item.category || 'Autres',
         confidence: 0.85, // Default confidence for Gemini parsing
     }));
-    // Build parsed receipt
+    // Build parsed receipt - use null instead of undefined for optional fields
     const receipt = {
         storeName: parsed.storeName || 'Unknown Store',
         storeNameNormalized: normalizeStoreName(parsed.storeName || ''),
-        storeAddress: parsed.storeAddress,
-        storePhone: parsed.storePhone,
-        receiptNumber: parsed.receiptNumber,
+        storeAddress: parsed.storeAddress || null,
+        storePhone: parsed.storePhone || null,
+        receiptNumber: parsed.receiptNumber || null,
         date: parsed.date || new Date().toISOString().split('T')[0],
         currency: parsed.currency === 'CDF' ? 'CDF' : 'USD',
         items,
-        subtotal: parsed.subtotal,
-        tax: parsed.tax,
+        subtotal: (_a = parsed.subtotal) !== null && _a !== void 0 ? _a : null,
+        tax: (_b = parsed.tax) !== null && _b !== void 0 ? _b : null,
         total: parsed.total || items.reduce((sum, item) => sum + item.totalPrice, 0),
-        totalUSD: parsed.totalUSD,
-        totalCDF: parsed.totalCDF,
+        totalUSD: (_c = parsed.totalUSD) !== null && _c !== void 0 ? _c : null,
+        totalCDF: (_d = parsed.totalCDF) !== null && _d !== void 0 ? _d : null,
     };
     return receipt;
 }

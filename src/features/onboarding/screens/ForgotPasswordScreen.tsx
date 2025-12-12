@@ -18,7 +18,13 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {authService} from '@/shared/services/firebase';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Icon} from '@/shared/components';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -113,10 +119,12 @@ export function ForgotPasswordScreen() {
         'auth/invalid-email': "L'adresse email est invalide.",
         'auth/user-not-found': 'Aucun compte trouvé avec cet email.',
         'auth/too-many-requests': 'Trop de tentatives. Réessayez plus tard.',
-        'auth/network-request-failed': 'Erreur réseau. Vérifiez votre connexion.',
+        'auth/network-request-failed':
+          'Erreur réseau. Vérifiez votre connexion.',
       };
       setError(
-        errorMessages[err.code] || 'Une erreur est survenue. Veuillez réessayer.',
+        errorMessages[err.code] ||
+          'Une erreur est survenue. Veuillez réessayer.',
       );
       triggerShake();
     } finally {
@@ -126,8 +134,12 @@ export function ForgotPasswordScreen() {
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
-    if (emailError) setEmailError(null);
-    if (error) setError(null);
+    if (emailError) {
+      setEmailError(null);
+    }
+    if (error) {
+      setError(null);
+    }
   };
 
   return (
@@ -164,7 +176,11 @@ export function ForgotPasswordScreen() {
             {emailSent && successMessage ? (
               <View style={styles.successContainer}>
                 <View style={styles.successIconContainer}>
-                  <Icon name="check-circle" size="3xl" color={Colors.status.success} />
+                  <Icon
+                    name="check-circle"
+                    size="3xl"
+                    color={Colors.status.success}
+                  />
                 </View>
                 <Text style={styles.successTitle}>Email envoyé !</Text>
                 <Text style={styles.successText}>{successMessage}</Text>
@@ -184,7 +200,11 @@ export function ForgotPasswordScreen() {
                       styles.errorBanner,
                       {transform: [{translateX: shakeAnimation}]},
                     ]}>
-                    <Icon name="alert-circle" size="md" color={Colors.status.error} />
+                    <Icon
+                      name="alert-circle"
+                      size="md"
+                      color={Colors.status.error}
+                    />
                     <Text style={styles.errorText}>{error}</Text>
                   </Animated.View>
                 )}
@@ -203,7 +223,11 @@ export function ForgotPasswordScreen() {
                         emailError ? styles.inputError : null,
                         loading ? styles.inputDisabled : null,
                       ]}>
-                      <Icon name="mail" size="md" color={Colors.text.secondary} />
+                      <Icon
+                        name="mail"
+                        size="md"
+                        color={Colors.text.secondary}
+                      />
                       <TextInput
                         style={styles.input}
                         placeholder="votre@email.com"
@@ -237,12 +261,18 @@ export function ForgotPasswordScreen() {
                     {loading ? (
                       <View style={styles.loadingContent}>
                         <ActivityIndicator color={Colors.white} size="small" />
-                        <Text style={styles.loadingText}>Envoi en cours...</Text>
+                        <Text style={styles.loadingText}>
+                          Envoi en cours...
+                        </Text>
                       </View>
                     ) : (
                       <View style={styles.buttonInner}>
                         <Text style={styles.buttonText}>Envoyer le lien</Text>
-                        <Icon name="arrow-right" size="md" color={Colors.white} />
+                        <Icon
+                          name="arrow-right"
+                          size="md"
+                          color={Colors.white}
+                        />
                       </View>
                     )}
                   </TouchableOpacity>

@@ -1,14 +1,20 @@
 /**
  * Badge Component
- * 
+ *
  * For status indicators, counts, and labels
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Colors, Typography, BorderRadius, Spacing } from '../theme/theme';
+import {View, Text, StyleSheet, ViewStyle} from 'react-native';
+import {Colors, Typography, BorderRadius, Spacing} from '../theme/theme';
 
-type BadgeVariant = 'default' | 'success' | 'warning' | 'error' | 'info' | 'accent';
+type BadgeVariant =
+  | 'default'
+  | 'success'
+  | 'warning'
+  | 'error'
+  | 'info'
+  | 'accent';
 type BadgeSize = 'sm' | 'md' | 'lg';
 
 interface BadgeProps {
@@ -31,17 +37,17 @@ const Badge: React.FC<BadgeProps> = ({
   const getColors = () => {
     switch (variant) {
       case 'success':
-        return { bg: Colors.status.successLight, text: Colors.status.success };
+        return {bg: Colors.status.successLight, text: Colors.status.success};
       case 'warning':
-        return { bg: Colors.status.warningLight, text: Colors.status.warning };
+        return {bg: Colors.status.warningLight, text: Colors.status.warning};
       case 'error':
-        return { bg: Colors.status.errorLight, text: Colors.status.error };
+        return {bg: Colors.status.errorLight, text: Colors.status.error};
       case 'info':
-        return { bg: Colors.status.infoLight, text: Colors.status.info };
+        return {bg: Colors.status.infoLight, text: Colors.status.info};
       case 'accent':
-        return { bg: Colors.accent, text: Colors.white };
+        return {bg: Colors.accent, text: Colors.white};
       default:
-        return { bg: Colors.background.secondary, text: Colors.text.secondary };
+        return {bg: Colors.background.secondary, text: Colors.text.secondary};
     }
   };
 
@@ -53,7 +59,8 @@ const Badge: React.FC<BadgeProps> = ({
       };
     }
     return {
-      paddingHorizontal: size === 'sm' ? Spacing.sm : size === 'md' ? Spacing.md : Spacing.base,
+      paddingHorizontal:
+        size === 'sm' ? Spacing.sm : size === 'md' ? Spacing.md : Spacing.base,
       paddingVertical: size === 'sm' ? 2 : size === 'md' ? 4 : 6,
     };
   };
@@ -77,7 +84,7 @@ const Badge: React.FC<BadgeProps> = ({
         style={[
           styles.dot,
           getSizeStyles(),
-          { backgroundColor: colors.text },
+          {backgroundColor: colors.text},
           style,
         ]}
       />
@@ -89,16 +96,11 @@ const Badge: React.FC<BadgeProps> = ({
       style={[
         styles.badge,
         getSizeStyles(),
-        { backgroundColor: colors.bg },
+        {backgroundColor: colors.bg},
         style,
-      ]}
-    >
+      ]}>
       <Text
-        style={[
-          styles.text,
-          { color: colors.text, fontSize: getFontSize() },
-        ]}
-      >
+        style={[styles.text, {color: colors.text, fontSize: getFontSize()}]}>
         {count !== undefined ? (count > 99 ? '99+' : count) : label}
       </Text>
     </View>
@@ -106,17 +108,17 @@ const Badge: React.FC<BadgeProps> = ({
 };
 
 // Notification badge (for tab bar icons)
-export const NotificationBadge: React.FC<{ count: number; style?: ViewStyle }> = ({
-  count,
-  style,
-}) => {
-  if (count === 0) return null;
+export const NotificationBadge: React.FC<{
+  count: number;
+  style?: ViewStyle;
+}> = ({count, style}) => {
+  if (count === 0) {
+    return null;
+  }
 
   return (
     <View style={[styles.notificationBadge, style]}>
-      <Text style={styles.notificationText}>
-        {count > 99 ? '99+' : count}
-      </Text>
+      <Text style={styles.notificationText}>{count > 99 ? '99+' : count}</Text>
     </View>
   );
 };

@@ -47,7 +47,9 @@ class ReceiptStorageService {
 
       // Validate collection path
       if (!PUBLIC_STORES_COLLECTION) {
-        console.warn('detectCityFromStore: PUBLIC_STORES_COLLECTION is not defined');
+        console.warn(
+          'detectCityFromStore: PUBLIC_STORES_COLLECTION is not defined',
+        );
         return null;
       }
 
@@ -221,7 +223,9 @@ class ReceiptStorageService {
       .doc(receiptId)
       .get();
 
-    if (!doc.exists) return null;
+    if (!doc.exists) {
+      return null;
+    }
     return this.docToReceipt(doc);
   }
 
@@ -230,7 +234,9 @@ class ReceiptStorageService {
    */
   async deleteReceipt(userId: string, receiptId: string): Promise<void> {
     const receipt = await this.getReceipt(userId, receiptId);
-    if (!receipt) return;
+    if (!receipt) {
+      return;
+    }
 
     const batch = firestore().batch();
 

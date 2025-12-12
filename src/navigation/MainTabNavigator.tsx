@@ -3,7 +3,13 @@ import React, {useEffect, useRef} from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {View, Text, StyleSheet, Animated, Platform} from 'react-native';
 import {MainTabParamList} from '@/shared/types';
-import {Colors, Typography, Spacing, Shadows, Layout} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  Shadows,
+  Layout,
+} from '@/shared/theme/theme';
 import {Icon} from '@/shared/components';
 
 // Screens
@@ -50,11 +56,7 @@ function TabIcon({focused, icon, label}: TabIconProps) {
           transform: [{scale: scaleAnim}, {translateY: translateYAnim}],
         },
       ]}>
-      <View
-        style={[
-          styles.iconWrapper,
-          focused && styles.iconWrapperFocused,
-        ]}>
+      <View style={[styles.iconWrapper, focused && styles.iconWrapperFocused]}>
         <Icon
           name={icon}
           size="sm"

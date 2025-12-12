@@ -11,7 +11,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import firestore from '@react-native-firebase/firestore';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
 import {Icon, FadeIn, SlideIn} from '@/shared/components';
 import {formatCurrency} from '@/shared/utils/helpers';
 import {useAuth} from '@/shared/contexts';
@@ -54,6 +60,10 @@ export function StatsScreen() {
     analyticsService.logScreenView('Stats', 'StatsScreen');
   }, []);
 
+  useEffect(() => {
+    loadStatsData();
+  }, [user?.uid]);
+
   const loadStatsData = async () => {
     if (!user?.uid) {
       setIsLoading(false);
@@ -63,7 +73,7 @@ export function StatsScreen() {
     try {
       setIsLoading(true);
 
-      // Get current month receipts
+      // Get current month receipts (load all and filter in memory to avoid index issues)
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -73,13 +83,19 @@ export function StatsScreen() {
         .collection('users')
         .doc(user.uid)
         .collection('receipts')
-        .where('scannedAt', '>=', startOfMonth)
         .orderBy('scannedAt', 'desc')
         .get();
 
+      // Filter for current month receipts in memory
+      const currentMonthReceipts = receiptsSnapshot.docs.filter(doc => {
+        const data = doc.data();
+        const scannedAt = data.scannedAt?.toDate();
+        return scannedAt && scannedAt >= startOfMonth;
+      });
+
       // Determine primary currency from receipts
       const currencyCount: Record<string, number> = {};
-      receiptsSnapshot.docs.forEach(doc => {
+      currentMonthReceipts.forEach(doc => {
         const data = doc.data();
         const currency = data.currency || 'USD';
         currencyCount[currency] = (currencyCount[currency] || 0) + 1;
@@ -97,7 +113,7 @@ export function StatsScreen() {
       let totalSpent = 0;
       let totalSavings = 0;
 
-      receiptsSnapshot.docs.forEach(doc => {
+      currentMonthReceipts.forEach(doc => {
         const data = doc.data();
         // Only include receipts with the primary currency
         if ((data.currency || 'USD') === primaryCurrency) {
@@ -175,7 +191,7 @@ export function StatsScreen() {
         monthlyTotals[monthKey] = 0;
       }
 
-      // Get receipts for last 3 months
+      // Get receipts for last 3 months (load all and filter in memory)
       const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
       const allReceiptsSnapshot = await firestore()
         .collection('artifacts')
@@ -183,10 +199,17 @@ export function StatsScreen() {
         .collection('users')
         .doc(user.uid)
         .collection('receipts')
-        .where('scannedAt', '>=', threeMonthsAgo)
+        .orderBy('scannedAt', 'desc')
         .get();
 
-      allReceiptsSnapshot.docs.forEach(doc => {
+      // Filter for last 3 months in memory
+      const lastThreeMonthsReceipts = allReceiptsSnapshot.docs.filter(doc => {
+        const data = doc.data();
+        const scannedAt = data.scannedAt?.toDate();
+        return scannedAt && scannedAt >= threeMonthsAgo;
+      });
+
+      lastThreeMonthsReceipts.forEach(doc => {
         const data = doc.data();
         const date = data.scannedAt?.toDate() || new Date();
         const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
@@ -239,7 +262,7 @@ export function StatsScreen() {
           <Text style={styles.headerSubtitle}>Ce mois-ci</Text>
         </View>
       </FadeIn>
-      
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -283,7 +306,11 @@ export function StatsScreen() {
                         style={[
                           styles.bar,
                           {
-                            height: `${maxMonthlyAmount > 0 ? (data.amount / maxMonthlyAmount) * 100 : 10}%`,
+                            height: `${
+                              maxMonthlyAmount > 0
+                                ? (data.amount / maxMonthlyAmount) * 100
+                                : 10
+                            }%`,
                             backgroundColor:
                               index === monthlyData.length - 1
                                 ? Colors.primary
@@ -311,7 +338,9 @@ export function StatsScreen() {
               {categories.length === 0 ? (
                 <View style={styles.emptyCategories}>
                   <Icon name="chart" size="lg" color={Colors.text.tertiary} />
-                  <Text style={styles.emptyCategoriesText}>Aucune donnée disponible</Text>
+                  <Text style={styles.emptyCategoriesText}>
+                    Aucune donnée disponible
+                  </Text>
                 </View>
               ) : (
                 categories.map((category, index) => (
@@ -322,7 +351,11 @@ export function StatsScreen() {
                           styles.categoryIcon,
                           {backgroundColor: category.color + '20'},
                         ]}>
-                        <Icon name={category.icon} size="sm" color={category.color} />
+                        <Icon
+                          name={category.icon}
+                          size="sm"
+                          color={category.color}
+                        />
                       </View>
                       <View>
                         <Text style={styles.categoryName}>{category.name}</Text>
@@ -368,8 +401,9 @@ export function StatsScreen() {
                   Économisez sur l'alimentation
                 </Text>
                 <Text style={styles.insightDesc}>
-                  Vous pourriez économiser {formatCurrency(15.5, primaryCurrency)}{' '}
-                  en achetant certains produits à Carrefour plutôt qu'à Shoprite.
+                  Vous pourriez économiser{' '}
+                  {formatCurrency(15.5, primaryCurrency)} en achetant certains
+                  produits à Carrefour plutôt qu'à Shoprite.
                 </Text>
               </View>
             </View>
@@ -381,8 +415,8 @@ export function StatsScreen() {
               <View style={styles.insightContent}>
                 <Text style={styles.insightTitle}>Tendance en hausse</Text>
                 <Text style={styles.insightDesc}>
-                  Vos dépenses ont augmenté de 12% ce mois-ci par rapport au mois
-                  dernier.
+                  Vos dépenses ont augmenté de 12% ce mois-ci par rapport au
+                  mois dernier.
                 </Text>
               </View>
             </View>

@@ -105,7 +105,9 @@ export function Toast({
     });
   };
 
-  if (!visible) return null;
+  if (!visible) {
+    return null;
+  }
 
   const getToastConfig = () => {
     switch (type) {
@@ -154,19 +156,20 @@ export function Toast({
       ]}>
       {/* Left accent bar */}
       <View style={[styles.accentBar, {backgroundColor: config.iconColor}]} />
-      
+
       <View style={styles.content}>
-        <View style={[styles.iconContainer, {backgroundColor: config.accentColor}]}>
+        <View
+          style={[styles.iconContainer, {backgroundColor: config.accentColor}]}>
           <Icon name={config.icon} size="sm" color={config.iconColor} />
         </View>
         <Text style={styles.message}>{message}</Text>
       </View>
-      
+
       <TouchableOpacity
         onPress={dismiss}
         style={styles.closeButton}
         activeOpacity={0.7}>
-        <Icon name="close-line" size="sm" color={URBANIST_COLORS.textSecondary} />
+        <Icon name="x" size="sm" color={URBANIST_COLORS.textSecondary} />
       </TouchableOpacity>
     </Animated.View>
   );
