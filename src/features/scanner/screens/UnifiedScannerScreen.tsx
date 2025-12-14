@@ -14,6 +14,7 @@ import {
   Dimensions,
   SafeAreaView,
 } from 'react-native';
+import ConfettiCannon from 'react-native-confetti-cannon';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
@@ -26,7 +27,7 @@ import {analyticsService} from '@/shared/services/analytics';
 import {duplicateDetectionService} from '@/shared/services/duplicateDetection';
 import {hapticService} from '@/shared/services/hapticService';
 import {inAppReviewService} from '@/shared/services/inAppReviewService';
-import {offlineQueueService} from '@/shared/services/firebase';
+import {offlineQueueService, receiptStorageService} from '@/shared/services/firebase';
 import {
   Colors,
   Typography,
@@ -86,6 +87,7 @@ export function UnifiedScannerScreen() {
   const progressAnim = useRef(new Animated.Value(0)).current;
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const retryCountRef = useRef(0);
+  const confettiRef = useRef<any>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -214,6 +216,11 @@ export function UnifiedScannerScreen() {
   // Success animation
   useEffect(() => {
     if (state === 'success') {
+      // Trigger confetti explosion
+      if (confettiRef.current) {
+        confettiRef.current.start();
+      }
+      
       Animated.sequence([
         Animated.spring(bounceAnim, {
           toValue: 1,
@@ -363,6 +370,12 @@ export function UnifiedScannerScreen() {
         );
 
         if (response.success && response.receipt) {
+          // Save the receipt to Firestore
+          const savedReceiptId = await receiptStorageService.saveReceipt(
+            response.receipt,
+            user?.uid || 'unknown-user'
+          );
+
           await recordScan();
 
           analyticsService.logCustomEvent('scan_completed', {
@@ -386,8 +399,8 @@ export function UnifiedScannerScreen() {
 
           // Navigate after animation
           setTimeout(() => {
-            navigation.replace('ReceiptDetail', {
-              receiptId: response.receipt!.id,
+            navigation.navigate('ReceiptDetail', {
+              receiptId: savedReceiptId,
             });
           }, 2000);
           return;
@@ -426,7 +439,7 @@ export function UnifiedScannerScreen() {
 
           const receiptId = result.receiptId;
           setTimeout(() => {
-            navigation.replace('ReceiptDetail', {
+            navigation.navigate('ReceiptDetail', {
               receiptId: receiptId,
             });
           }, 2000);
@@ -792,7 +805,7 @@ export function UnifiedScannerScreen() {
                 {transform: [{scale: bounceScale}]}
               ]}
             >
-              <Text style={styles.successEmoji}>🎉</Text>
+              <Icon name="check-circle" size="xl" color={Colors.primary} />
             </Animated.View>
             <Text style={styles.successTitle}>Analyse terminée!</Text>
             <Text style={styles.successSubtitle}>
@@ -846,6 +859,17 @@ export function UnifiedScannerScreen() {
           </View>
         )}
       </ScrollView>
+      
+      {/* Confetti Cannon - Celebration! */}
+      <ConfettiCannon
+        ref={confettiRef}
+        count={200}
+        origin={{x: SCREEN_WIDTH / 2, y: SCREEN_HEIGHT / 2}}
+        autoStart={false}
+        fadeOut={true}
+        fallSpeed={3000}
+        colors={['#FFD700', '#FFA500', '#FF6347', '#32CD32', '#1E90FF', '#FF69B4']}
+      />
       </View>
     </SafeAreaView>
   );
@@ -1311,9 +1335,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: Spacing.xl,
     ...Shadows.md,
-  },
-  successEmoji: {
-    fontSize: 60,
   },
   successTitle: {
     fontSize: Typography.fontSize['2xl'],

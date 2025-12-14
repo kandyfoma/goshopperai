@@ -25,15 +25,20 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon} from '@/shared/components';
+import {useAuth} from '@/shared/contexts';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function RegisterScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const {signInWithGoogle, signInWithApple} = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(
+    null,
+  );
 
   const handleRegister = async () => {
     if (!email || !password || !confirmPassword) {
@@ -66,17 +71,25 @@ export function RegisterScreen() {
   };
 
   const handleGoogleSignIn = async () => {
-    Alert.alert(
-      'Bientôt disponible',
-      'La connexion Google sera disponible prochainement',
-    );
+    setSocialLoading('google');
+    try {
+      await signInWithGoogle();
+    } catch (err: any) {
+      Alert.alert('Erreur', err?.message || 'Échec de la connexion Google');
+    } finally {
+      setSocialLoading(null);
+    }
   };
 
   const handleAppleSignIn = async () => {
-    Alert.alert(
-      'Bientôt disponible',
-      'La connexion Apple sera disponible prochainement',
-    );
+    setSocialLoading('apple');
+    try {
+      await signInWithApple();
+    } catch (err: any) {
+      Alert.alert('Erreur', err?.message || 'Échec de la connexion Apple');
+    } finally {
+      setSocialLoading(null);
+    }
   };
 
   return (
@@ -180,20 +193,35 @@ export function RegisterScreen() {
             <TouchableOpacity
               style={[styles.button, styles.socialButton]}
               onPress={handleGoogleSignIn}
-              disabled={loading}>
-              <Text style={styles.googleIcon}>G</Text>
-              <Text style={styles.socialButtonText}>Continuer avec Google</Text>
+              disabled={loading || socialLoading !== null}>
+              {socialLoading === 'google' ? (
+                <ActivityIndicator color={Colors.text.primary} />
+              ) : (
+                <>
+                  <Text style={styles.googleIcon}>G</Text>
+                  <Text style={styles.socialButtonText}>
+                    Continuer avec Google
+                  </Text>
+                </>
+              )}
             </TouchableOpacity>
 
             {Platform.OS === 'ios' && (
               <TouchableOpacity
                 style={[styles.button, styles.socialButton, styles.appleButton]}
                 onPress={handleAppleSignIn}
-                disabled={loading}>
-                <Icon name="apple" size="md" color={Colors.white} />
-                <Text style={[styles.socialButtonText, styles.appleButtonText]}>
-                  Continuer avec Apple
-                </Text>
+                disabled={loading || socialLoading !== null}>
+                {socialLoading === 'apple' ? (
+                  <ActivityIndicator color={Colors.white} />
+                ) : (
+                  <>
+                    <Icon name="apple" size="md" color={Colors.white} />
+                    <Text
+                      style={[styles.socialButtonText, styles.appleButtonText]}>
+                      Continuer avec Apple
+                    </Text>
+                  </>
+                )}
               </TouchableOpacity>
             )}
           </View>

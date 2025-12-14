@@ -1,6 +1,6 @@
 // Stats Screen - Spending analytics and insights
 // Styled with GoShopperAI Design System (Blue + Gold)
-import React, {useState, useEffect, useMemo} from 'react';
+import React, {useState, useEffect, useMemo, useCallback} from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   SafeAreaView,
   Dimensions,
   ActivityIndicator,
-  TouchableOpacity,
 } from 'react-native';
 import Svg, {Circle, G, Path, Line, Text as SvgText} from 'react-native-svg';
 import firestore from '@react-native-firebase/firestore';
@@ -24,6 +23,7 @@ import {Icon, FadeIn, SlideIn} from '@/shared/components';
 import {formatCurrency} from '@/shared/utils/helpers';
 import {useAuth, useUser} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
+import {globalSettingsService} from '@/shared/services/globalSettingsService';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
@@ -40,35 +40,40 @@ interface MonthlySpending {
   amount: number;
 }
 
-interface CurrencyStats {
-  totalSpending: number;
-  totalSavings: number;
-  categories: SpendingCategory[];
-  monthlyData: MonthlySpending[];
-}
-
 export function StatsScreen() {
   const {user} = useAuth();
   const {profile} = useUser();
 
   const [totalSpending, setTotalSpending] = useState(0);
-  const [totalSavings, setTotalSavings] = useState(0);
-  const [monthlyBudget, setMonthlyBudget] = useState(500); // Default budget
+  const [monthlyBudget, setMonthlyBudget] = useState<number>(0); // Will be set from profile
   const [categories, setCategories] = useState<SpendingCategory[]>([]);
   const [monthlyData, setMonthlyData] = useState<MonthlySpending[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [primaryCurrency, setPrimaryCurrency] = useState<'USD' | 'CDF'>('USD');
+  const [exchangeRate, setExchangeRate] = useState(2220); // Default rate
 
   useEffect(() => {
     // Track screen view
     analyticsService.logScreenView('Stats', 'StatsScreen');
   }, []);
 
+  // Separate effect to update budget when profile changes
   useEffect(() => {
-    loadStatsData();
-  }, [user?.uid, profile?.preferredCurrency, profile?.monthlyBudget]);
+    if (profile?.monthlyBudget !== undefined) {
+      setMonthlyBudget(profile.monthlyBudget);
+    }
+  }, [profile?.monthlyBudget]);
 
-  const loadStatsData = async () => {
+  // Subscribe to exchange rate changes
+  useEffect(() => {
+    const unsubscribe = globalSettingsService.subscribe((settings) => {
+      setExchangeRate(settings.exchangeRates.usdToCdf);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const loadStatsData = useCallback(async () => {
     if (!user?.uid) {
       setIsLoading(false);
       return;
@@ -109,14 +114,11 @@ export function StatsScreen() {
       const userPreferredCurrency = profile?.preferredCurrency || 'USD';
       setPrimaryCurrency(userPreferredCurrency);
 
-      // Set monthly budget from user profile
-      const userBudget = profile?.monthlyBudget || 500;
-      setMonthlyBudget(userBudget);
+      // Note: monthlyBudget is now set by separate useEffect for real-time updates
 
       // Calculate spending by category
       const categoryTotals: Record<string, number> = {};
       let totalSpent = 0;
-      let totalSavings = 0;
       let categoryRawTotal = 0; // For calculating percentages
 
       currentMonthReceipts.forEach(doc => {
@@ -129,9 +131,7 @@ export function StatsScreen() {
         }
 
         // Calculate real savings from receipt data
-        if (data.savings && typeof data.savings === 'number') {
-          totalSavings += data.savings;
-        }
+        // Note: Savings calculation removed as it's not displayed in UI
 
         // Calculate category totals from items
         // Convert to user's preferred currency for consistency
@@ -142,14 +142,18 @@ export function StatsScreen() {
           // Convert item total to user's preferred currency if needed
           let convertedItemTotal = itemTotal;
           if (userPreferredCurrency === 'CDF' && data.currency === 'USD') {
-            // Convert USD to CDF (approximate rate)
-            convertedItemTotal = itemTotal * 2800; // Using approximate USD to CDF rate
-          } else if (userPreferredCurrency === 'USD' && data.currency === 'CDF') {
-            // Convert CDF to USD
-            convertedItemTotal = itemTotal / 2800;
+            // Convert USD to CDF using configurable exchange rate
+            convertedItemTotal = itemTotal * exchangeRate;
+          } else if (
+            userPreferredCurrency === 'USD' &&
+            data.currency === 'CDF'
+          ) {
+            // Convert CDF to USD using configurable exchange rate
+            convertedItemTotal = itemTotal / exchangeRate;
           }
 
-          categoryTotals[category] = (categoryTotals[category] || 0) + convertedItemTotal;
+          categoryTotals[category] =
+            (categoryTotals[category] || 0) + convertedItemTotal;
           categoryRawTotal += convertedItemTotal;
         });
       });
@@ -206,7 +210,9 @@ export function StatsScreen() {
           name,
           amount,
           percentage:
-            categoryRawTotal > 0 ? Math.round((amount / categoryRawTotal) * 100) : 0,
+            categoryRawTotal > 0
+              ? Math.round((amount / categoryRawTotal) * 100)
+              : 0,
           color:
             categoryColors[name as keyof typeof categoryColors] ||
             Colors.text.tertiary,
@@ -215,7 +221,6 @@ export function StatsScreen() {
         .sort((a, b) => b.amount - a.amount);
 
       setTotalSpending(totalSpent);
-      setTotalSavings(totalSavings);
       setCategories(categoriesArray);
 
       // Calculate monthly data (last 3 months)
@@ -277,7 +282,7 @@ export function StatsScreen() {
         ([key, amount]) => {
           const [, month] = key.split('-');
           return {
-            month: monthNames[parseInt(month)],
+            month: monthNames[parseInt(month, 10)],
             amount,
           };
         },
@@ -288,23 +293,31 @@ export function StatsScreen() {
       console.error('Error loading stats:', error);
       // Set empty data on error
       setTotalSpending(0);
-      setTotalSavings(0);
       setCategories([]);
       setMonthlyData([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.uid, profile?.preferredCurrency]);
 
-  const maxMonthlyAmount = Math.max(...monthlyData.map(d => d.amount), monthlyBudget);
+  useEffect(() => {
+    loadStatsData();
+  }, [loadStatsData]);
+
+  const maxMonthlyAmount = Math.max(
+    ...monthlyData.map(d => d.amount),
+    monthlyBudget,
+  );
 
   // Donut chart calculations
   const donutChartData = useMemo(() => {
-    if (categories.length === 0) return [];
-    
+    if (categories.length === 0) {
+      return [];
+    }
+
     const total = categories.reduce((sum, cat) => sum + cat.amount, 0);
     let startAngle = -90; // Start from top
-    
+
     return categories.map(category => {
       const angle = (category.amount / total) * 360;
       const data = {
@@ -328,14 +341,14 @@ export function StatsScreen() {
   ) => {
     const startRad = (startAngle * Math.PI) / 180;
     const endRad = (endAngle * Math.PI) / 180;
-    
+
     const x1 = centerX + radius * Math.cos(startRad);
     const y1 = centerY + radius * Math.sin(startRad);
     const x2 = centerX + radius * Math.cos(endRad);
     const y2 = centerY + radius * Math.sin(endRad);
-    
+
     const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0;
-    
+
     return `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
   };
 
@@ -378,14 +391,20 @@ export function StatsScreen() {
 
             <View style={[styles.summaryCard, styles.spendingCard]}>
               <View style={styles.summaryIconWrapper}>
-                <Icon name="credit-card" size="md" color={Colors.status.warning} />
+                <Icon
+                  name="credit-card"
+                  size="md"
+                  color={Colors.status.warning}
+                />
               </View>
               <Text style={styles.summaryLabel}>Dépenses</Text>
               <Text style={styles.summaryAmount}>
                 {formatCurrency(totalSpending, primaryCurrency)}
               </Text>
               <Text style={styles.summarySubtitle}>
-                {totalSpending > monthlyBudget ? 'Dépassement' : 'Dans le budget'}
+                {totalSpending > monthlyBudget
+                  ? 'Dépassement'
+                  : 'Dans le budget'}
               </Text>
             </View>
           </View>
@@ -409,20 +428,19 @@ export function StatsScreen() {
                         y2={160 - ratio * 130}
                         stroke={Colors.border.light}
                         strokeWidth="1"
-                        strokeDasharray={i > 0 ? "5,5" : "0"}
+                        strokeDasharray={i > 0 ? '5,5' : '0'}
                       />
                       <SvgText
                         x="35"
                         y={165 - ratio * 130}
                         fontSize="10"
                         fill={Colors.text.tertiary}
-                        textAnchor="end"
-                      >
+                        textAnchor="end">
                         {Math.round(maxMonthlyAmount * ratio).toLocaleString()}
                       </SvgText>
                     </G>
                   ))}
-                  
+
                   {/* Budget line */}
                   <Line
                     x1="40"
@@ -433,25 +451,44 @@ export function StatsScreen() {
                     strokeWidth="2"
                     strokeDasharray="8,4"
                   />
-                  
+
                   {/* Bars */}
                   {monthlyData.map((data, index) => {
                     const barWidth = 50;
-                    const gap = ((SCREEN_WIDTH - 120) - (monthlyData.length * barWidth)) / (monthlyData.length + 1);
+                    const gap =
+                      (SCREEN_WIDTH - 120 - monthlyData.length * barWidth) /
+                      (monthlyData.length + 1);
                     const x = 50 + gap * (index + 1) + barWidth * index;
-                    const barHeight = maxMonthlyAmount > 0 ? (data.amount / maxMonthlyAmount) * 130 : 0;
+                    const barHeight =
+                      maxMonthlyAmount > 0
+                        ? (data.amount / maxMonthlyAmount) * 130
+                        : 0;
                     const isOverBudget = data.amount > monthlyBudget;
-                    
+
                     return (
                       <G key={index}>
                         {/* Bar background */}
                         <Path
-                          d={`M ${x} 160 L ${x} ${160 - barHeight + 8} Q ${x} ${160 - barHeight} ${x + 8} ${160 - barHeight} L ${x + barWidth - 8} ${160 - barHeight} Q ${x + barWidth} ${160 - barHeight} ${x + barWidth} ${160 - barHeight + 8} L ${x + barWidth} 160 Z`}
-                          fill={isOverBudget ? Colors.status.error : Colors.primary}
+                          d={`M ${x} 160 L ${x} ${160 - barHeight + 8} Q ${x} ${
+                            160 - barHeight
+                          } ${x + 8} ${160 - barHeight} L ${x + barWidth - 8} ${
+                            160 - barHeight
+                          } Q ${x + barWidth} ${160 - barHeight} ${
+                            x + barWidth
+                          } ${160 - barHeight + 8} L ${x + barWidth} 160 Z`}
+                          fill={
+                            isOverBudget ? Colors.status.error : Colors.primary
+                          }
                         />
                         {/* Gradient overlay */}
                         <Path
-                          d={`M ${x} 160 L ${x} ${160 - barHeight + 8} Q ${x} ${160 - barHeight} ${x + 8} ${160 - barHeight} L ${x + barWidth - 8} ${160 - barHeight} Q ${x + barWidth} ${160 - barHeight} ${x + barWidth} ${160 - barHeight + 8} L ${x + barWidth} 160 Z`}
+                          d={`M ${x} 160 L ${x} ${160 - barHeight + 8} Q ${x} ${
+                            160 - barHeight
+                          } ${x + 8} ${160 - barHeight} L ${x + barWidth - 8} ${
+                            160 - barHeight
+                          } Q ${x + barWidth} ${160 - barHeight} ${
+                            x + barWidth
+                          } ${160 - barHeight + 8} L ${x + barWidth} 160 Z`}
                           fill="url(#barGradient)"
                           opacity={0.3}
                         />
@@ -462,8 +499,7 @@ export function StatsScreen() {
                           fontSize="12"
                           fill={Colors.text.secondary}
                           textAnchor="middle"
-                          fontWeight="500"
-                        >
+                          fontWeight="500">
                           {data.month}
                         </SvgText>
                         {/* Amount on top of bar */}
@@ -473,31 +509,47 @@ export function StatsScreen() {
                           fontSize="11"
                           fill={Colors.text.primary}
                           textAnchor="middle"
-                          fontWeight="600"
-                        >
-                          {primaryCurrency === 'CDF' ? 
-                            `${(data.amount / 1000).toFixed(0)}k` : 
-                            `$${data.amount.toFixed(0)}`}
+                          fontWeight="600">
+                          {primaryCurrency === 'CDF'
+                            ? `${(data.amount / 1000).toFixed(0)}k`
+                            : `$${data.amount.toFixed(0)}`}
                         </SvgText>
                       </G>
                     );
                   })}
                 </Svg>
               </View>
-              
+
               {/* Legend */}
               <View style={styles.chartLegend}>
                 <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, {backgroundColor: Colors.primary}]} />
+                  <View
+                    style={[
+                      styles.legendDot,
+                      {backgroundColor: Colors.primary},
+                    ]}
+                  />
                   <Text style={styles.legendText}>Dépenses</Text>
                 </View>
                 <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, {backgroundColor: Colors.status.error}]} />
+                  <View
+                    style={[
+                      styles.legendDot,
+                      {backgroundColor: Colors.status.error},
+                    ]}
+                  />
                   <Text style={styles.legendText}>Dépassement</Text>
                 </View>
                 <View style={styles.legendItem}>
-                  <View style={[styles.legendLine, {backgroundColor: Colors.accent}]} />
-                  <Text style={styles.legendText}>Budget ({formatCurrency(monthlyBudget, primaryCurrency)})</Text>
+                  <View
+                    style={[
+                      styles.legendLine,
+                      {backgroundColor: Colors.accent},
+                    ]}
+                  />
+                  <Text style={styles.legendText}>
+                    Budget ({formatCurrency(monthlyBudget, primaryCurrency)})
+                  </Text>
                 </View>
               </View>
             </View>
@@ -538,7 +590,13 @@ export function StatsScreen() {
                           return (
                             <Path
                               key={index}
-                              d={createArcPath(0, 0, 70, item.startAngle, item.endAngle)}
+                              d={createArcPath(
+                                0,
+                                0,
+                                70,
+                                item.startAngle,
+                                item.endAngle,
+                              )}
                               fill={item.color}
                             />
                           );
@@ -559,13 +617,13 @@ export function StatsScreen() {
                   {/* Category List */}
                   <View style={styles.categoryList}>
                     {categories.map((category, index) => (
-                      <View 
-                        key={index} 
+                      <View
+                        key={index}
                         style={[
                           styles.categoryRow,
-                          index === categories.length - 1 && styles.categoryRowLast
-                        ]}
-                      >
+                          index === categories.length - 1 &&
+                            styles.categoryRowLast,
+                        ]}>
                         <View style={styles.categoryLeft}>
                           <View
                             style={[
@@ -573,7 +631,9 @@ export function StatsScreen() {
                               {backgroundColor: category.color},
                             ]}
                           />
-                          <Text style={styles.categoryName}>{category.name}</Text>
+                          <Text style={styles.categoryName}>
+                            {category.name}
+                          </Text>
                         </View>
                         <View style={styles.categoryRight}>
                           <Text style={styles.categoryAmount}>

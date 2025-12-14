@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   Dimensions,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -130,19 +131,7 @@ export function ProfileScreen() {
   const navigation = useNavigation<NavigationProp>();
   const {user, signOut, isAuthenticated} = useAuth();
   const {subscription, trialScansUsed} = useSubscription();
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigation.navigate('Login');
-    }
-  }, [isAuthenticated, navigation]);
-
-  // Don't render anything if not authenticated
-  if (!isAuthenticated) {
-    return null;
-  }
-  const {profile} = useUser();
+  const {profile, isLoading: profileLoading} = useUser();
 
   const [userStats, setUserStats] = useState({
     totalReceipts: 0,
@@ -157,6 +146,13 @@ export function ProfileScreen() {
 
   const trialRemaining = Math.max(0, TRIAL_SCAN_LIMIT - trialScansUsed);
   const isPremium = subscription?.isSubscribed;
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigation.navigate('Login');
+    }
+  }, [isAuthenticated, navigation]);
 
   useEffect(() => {
     analyticsService.logScreenView('Profile', 'ProfileScreen');
@@ -197,9 +193,28 @@ export function ProfileScreen() {
     }
   }, [user]);
 
+  // Don't render anything if not authenticated or profile is loading
+  if (!isAuthenticated || profileLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>
+            {profileLoading ? 'Chargement du profil...' : 'Chargement...'}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   const handleSignOut = async () => {
     try {
       await signOut();
+      // Navigate to Home tab after sign out by resetting to Main
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Main' }],
+      });
     } catch (error) {
       console.error('Sign out error:', error);
     }
@@ -220,7 +235,10 @@ export function ProfileScreen() {
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
-                {user?.displayName?.charAt(0)?.toUpperCase() || 'U'}
+                {profile?.name?.charAt(0)?.toUpperCase() ||
+                 profile?.surname?.charAt(0)?.toUpperCase() ||
+                 user?.displayName?.charAt(0)?.toUpperCase() ||
+                 'U'}
               </Text>
             </View>
             {isPremium && (
@@ -230,7 +248,9 @@ export function ProfileScreen() {
             )}
           </View>
           <Text style={styles.userName}>
-            {user?.displayName || 'Utilisateur'}
+            {profile?.name && profile?.surname
+              ? `${profile.name} ${profile.surname}`
+              : profile?.name || profile?.surname || user?.displayName || 'Utilisateur'}
           </Text>
           <Text style={styles.userEmail}>{user?.email}</Text>
         </View>
@@ -599,5 +619,19 @@ const styles = StyleSheet.create({
     fontFamily: Typography.fontFamily.regular,
     color: Colors.text.tertiary,
     marginTop: Spacing.lg,
+  },
+
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background.primary,
+  },
+  loadingText: {
+    marginTop: Spacing.md,
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.secondary,
   },
 });

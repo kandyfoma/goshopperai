@@ -1,6 +1,6 @@
 // Settings Screen - Urbanist Design System
 // Sleek, professional settings with soft pastels
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -167,6 +167,11 @@ export function SettingsScreen() {
         style: 'destructive',
         onPress: async () => {
           await signOut();
+          // Navigate to Home tab after sign out by resetting to Main
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Main' }],
+          });
         },
       },
     ]);

@@ -152,8 +152,8 @@ export function RootNavigator() {
   // Determine initial route based on state
   let initialRoute: keyof RootStackParamList = 'Main';
   
-  if (isFirstLaunch) {
-    // First time user - show Welcome screen
+  if (isFirstLaunch && !isAuthenticated) {
+    // First time user who hasn't logged in yet - show Welcome screen
     initialRoute = 'Welcome';
   } else if (isAuthenticated && isProfileComplete === false) {
     // Authenticated but profile incomplete - show profile setup
@@ -167,8 +167,8 @@ export function RootNavigator() {
         headerShown: false,
         animation: 'slide_from_right',
       }}>
-      {/* Welcome Screen - shown for first-time users */}
-      {isFirstLaunch && (
+      {/* Welcome Screen - shown for first-time users who haven't logged in */}
+      {isFirstLaunch && !isAuthenticated && (
         <Stack.Screen
           name="Welcome"
           component={WelcomeScreen}

@@ -89,4 +89,5 @@ export {
 export {
   aggregateItemsOnReceipt,
   rebuildItemsAggregation,
+  getCityItems,
 } from './items/itemAggregation';

@@ -35,7 +35,7 @@ interface ItemData {
     storeName: string;
     price: number;
     currency: 'USD' | 'CDF';
-    date: Date;
+    date: Date | any; // Can be Date or Firestore Timestamp
     receiptId: string;
   }[];
   minPrice: number;
@@ -209,7 +209,9 @@ export function ItemsScreen() {
     const sortedPrices = [...item.prices].sort((a, b) => a.price - b.price);
     const topStores = sortedPrices
       .slice(0, 2)
-      .filter((p, i, arr) => arr.findIndex(x => x.storeName === p.storeName) === i);
+      .filter(
+        (p, i, arr) => arr.findIndex(x => x.storeName === p.storeName) === i,
+      );
 
     return (
       <SlideIn delay={index * 50}>
@@ -230,7 +232,11 @@ export function ItemsScreen() {
               </Text>
               <View style={styles.itemMetaRow}>
                 <View style={styles.metaBadge}>
-                  <Icon name="shopping-cart" size="xs" color={Colors.text.tertiary} />
+                  <Icon
+                    name="shopping-cart"
+                    size="xs"
+                    color={Colors.text.tertiary}
+                  />
                   <Text style={styles.metaText}>{item.prices.length}</Text>
                 </View>
                 <View style={styles.metaBadge}>
@@ -243,7 +249,11 @@ export function ItemsScreen() {
             </View>
             {hasSavings && (
               <View style={styles.savingsBadge}>
-                <Icon name="trending-down" size="xs" color={Colors.text.inverse} />
+                <Icon
+                  name="trending-down"
+                  size="xs"
+                  color={Colors.text.inverse}
+                />
                 <Text style={styles.savingsText}>-{savingsPercent}%</Text>
               </View>
             )}
@@ -281,7 +291,9 @@ export function ItemsScreen() {
                 <Text style={styles.storesTitle}>Meilleurs prix</Text>
               </View>
               {topStores.map((priceData, idx) => (
-                <View key={`${priceData.storeName}-${idx}`} style={styles.storeRow}>
+                <View
+                  key={`${priceData.storeName}-${idx}`}
+                  style={styles.storeRow}>
                   <View style={styles.storeRank}>
                     <Text style={styles.storeRankText}>{idx + 1}</Text>
                   </View>
@@ -290,10 +302,25 @@ export function ItemsScreen() {
                       {priceData.storeName}
                     </Text>
                     <Text style={styles.storeDate}>
-                      {priceData.date.toLocaleDateString('fr-FR', {
-                        day: 'numeric',
-                        month: 'short',
-                      })}
+                      {(() => {
+                        try {
+                          const date = priceData.date;
+                          if (!date) {
+                            return 'Date inconnue';
+                          }
+
+                          // Handle Firestore Timestamp
+                          const jsDate = date.toDate
+                            ? date.toDate()
+                            : new Date(date);
+                          return jsDate.toLocaleDateString('fr-FR', {
+                            day: 'numeric',
+                            month: 'short',
+                          });
+                        } catch {
+                          return 'Date inconnue';
+                        }
+                      })()}
                     </Text>
                   </View>
                   <View
@@ -400,7 +427,8 @@ export function ItemsScreen() {
           <View style={styles.resultsBadge}>
             <Icon name="filter" size="xs" color={Colors.primary} />
             <Text style={styles.resultsText}>
-              {filteredItems.length} résultat{filteredItems.length !== 1 ? 's' : ''}
+              {filteredItems.length} résultat
+              {filteredItems.length !== 1 ? 's' : ''}
             </Text>
           </View>
           {searchQuery && (

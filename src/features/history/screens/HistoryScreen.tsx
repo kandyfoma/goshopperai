@@ -80,6 +80,24 @@ export function HistoryScreen() {
 
       const receiptsData: Receipt[] = receiptsSnapshot.docs.map(doc => {
         const data = doc.data();
+        
+        // Process items first
+        const processedItems = (data.items || []).map((item: any) => ({
+          id: item.id || Math.random().toString(36).substring(7),
+          name: item.name || 'Article inconnu',
+          nameNormalized: item.nameNormalized || '',
+          quantity: item.quantity || 1,
+          unitPrice: item.unitPrice || 0,
+          totalPrice: item.totalPrice || 0,
+          unit: item.unit,
+          category: item.category || 'Autres',
+          confidence: item.confidence || 0.85,
+        }));
+        
+        // Calculate total from items if not provided
+        const calculatedTotal = processedItems.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0);
+        const finalTotal = data.total || calculatedTotal || 0;
+        
         return {
           id: doc.id,
           userId: data.userId,
@@ -93,20 +111,10 @@ export function HistoryScreen() {
                  data.date && typeof data.date === 'object' && data.date.seconds ? new Date(data.date.seconds * 1000) :
                  new Date()),
           currency: data.currency || 'USD',
-          items: (data.items || []).map((item: any) => ({
-            id: item.id || Math.random().toString(36).substring(7),
-            name: item.name || 'Article inconnu',
-            nameNormalized: item.nameNormalized || '',
-            quantity: item.quantity || 1,
-            unitPrice: item.unitPrice || 0,
-            totalPrice: item.totalPrice || 0,
-            unit: item.unit,
-            category: item.category || 'Autres',
-            confidence: item.confidence || 0.85,
-          })),
+          items: processedItems,
           subtotal: data.subtotal,
           tax: data.tax,
-          total: data.total || 0,
+          total: finalTotal,
           totalUSD: data.totalUSD,
           totalCDF: data.totalCDF,
           processingStatus: data.processingStatus || 'completed',
@@ -152,13 +160,13 @@ export function HistoryScreen() {
           const offlineReceipts = cachedReceipts.map(c => ({
             id: c.id,
             storeName: c.storeName,
-            total: c.total,
+            total: c.total || 0,
             date: new Date(c.date),
             items: [],
             // Add other required fields with defaults
             userId: user?.uid || '',
             storeNameNormalized: '',
-            currency: 'EUR',
+            currency: 'USD' as const, // Default to USD for cached receipts
             processingStatus: 'completed' as const,
             createdAt: new Date(),
             updatedAt: new Date(),

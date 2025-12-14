@@ -10,6 +10,9 @@ import {Subscription} from '../types';
 
 const db = admin.firestore();
 
+// Default exchange rate fallback
+const DEFAULT_EXCHANGE_RATE = 2220; // 1 USD = 2,220 CDF
+
 // Trial configuration
 const TRIAL_DURATION_DAYS = 60; // 2 months
 const TRIAL_EXTENSION_DAYS = 30; // 1 month extension
@@ -18,6 +21,25 @@ const PLAN_SCAN_LIMITS: Record<string, number> = {
   standard: 100,
   premium: -1, // Unlimited
 };
+
+// Get current exchange rate from global settings
+async function getExchangeRate(): Promise<number> {
+  try {
+    const settingsRef = db.collection('artifacts').doc(config.appId)
+      .collection('public').doc('data')
+      .collection('settings').doc('global');
+
+    const settingsDoc = await settingsRef.get();
+    if (settingsDoc.exists) {
+      const data = settingsDoc.data();
+      return data?.exchangeRates?.usdToCdf || DEFAULT_EXCHANGE_RATE;
+    }
+    return DEFAULT_EXCHANGE_RATE;
+  } catch (error) {
+    console.error('Error fetching exchange rate:', error);
+    return DEFAULT_EXCHANGE_RATE;
+  }
+}
 
 // Subscription duration options (in months)
 type SubscriptionDuration = 1 | 3 | 6 | 12;
@@ -866,8 +888,9 @@ export const getUserStats = functions
         if (receipt.totalUSD && typeof receipt.totalUSD === 'number') {
           totalSpent = receipt.totalUSD;
         } else if (receipt.totalCDF && typeof receipt.totalCDF === 'number') {
-          // Convert CDF to approximate USD (rough conversion rate)
-          totalSpent = receipt.totalCDF / 2800; // Approximate USD to CDF rate
+          // Convert CDF to USD using configurable exchange rate
+          const exchangeRate = await getExchangeRate();
+          totalSpent = receipt.totalCDF / exchangeRate;
         } else if (receipt.total && typeof receipt.total === 'number') {
           totalSpent = receipt.total;
         }

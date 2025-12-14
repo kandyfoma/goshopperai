@@ -240,7 +240,14 @@ export function ReceiptDetailScreen() {
           <Text style={styles.errorText}>{error || 'Reçu non trouvé'}</Text>
           <TouchableOpacity
             style={styles.retryButton}
-            onPress={() => navigation.goBack()}
+            onPress={() => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                // Fallback to main screen if no back stack
+                navigation.navigate('Main');
+              }
+            }}
             activeOpacity={0.8}>
             <Icon name="arrow-left" size="sm" color={Colors.white} />
             <Text style={styles.retryButtonText}>Retour</Text>

@@ -1,31 +1,67 @@
 // City Items Screen - Browse items from all users in the same city
 // Shows aggregated price data for community price comparison
-import React from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
+  FlatList,
+  TextInput,
   TouchableOpacity,
+  SafeAreaView,
+  ActivityIndicator,
+  Animated,
+  Pressable,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import firestore from '@react-native-firebase/firestore';
+import {firebase} from '@react-native-firebase/functions';
 import {
   Colors,
   Typography,
   Spacing,
   BorderRadius,
+  Shadows,
 } from '@/shared/theme/theme';
-import {Icon} from '@/shared/components';
+import {Icon, FadeIn, SlideIn} from '@/shared/components';
+import {formatCurrency} from '@/shared/utils/helpers';
 import {useAuth, useUser} from '@/shared/contexts';
+import {analyticsService} from '@/shared/services/analytics';
 import {RootStackParamList} from '@/shared/types';
+
+interface CityItemData {
+  id: string;
+  name: string;
+  prices: {
+    storeName: string;
+    price: number;
+    currency: 'USD' | 'CDF';
+    date: Date | any; // Can be Date or Firestore Timestamp
+    userId: string;
+  }[];
+  minPrice: number;
+  maxPrice: number;
+  avgPrice: number;
+  storeCount: number;
+  currency: 'USD' | 'CDF';
+  userCount: number; // Number of users who purchased this item
+  lastPurchaseDate: Date;
+}
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export function CityItemsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const {isAuthenticated} = useAuth();
-  const {profile: userProfile} = useUser();
+  const {profile: userProfile, isLoading: profileLoading} = useUser();
+  const [items, setItems] = useState<CityItemData[]>([]);
+  const [filteredItems, setFilteredItems] = useState<CityItemData[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchInputRef = useRef<TextInput>(null);
+  const searchAnimation = useRef(new Animated.Value(0)).current;
 
   // Redirect if not authenticated
   React.useEffect(() => {
@@ -34,6 +70,264 @@ export function CityItemsScreen() {
     }
   }, [isAuthenticated, navigation]);
 
+  useEffect(() => {
+    // Track screen view
+    analyticsService.logScreenView('City Items', 'CityItemsScreen');
+  }, []);
+
+  useEffect(() => {
+    if (!profileLoading && userProfile?.defaultCity) {
+      loadCityItemsData();
+    } else if (!profileLoading) {
+      setIsLoading(false);
+    }
+  }, [userProfile?.defaultCity, profileLoading]);
+
+  useEffect(() => {
+    filterItems();
+  }, [items, searchQuery]);
+
+  const toggleSearch = () => {
+    if (isSearchOpen) {
+      // Closing search
+      setSearchQuery('');
+      Animated.timing(searchAnimation, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: false,
+      }).start(() => setIsSearchOpen(false));
+    } else {
+      // Opening search
+      setIsSearchOpen(true);
+      Animated.timing(searchAnimation, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: false,
+      }).start(() => searchInputRef.current?.focus());
+    }
+  };
+
+  const loadCityItemsData = async () => {
+    console.log(
+      '🔄 loadCityItemsData called, userProfile:',
+      userProfile,
+      'profileLoading:',
+      profileLoading,
+    );
+    if (profileLoading) {
+      console.log('⏳ Profile still loading, skipping');
+      return;
+    }
+    if (!userProfile?.defaultCity) {
+      console.log('❌ No defaultCity, skipping');
+      setIsLoading(false);
+      return;
+    }
+
+    console.log('📡 Calling getCityItems for city:', userProfile.defaultCity);
+    try {
+      const functionsInstance = firebase.app().functions('europe-west1');
+      const result = await functionsInstance.httpsCallable('getCityItems')({
+        city: userProfile.defaultCity,
+      });
+
+      console.log('✅ getCityItems result:', result);
+      const data = result.data as {
+        success: boolean;
+        items: CityItemData[];
+        city: string;
+      };
+
+      if (data.success && data.items) {
+        const itemsArray = data.items.sort(
+          (a: any, b: any) => b.prices.length - a.prices.length,
+        ); // Sort by total purchases
+        console.log('📦 Setting items:', itemsArray.length);
+        setItems(itemsArray);
+      } else {
+        console.log('❌ No items returned');
+        setItems([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading city items:', error);
+      setItems([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filterItems = () => {
+    if (!searchQuery.trim()) {
+      setFilteredItems(items);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    const filtered = items.filter(item =>
+      item.name.toLowerCase().includes(query),
+    );
+    setFilteredItems(filtered);
+
+    // Track item search
+    analyticsService.logCustomEvent('city_item_search', {
+      query: query,
+      results_count: filtered.length,
+    });
+  };
+
+  const renderItem = ({item, index}: {item: CityItemData; index: number}) => {
+    const savingsPercent =
+      item.maxPrice > 0
+        ? Math.round(((item.maxPrice - item.minPrice) / item.maxPrice) * 100)
+        : 0;
+    const hasSavings = savingsPercent > 5; // Show badge if savings > 5%
+
+    // Get top 2 stores with best prices
+    const sortedPrices = [...item.prices].sort((a, b) => a.price - b.price);
+    const topStores = sortedPrices
+      .slice(0, 2)
+      .filter(
+        (p, i, arr) => arr.findIndex(x => x.storeName === p.storeName) === i,
+      );
+
+    return (
+      <SlideIn delay={index * 50}>
+        <Pressable
+          style={({pressed}) => [
+            styles.itemCard,
+            pressed && styles.itemCardPressed,
+          ]}
+          android_ripple={{color: Colors.primaryLight}}>
+          {/* Card Header */}
+          <View style={styles.itemHeader}>
+            <View style={styles.itemIconWrapper}>
+              <Icon name="users" size="md" color={Colors.text.inverse} />
+            </View>
+            <View style={styles.itemInfo}>
+              <Text style={styles.itemName} numberOfLines={2}>
+                {item.name}
+              </Text>
+              <View style={styles.itemMetaRow}>
+                <View style={styles.metaBadge}>
+                  <Icon
+                    name="shopping-cart"
+                    size="xs"
+                    color={Colors.text.tertiary}
+                  />
+                  <Text style={styles.metaText}>{item.prices.length}</Text>
+                </View>
+                <View style={styles.metaBadge}>
+                  <Icon name="map-pin" size="xs" color={Colors.text.tertiary} />
+                  <Text style={styles.metaText}>
+                    {item.storeCount} magasin{item.storeCount > 1 ? 's' : ''}
+                  </Text>
+                </View>
+                <View style={styles.metaBadge}>
+                  <Icon name="users" size="xs" color={Colors.text.tertiary} />
+                  <Text style={styles.metaText}>
+                    {item.userCount} utilisateur{item.userCount > 1 ? 's' : ''}
+                  </Text>
+                </View>
+              </View>
+            </View>
+            {hasSavings && (
+              <View style={styles.savingsBadge}>
+                <Icon
+                  name="trending-down"
+                  size="xs"
+                  color={Colors.text.inverse}
+                />
+                <Text style={styles.savingsText}>-{savingsPercent}%</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Price Comparison */}
+          <View style={styles.priceComparison}>
+            <View style={styles.priceColumn}>
+              <Text style={styles.priceLabel}>Meilleur prix</Text>
+              <Text style={styles.priceBest}>
+                {formatCurrency(item.minPrice, item.currency)}
+              </Text>
+            </View>
+            <View style={styles.priceColumnDivider} />
+            <View style={styles.priceColumn}>
+              <Text style={styles.priceLabel}>Prix moyen</Text>
+              <Text style={styles.priceAvg}>
+                {formatCurrency(item.avgPrice, item.currency)}
+              </Text>
+            </View>
+            <View style={styles.priceColumnDivider} />
+            <View style={styles.priceColumn}>
+              <Text style={styles.priceLabel}>Prix max</Text>
+              <Text style={styles.priceMax}>
+                {formatCurrency(item.maxPrice, item.currency)}
+              </Text>
+            </View>
+          </View>
+
+          {/* Top Stores */}
+          {topStores.length > 0 && (
+            <View style={styles.storesSection}>
+              <View style={styles.storesTitleRow}>
+                <Icon name="award" size="xs" color={Colors.primary} />
+                <Text style={styles.storesTitle}>Meilleurs prix</Text>
+              </View>
+              {topStores.map((priceData, idx) => (
+                <View
+                  key={`${priceData.storeName}-${idx}`}
+                  style={styles.storeRow}>
+                  <View style={styles.storeRank}>
+                    <Text style={styles.storeRankText}>{idx + 1}</Text>
+                  </View>
+                  <View style={styles.storeInfo}>
+                    <Text style={styles.storeName} numberOfLines={1}>
+                      {priceData.storeName}
+                    </Text>
+                    <Text style={styles.storeDate}>
+                      {(() => {
+                        try {
+                          const date = priceData.date;
+                          if (!date) {
+                            return 'Date inconnue';
+                          }
+
+                          // Handle Firestore Timestamp
+                          const jsDate = date.toDate
+                            ? date.toDate()
+                            : new Date(date);
+                          return jsDate.toLocaleDateString('fr-FR', {
+                            day: 'numeric',
+                            month: 'short',
+                          });
+                        } catch {
+                          return 'Date inconnue';
+                        }
+                      })()}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.storePriceBadge,
+                      idx === 0 && styles.storePriceBadgeBest,
+                    ]}>
+                    <Text
+                      style={[
+                        styles.storePrice,
+                        idx === 0 && styles.storePriceBest,
+                      ]}>
+                      {formatCurrency(priceData.price, priceData.currency)}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </Pressable>
+      </SlideIn>
+    );
+  };
+
   if (!userProfile?.defaultCity) {
     return (
       <SafeAreaView style={styles.container}>
@@ -41,12 +335,12 @@ export function CityItemsScreen() {
           <Icon name="map-pin" size="3xl" color={Colors.text.secondary} />
           <Text style={styles.centerTitle}>Ville non définie</Text>
           <Text style={styles.centerSubtitle}>
-            Définissez votre ville dans les paramètres pour voir les articles de votre communauté.
+            Définissez votre ville dans les paramètres pour voir les articles de
+            votre communauté.
           </Text>
           <TouchableOpacity
             style={styles.settingsButton}
-            onPress={() => navigation.navigate('Settings')}
-          >
+            onPress={() => navigation.navigate('Settings')}>
             <Text style={styles.settingsButtonText}>Aller aux paramètres</Text>
           </TouchableOpacity>
         </View>
@@ -54,32 +348,135 @@ export function CityItemsScreen() {
     );
   }
 
-  // For now, show coming soon message
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>
+            Chargement des articles communautaires...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size="lg" color={Colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Articles de {userProfile.defaultCity}</Text>
-        <View style={{width: 24}} />
-      </View>
+      {/* Modern Header */}
+      <FadeIn>
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <View style={styles.headerLeft}>
+              <View style={styles.titleRow}>
+                <Icon name="users" size="md" color={Colors.primary} />
+                <Text style={styles.title}>
+                  Articles de {userProfile.defaultCity}
+                </Text>
+              </View>
+              <Text style={styles.subtitle}>
+                {items.length} produits communautaires
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.searchButton}
+              onPress={toggleSearch}
+              activeOpacity={0.7}>
+              <Icon
+                name={isSearchOpen ? 'x' : 'search'}
+                size="sm"
+                color={Colors.primary}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </FadeIn>
 
-      <View style={styles.centerContainer}>
-        <Icon name="users" size="3xl" color={Colors.primary} />
-        <Text style={styles.centerTitle}>Fonctionnalité à venir</Text>
-        <Text style={styles.centerSubtitle}>
-          Bientôt, vous pourrez découvrir les prix des articles scannés par d'autres utilisateurs de {userProfile.defaultCity}.
-          {'\n\n'}
-          Cette fonctionnalité permettra de comparer les prix et découvrir les meilleures affaires dans votre ville.
-        </Text>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>Retour</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Animated Search Bar */}
+      {isSearchOpen && (
+        <Animated.View
+          style={[
+            styles.searchContainer,
+            {
+              opacity: searchAnimation,
+              transform: [
+                {
+                  translateY: searchAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 0],
+                  }),
+                },
+              ],
+            },
+          ]}>
+          <View style={styles.searchWrapper}>
+            <Icon name="search" size="sm" color={Colors.text.tertiary} />
+            <TextInput
+              ref={searchInputRef}
+              style={styles.searchInput}
+              placeholder="Rechercher un article..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor={Colors.text.tertiary}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Icon name="x-circle" size="sm" color={Colors.text.tertiary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </Animated.View>
+      )}
+
+      {/* Results Badge */}
+      {(searchQuery || filteredItems.length > 0) && (
+        <View style={styles.resultsContainer}>
+          <View style={styles.resultsBadge}>
+            <Icon name="filter" size="xs" color={Colors.primary} />
+            <Text style={styles.resultsText}>
+              {filteredItems.length} résultat
+              {filteredItems.length !== 1 ? 's' : ''}
+            </Text>
+          </View>
+          {searchQuery && (
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={() => setSearchQuery('')}>
+              <Text style={styles.clearText}>Tout afficher</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {/* Items List */}
+      <FlatList
+        data={filteredItems}
+        renderItem={renderItem}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyIconWrapper}>
+              <Icon
+                name={searchQuery ? 'search' : 'users'}
+                size="xl"
+                color={Colors.text.tertiary}
+              />
+            </View>
+            <Text style={styles.emptyTitle}>
+              {searchQuery
+                ? 'Aucun article trouvé'
+                : 'Aucun article communautaire'}
+            </Text>
+            <Text style={styles.emptyText}>
+              {searchQuery
+                ? 'Essayez un autre terme de recherche'
+                : "Les articles de votre communauté apparaîtront ici une fois que d'autres utilisateurs auront scanné leurs reçus."}
+            </Text>
+          </View>
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -89,30 +486,292 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background.primary,
   },
+  // Header Styles
   header: {
+    backgroundColor: Colors.white,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.lg,
+    ...Shadows.sm,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.secondary,
+    gap: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   title: {
     fontSize: Typography.fontSize['2xl'],
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
+  },
+  subtitle: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.tertiary,
+    marginLeft: 36, // Align with title after icon
+  },
+  searchButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.card.blue,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Search Styles
+  searchContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    backgroundColor: Colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+  },
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.xl,
+    paddingHorizontal: Spacing.md,
+    height: 48,
+    gap: Spacing.sm,
+  },
+  searchInput: {
     flex: 1,
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+  },
+
+  // Results Badge
+  resultsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+  },
+  resultsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.card.yellow,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
+  },
+  resultsText: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.primary,
+    fontWeight: Typography.fontWeight.medium,
+  },
+  clearButton: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  clearText: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.primary,
+    fontWeight: Typography.fontWeight.medium,
+  },
+
+  // List Styles
+  listContainer: {
+    padding: Spacing.lg,
+    paddingTop: Spacing.sm,
+  },
+
+  // Item Card Styles
+  itemCard: {
+    backgroundColor: Colors.card.cream,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    ...Shadows.sm,
+  },
+  itemCardPressed: {
+    opacity: 0.9,
+    transform: [{scale: 0.98}],
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.md,
+  },
+  itemIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.card.cosmos,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.sm,
+  },
+  itemInfo: {
+    flex: 1,
+  },
+  itemName: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
+    lineHeight: Typography.fontSize.base * 1.3,
+  },
+  itemMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  metaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaText: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
+  },
+  savingsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.card.cosmos,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    marginLeft: Spacing.sm,
+  },
+  savingsText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.inverse,
+  },
+
+  // Price Comparison Styles
+  priceComparison: {
+    flexDirection: 'row',
+    backgroundColor: Colors.background.primary,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.sm,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  priceColumn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  priceColumnDivider: {
+    width: 1,
+    backgroundColor: Colors.border.light,
+    marginHorizontal: Spacing.xs,
+  },
+  priceLabel: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
+    marginBottom: Spacing.xs,
     textAlign: 'center',
+  },
+  priceBest: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.card.red,
+  },
+  priceAvg: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.card.cosmos,
+  },
+  priceMax: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.secondary,
+  },
+
+  // Stores Section Styles
+  storesSection: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border.light,
+    paddingTop: Spacing.sm,
+  },
+  storesTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginBottom: Spacing.sm,
+  },
+  storesTitle: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
+  },
+  storeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.xs,
+    backgroundColor: Colors.background.primary,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.xs,
+  },
+  storeRank: {
+    width: 20,
+    height: 20,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.card.crimson,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.xs,
+  },
+  storeRankText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.inverse,
+  },
+  storeInfo: {
+    flex: 1,
+  },
+  storeName: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.medium,
+    color: Colors.text.primary,
+    marginBottom: 2,
+  },
+  storeDate: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
+  },
+  storePriceBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    backgroundColor: Colors.card.yellow,
+    borderRadius: BorderRadius.md,
+  },
+  storePriceBadgeBest: {
+    backgroundColor: Colors.card.red,
+  },
+  storePrice: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+  },
+  storePriceBest: {
+    color: Colors.text.inverse,
   },
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.xl,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
   },
   centerTitle: {
-    fontSize: Typography.fontSize.xl,
+    fontSize: Typography.fontSize['2xl'],
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
     textAlign: 'center',
@@ -123,29 +782,72 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     color: Colors.text.secondary,
     textAlign: 'center',
+    lineHeight: 24,
   },
   settingsButton: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     marginTop: Spacing.lg,
   },
   settingsButtonText: {
     fontSize: Typography.fontSize.base,
-    color: Colors.white,
+    color: Colors.text.inverse,
+    fontWeight: Typography.fontWeight.semiBold,
+    textAlign: 'center',
+  },
+  loading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
+    marginTop: Spacing.md,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: Spacing['3xl'],
+    paddingHorizontal: Spacing.lg,
+  },
+  emptyIconWrapper: {
+    width: 96,
+    height: 96,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.background.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: Typography.fontSize.xl,
     fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.tertiary,
+    textAlign: 'center',
+    lineHeight: Typography.fontSize.md * 1.5,
+    maxWidth: 280,
   },
   backButton: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
-    borderRadius: BorderRadius.md,
+    borderRadius: BorderRadius.lg,
     marginTop: Spacing.lg,
   },
   backButtonText: {
     fontSize: Typography.fontSize.base,
-    color: Colors.white,
-    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.inverse,
+    fontWeight: Typography.fontWeight.semiBold,
+    textAlign: 'center',
   },
 });

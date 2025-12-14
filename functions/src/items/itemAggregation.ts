@@ -333,3 +333,111 @@ export const rebuildItemsAggregation = functions
       );
     }
   });
+
+/**
+ * Callable function to get aggregated items for a city
+ * Returns items from all users in the same city
+ * Updated to force redeploy
+ */
+export const getCityItems = functions
+  .region('europe-west1')
+  .https.onCall(async (data, context) => {
+    // Verify authentication
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        'unauthenticated',
+        'User must be authenticated',
+      );
+    }
+
+    const userId = context.auth.uid;
+    const { city } = data;
+
+    if (!city || typeof city !== 'string') {
+      throw new functions.https.HttpsError(
+        'invalid-argument',
+        'City parameter is required and must be a string',
+      );
+    }
+
+    try {
+      console.log(`Getting city items for city: ${city}, user: ${userId}`);
+
+      // Get all users in the city
+      const usersSnapshot = await db
+        .collection(`artifacts/${APP_ID}/users`)
+        .where('defaultCity', '==', city)
+        .get();
+
+      const itemsMap = new Map<string, any>();
+
+      // Process each user's items
+      for (const userDoc of usersSnapshot.docs) {
+        const userId = userDoc.id;
+        const itemsSnapshot = await db
+          .collection(`artifacts/${APP_ID}/users/${userId}/items`)
+          .get();
+
+        itemsSnapshot.docs.forEach(doc => {
+          const itemData = doc.data() as AggregatedItem;
+          const itemName = itemData.nameNormalized;
+
+          if (!itemsMap.has(itemName)) {
+            itemsMap.set(itemName, {
+              id: itemName,
+              name: itemData.name,
+              prices: [],
+              minPrice: itemData.minPrice,
+              maxPrice: itemData.maxPrice,
+              avgPrice: itemData.avgPrice,
+              storeCount: itemData.storeCount,
+              currency: itemData.currency,
+              userCount: 1,
+              lastPurchaseDate: itemData.lastPurchaseDate,
+            });
+          }
+
+          const cityItem = itemsMap.get(itemName)!;
+
+          // Merge prices from this user
+          cityItem.prices.push(...itemData.prices.map(p => ({ ...p, userId })));
+
+          // Update statistics
+          const allPrices = cityItem.prices.map((p: any) => p.price);
+          cityItem.minPrice = Math.min(...allPrices);
+          cityItem.maxPrice = Math.max(...allPrices);
+          cityItem.avgPrice = allPrices.reduce((sum: number, p: number) => sum + p, 0) / allPrices.length;
+          cityItem.storeCount = new Set(cityItem.prices.map((p: any) => p.storeName)).size;
+          cityItem.userCount = new Set(cityItem.prices.map((p: any) => p.userId)).size;
+
+          // Update last purchase date
+          if (itemData.lastPurchaseDate.toMillis() > cityItem.lastPurchaseDate.toMillis()) {
+            cityItem.lastPurchaseDate = itemData.lastPurchaseDate;
+          }
+        });
+      }
+
+      const cityItems = Array.from(itemsMap.values()).map(item => ({
+        ...item,
+        lastPurchaseDate: item.lastPurchaseDate.toDate(),
+        prices: item.prices.map((p: any) => ({
+          ...p,
+          date: p.date.toDate(),
+        })),
+      }));
+
+      console.log(`✅ Found ${cityItems.length} items for city ${city}`);
+
+      return {
+        success: true,
+        items: cityItems,
+        city,
+      };
+    } catch (error) {
+      console.error('Error getting city items:', error);
+      throw new functions.https.HttpsError(
+        'internal',
+        'Failed to get city items',
+      );
+    }
+  });

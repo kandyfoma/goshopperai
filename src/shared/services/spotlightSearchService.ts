@@ -1,13 +1,10 @@
 /**
  * Spotlight Search Service
- * 
+ *
  * Indexes receipts, items, and shops for device search (iOS Spotlight / Android App Search).
  * Allows users to find their receipts directly from the device search.
  */
 
-import {Platform} from 'react-native';
-
-// Types for search items
 export interface SearchableReceipt {
   id: string;
   shopName: string;
@@ -51,10 +48,19 @@ const loadSearchApi = async (): Promise<boolean> => {
   if (SearchApi !== null) {
     return SearchApi !== false;
   }
-  
+
   try {
     SearchApi = require('react-native-search-api').default;
-    return true;
+    // Verify the API has the required methods
+    if (SearchApi && typeof SearchApi.indexSpotlightItem === 'function') {
+      return true;
+    } else {
+      console.log(
+        'Spotlight Search: react-native-search-api loaded but missing required methods',
+      );
+      SearchApi = false;
+      return false;
+    }
   } catch (error) {
     console.log('Spotlight Search: react-native-search-api not available');
     SearchApi = false;
@@ -77,11 +83,13 @@ class SpotlightSearchService {
    */
   async initialize(): Promise<void> {
     this.isAvailable = await loadSearchApi();
-    
+
     if (this.isAvailable && SearchApi) {
       // Set up listener for search result selections only if the method exists
       if (typeof SearchApi.addOnSpotlightItemPressedListener === 'function') {
-        SearchApi.addOnSpotlightItemPressedListener(this.handleSearchItemPressed);
+        SearchApi.addOnSpotlightItemPressedListener(
+          this.handleSearchItemPressed,
+        );
         console.log('Spotlight Search: Initialized successfully');
       } else {
         console.log('Spotlight Search: API loaded but listener not available');
@@ -94,10 +102,10 @@ class SpotlightSearchService {
    */
   private handleSearchItemPressed = (uniqueIdentifier: string): void => {
     console.log('Spotlight Search: Item pressed -', uniqueIdentifier);
-    
+
     // Parse the identifier to determine type and ID
     const [type, id] = uniqueIdentifier.split(':');
-    
+
     // Emit an event or store for navigation handling
     // The app can listen to this and navigate accordingly
     if (this.onItemPressed) {
@@ -112,14 +120,24 @@ class SpotlightSearchService {
    * Index a receipt for search
    */
   async indexReceipt(receipt: SearchableReceipt): Promise<void> {
-    if (!this.isAvailable || !SearchApi) return;
-    if (this.indexedReceiptIds.has(receipt.id)) return;
+    if (
+      !this.isAvailable ||
+      !SearchApi ||
+      typeof SearchApi.indexSpotlightItem !== 'function'
+    ) {
+      return;
+    }
+    if (this.indexedReceiptIds.has(receipt.id)) {
+      return;
+    }
 
     try {
       const item: IndexedItem = {
         uniqueIdentifier: `receipt:${receipt.id}`,
         title: `${receipt.shopName} - ${this.formatCurrency(receipt.total)}`,
-        contentDescription: `${receipt.itemCount} articles • ${this.formatDate(receipt.date)}`,
+        contentDescription: `${receipt.itemCount} articles • ${this.formatDate(
+          receipt.date,
+        )}`,
         keywords: [
           receipt.shopName.toLowerCase(),
           'facture',
@@ -146,8 +164,10 @@ class SpotlightSearchService {
    * Index multiple receipts
    */
   async indexReceipts(receipts: SearchableReceipt[]): Promise<void> {
-    if (!this.isAvailable) return;
-    
+    if (!this.isAvailable) {
+      return;
+    }
+
     for (const receipt of receipts) {
       await this.indexReceipt(receipt);
     }
@@ -157,14 +177,24 @@ class SpotlightSearchService {
    * Index an item for search
    */
   async indexItem(item: SearchableItem): Promise<void> {
-    if (!this.isAvailable || !SearchApi) return;
-    if (this.indexedItemIds.has(item.id)) return;
+    if (
+      !this.isAvailable ||
+      !SearchApi ||
+      typeof SearchApi.indexSpotlightItem !== 'function'
+    ) {
+      return;
+    }
+    if (this.indexedItemIds.has(item.id)) {
+      return;
+    }
 
     try {
       const searchItem: IndexedItem = {
         uniqueIdentifier: `item:${item.id}`,
         title: item.name,
-        contentDescription: `${this.formatCurrency(item.price)} chez ${item.shopName}`,
+        contentDescription: `${this.formatCurrency(item.price)} chez ${
+          item.shopName
+        }`,
         keywords: [
           item.name.toLowerCase(),
           item.shopName.toLowerCase(),
@@ -186,20 +216,25 @@ class SpotlightSearchService {
    * Index a shop for search
    */
   async indexShop(shop: SearchableShop): Promise<void> {
-    if (!this.isAvailable || !SearchApi) return;
-    if (this.indexedShopIds.has(shop.id)) return;
+    if (
+      !this.isAvailable ||
+      !SearchApi ||
+      typeof SearchApi.indexSpotlightItem !== 'function'
+    ) {
+      return;
+    }
+    if (this.indexedShopIds.has(shop.id)) {
+      return;
+    }
 
     try {
       const searchItem: IndexedItem = {
         uniqueIdentifier: `shop:${shop.id}`,
         title: shop.name,
-        contentDescription: `${shop.visitCount} visite${shop.visitCount > 1 ? 's' : ''}`,
-        keywords: [
-          shop.name.toLowerCase(),
-          'magasin',
-          'boutique',
-          'shop',
-        ],
+        contentDescription: `${shop.visitCount} visite${
+          shop.visitCount > 1 ? 's' : ''
+        }`,
+        keywords: [shop.name.toLowerCase(), 'magasin', 'boutique', 'shop'],
         domain: 'com.goshopperai.shops',
       };
 
@@ -214,12 +249,16 @@ class SpotlightSearchService {
    * Remove a receipt from search index
    */
   async removeReceipt(receiptId: string): Promise<void> {
-    if (!this.isAvailable || !SearchApi) return;
+    if (
+      !this.isAvailable ||
+      !SearchApi ||
+      typeof SearchApi.deleteSpotlightItem !== 'function'
+    ) {
+      return;
+    }
 
     try {
-      if (typeof SearchApi.deleteSpotlightItem === 'function') {
-        await SearchApi.deleteSpotlightItem(`receipt:${receiptId}`);
-      }
+      await SearchApi.deleteSpotlightItem(`receipt:${receiptId}`);
       this.indexedReceiptIds.delete(receiptId);
     } catch (error) {
       console.error('Spotlight Search: Failed to remove receipt', error);
@@ -230,12 +269,16 @@ class SpotlightSearchService {
    * Remove an item from search index
    */
   async removeItem(itemId: string): Promise<void> {
-    if (!this.isAvailable || !SearchApi) return;
+    if (
+      !this.isAvailable ||
+      !SearchApi ||
+      typeof SearchApi.deleteSpotlightItem !== 'function'
+    ) {
+      return;
+    }
 
     try {
-      if (typeof SearchApi.deleteSpotlightItem === 'function') {
-        await SearchApi.deleteSpotlightItem(`item:${itemId}`);
-      }
+      await SearchApi.deleteSpotlightItem(`item:${itemId}`);
       this.indexedItemIds.delete(itemId);
     } catch (error) {
       console.error('Spotlight Search: Failed to remove item', error);
@@ -246,12 +289,16 @@ class SpotlightSearchService {
    * Remove a shop from search index
    */
   async removeShop(shopId: string): Promise<void> {
-    if (!this.isAvailable || !SearchApi) return;
+    if (
+      !this.isAvailable ||
+      !SearchApi ||
+      typeof SearchApi.deleteSpotlightItem !== 'function'
+    ) {
+      return;
+    }
 
     try {
-      if (typeof SearchApi.deleteSpotlightItem === 'function') {
-        await SearchApi.deleteSpotlightItem(`shop:${shopId}`);
-      }
+      await SearchApi.deleteSpotlightItem(`shop:${shopId}`);
       this.indexedShopIds.delete(shopId);
     } catch (error) {
       console.error('Spotlight Search: Failed to remove shop', error);
@@ -262,12 +309,16 @@ class SpotlightSearchService {
    * Clear all indexed items by domain
    */
   async clearAllReceipts(): Promise<void> {
-    if (!this.isAvailable || !SearchApi) return;
+    if (
+      !this.isAvailable ||
+      !SearchApi ||
+      typeof SearchApi.deleteAllSpotlightItems !== 'function'
+    ) {
+      return;
+    }
 
     try {
-      if (typeof SearchApi.deleteAllSpotlightItems === 'function') {
-        await SearchApi.deleteAllSpotlightItems();
-      }
+      await SearchApi.deleteAllSpotlightItems();
       this.indexedReceiptIds.clear();
       this.indexedItemIds.clear();
       this.indexedShopIds.clear();

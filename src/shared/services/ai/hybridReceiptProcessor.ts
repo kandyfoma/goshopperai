@@ -1,13 +1,12 @@
 // Hybrid Receipt Processor Service
-// Integrates Python-based hybrid receipt extraction with React Native
+// Integrates local OCR with AI fallback for receipt extraction
 // Combines local OCR, rule-based extraction, and AI fallback
 
-import {NativeModules, Platform} from 'react-native';
-import auth from '@react-native-firebase/auth';
-import functions from '@react-native-firebase/functions';
+import {Platform} from 'react-native';
 import {Receipt, ReceiptItem, ReceiptScanResult} from '@/shared/types';
 import {generateUUID} from '@/shared/utils/helpers';
 import {ocrCorrectionService} from '../ocrCorrectionService';
+import {localOcrService} from './localOcrService';
 
 // Import existing Gemini service for fallback
 import {geminiService} from './gemini';
@@ -53,36 +52,6 @@ interface ValidationResult {
 }
 
 class HybridReceiptProcessor {
-  private pythonProcessor: any = null;
-
-  constructor() {
-    // Initialize Python processor if available
-    this.initializePythonProcessor();
-  }
-
-  private async initializePythonProcessor() {
-    try {
-      // For React Native, we'll use a bridge to Python
-      // This could be implemented via:
-      // 1. Native module calling Python subprocess
-      // 2. Separate Python server with HTTP API
-      // 3. Embedded Python runtime (limited support)
-
-      if (Platform.OS === 'android') {
-        // Android implementation - call Python via native module
-        this.pythonProcessor = NativeModules.ReceiptProcessor;
-      } else if (Platform.OS === 'ios') {
-        // iOS implementation
-        this.pythonProcessor = NativeModules.ReceiptProcessor;
-      }
-
-      console.log('Hybrid Receipt Processor initialized');
-    } catch (error) {
-      console.warn('Python processor not available, using Gemini fallback only');
-      this.pythonProcessor = null;
-    }
-  }
-
   /**
    * Process receipt using hybrid approach:
    * 1. Local OCR + Rule-based extraction (fast, cheap)
@@ -99,9 +68,21 @@ class HybridReceiptProcessor {
     try {
       console.log('Starting hybrid receipt processing...');
 
+      // Check if local OCR is available
+      if (!localOcrService.isAvailable()) {
+        console.log('Local OCR not available - using Gemini directly');
+        return await geminiService.parseReceipt(imageBase64, userId);
+      }
+
       // Phase 1: Attempt local processing first
       console.log('Phase 1: Local OCR processing...');
       const localResult = await this.processLocally(imageBase64);
+
+      // If local processing failed, go directly to Gemini
+      if (!localResult.success) {
+        console.log('Local OCR failed - using Gemini');
+        return await geminiService.parseReceipt(imageBase64, userId);
+      }
 
       // Phase 2: VALIDATE local results thoroughly
       console.log('Phase 2: Validating local OCR results...');
@@ -170,26 +151,12 @@ class HybridReceiptProcessor {
   }
 
   /**
-   * Process receipt using local Python processor
+   * Process receipt using local OCR service
    */
   private async processLocally(imageBase64: string): Promise<LocalProcessingResult> {
     try {
-      if (!this.pythonProcessor) {
-        return {
-          success: false,
-          confidence: 0.0,
-          error: 'Local processor not available'
-        };
-      }
-
-      // Convert base64 to temporary file path for Python processing
-      const imagePath = await this.saveBase64ToTempFile(imageBase64);
-
-      // Call Python processor via native bridge
-      const result = await this.pythonProcessor.processReceipt(imagePath);
-
-      // Clean up temp file
-      await this.cleanupTempFile(imagePath);
+      // Use the local OCR service to extract receipt data
+      const result = await localOcrService.extractReceiptData(imageBase64);
 
       return {
         success: result.success,
@@ -208,6 +175,7 @@ class HybridReceiptProcessor {
       return {
         success: false,
         confidence: 0.0,
+        items: [],
         error: error.message || 'Local processing failed'
       };
     }
@@ -388,6 +356,7 @@ class HybridReceiptProcessor {
 
   /**
    * Learn from Gemini corrections to improve local processing
+   * This can be used for future ML model training
    */
   private async learnFromGeminiCorrection(
     localResult: LocalProcessingResult,
@@ -395,30 +364,19 @@ class HybridReceiptProcessor {
     imageBase64: string
   ): Promise<void> {
     try {
-      if (!this.pythonProcessor?.learnFromCorrection) {
-        return; // Learning not available
-      }
-
-      // Extract OCR text from the image (if available from local processing)
-      const ocrText = localResult.error || 'Unknown receipt text';
-
-      // Send learning data to Python processor
-      await this.pythonProcessor.learnFromCorrection({
-        ocrText,
-        geminiResult: {
-          merchant: geminiResult.receipt?.storeName,
-          items: geminiResult.receipt?.items?.map(item => ({
-            name: item.name,
-            price: item.totalPrice / item.quantity,
-            quantity: item.quantity
-          })),
-          total: geminiResult.receipt?.total
-        },
-        localConfidence: localResult.confidence
+      // Log the correction for future analysis/training
+      console.log('Learning opportunity detected:', {
+        localMerchant: localResult.merchant,
+        geminiMerchant: geminiResult.receipt?.storeName,
+        localItemsCount: localResult.items?.length || 0,
+        geminiItemsCount: geminiResult.receipt?.items?.length || 0,
+        localTotal: localResult.total,
+        geminiTotal: geminiResult.receipt?.total
       });
 
-      console.log('Successfully learned from Gemini correction');
-
+      // TODO: Store this data for future ML model training
+      // Could send to Firebase for analysis or local storage
+      
     } catch (error) {
       console.warn('Learning from correction failed:', error);
       // Don't throw - learning failure shouldn't break the main flow
@@ -461,22 +419,6 @@ class HybridReceiptProcessor {
       updatedAt: now,
       scannedAt: now,
     };
-  }
-
-  /**
-   * Save base64 image to temporary file for Python processing
-   */
-  private async saveBase64ToTempFile(base64Data: string): Promise<string> {
-    // Implementation depends on React Native file system
-    // This would use RNFS or similar library
-    return 'temp_image.jpg'; // Placeholder
-  }
-
-  /**
-   * Clean up temporary file
-   */
-  private async cleanupTempFile(filePath: string): Promise<void> {
-    // Clean up temp file
   }
 
   /**

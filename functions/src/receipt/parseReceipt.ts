@@ -406,6 +406,8 @@ export const parseReceiptV2 = functions
         total:
           lastPage.total ||
           allItems.reduce((sum, item) => sum + item.totalPrice, 0),
+        totalUSD: lastPage.totalUSD || firstPage.totalUSD || null,
+        totalCDF: lastPage.totalCDF || firstPage.totalCDF || null,
       };
 
       // Get user profile to include city

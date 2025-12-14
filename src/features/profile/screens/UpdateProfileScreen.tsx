@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -66,7 +67,7 @@ const SEX_OPTIONS = [
 export function UpdateProfileScreen() {
   const navigation = useNavigation<NavigationProp>();
   const {user, isAuthenticated} = useAuth();
-  const {profile} = useUser();
+  const {profile, isLoading: profileLoading} = useUser();
   const {showToast} = useToast();
   const insets = useSafeAreaInsets();
 
@@ -76,8 +77,22 @@ export function UpdateProfileScreen() {
     }
   }, [isAuthenticated, navigation]);
 
-  if (!isAuthenticated) {
-    return null;
+  if (!isAuthenticated || profileLoading) {
+    return (
+      <SafeAreaView style={{flex: 1, backgroundColor: Colors.background.primary}}>
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={{
+            marginTop: Spacing.md,
+            fontSize: Typography.fontSize.base,
+            fontFamily: Typography.fontFamily.medium,
+            color: Colors.text.secondary,
+          }}>
+            {profileLoading ? 'Chargement du profil...' : 'Chargement...'}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   const [formData, setFormData] = useState({

@@ -15,9 +15,13 @@ export function generateUUID(): string {
  * Format currency for display
  */
 export function formatCurrency(
-  amount: number,
+  amount: number | null | undefined,
   currency: 'USD' | 'CDF' = 'USD',
 ): string {
+  if (amount == null || isNaN(amount)) {
+    return currency === 'CDF' ? '0 FC' : '$0.00';
+  }
+  
   if (currency === 'CDF') {
     return `${Math.round(amount).toLocaleString('fr-CD')} FC`;
   }
