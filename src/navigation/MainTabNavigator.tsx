@@ -16,7 +16,7 @@ import {Icon} from '@/shared/components';
 import {HomeScreen} from '@/features/home/screens';
 import {HistoryScreen} from '@/features/history/screens';
 import {UnifiedScannerScreen} from '@/features/scanner/screens';
-import {ItemsScreen} from '@/features/items';
+import {ItemsScreen, CityItemsScreen} from '@/features/items';
 import {ProfileScreen} from '@/features/profile/screens';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -109,7 +109,7 @@ export function MainTabNavigator() {
       />
       <Tab.Screen
         name="Items"
-        component={ItemsScreen}
+        component={CityItemsScreen}
         options={{
           tabBarIcon: ({focused}) => (
             <TabIcon focused={focused} icon="cart" label="Articles" />

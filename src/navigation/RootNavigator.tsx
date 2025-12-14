@@ -19,7 +19,7 @@ import {
   ProfileSetupScreen,
 } from '@/features/onboarding/screens';
 import {WelcomeScreen} from '@/features/onboarding/screens/WelcomeScreenSimple';
-import {SignInScreen} from '@/features/auth/screens/SignInScreen';
+import {LoginScreen as SignInScreen} from '@/features/onboarding/screens';
 import {
   UnifiedScannerScreen,
   ReceiptDetailScreen,
@@ -39,6 +39,8 @@ import {CitySelectionScreen} from '@/features/onboarding/screens';
 import {FAQScreen, PrivacyPolicyScreen, TermsOfServiceScreen} from '@/features/legal';
 import {ShopsScreen, ShopDetailScreen} from '@/features/shops';
 import {StatsScreen} from '@/features/stats/screens';
+import {CityItemsScreen} from '@/features/items/screens';
+import {ItemsScreen} from '@/features/items';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -327,6 +329,16 @@ export function RootNavigator() {
       <Stack.Screen
         name="TermsOfService"
         component={TermsOfServiceScreen}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="CityItems"
+        component={CityItemsScreen}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="Items"
+        component={ItemsScreen}
         options={{headerShown: false}}
       />
     </Stack.Navigator>

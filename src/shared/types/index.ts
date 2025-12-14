@@ -41,6 +41,8 @@ export type RootStackParamList = {
   FAQ: undefined;
   PrivacyPolicy: undefined;
   TermsOfService: undefined;
+  CityItems: undefined;
+  Items: undefined;
 };
 
 export type MainTabParamList = {

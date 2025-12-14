@@ -287,7 +287,11 @@ export function HomeScreen() {
   const {profile: userProfile} = useUser();
   const [selectedPeriod, setSelectedPeriod] = useState('This Month');
   const [monthlySpending, setMonthlySpending] = useState(0);
+  const [itemsCount, setItemsCount] = useState(0);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  // Determine display currency: use preferred currency if budget is set, otherwise USD
+  const displayCurrency = userProfile?.monthlyBudget ? userProfile.preferredCurrency : 'USD';
 
   useEffect(() => {
     analyticsService.logScreenView('Home', 'HomeScreen');
@@ -315,11 +319,11 @@ export function HomeScreen() {
         let total = 0;
         receiptsSnapshot.docs.forEach(doc => {
           const data = doc.data();
-          // Use the currency that matches user's budget preference
-          if (userProfile.preferredCurrency === 'CDF') {
-            total += data.totalCDF || 0;
+          // Use the currency that matches the display currency (budget currency or USD default)
+          if (displayCurrency === 'CDF') {
+            total += data.totalCDF || data.total || 0;
           } else {
-            total += data.totalUSD || 0;
+            total += data.totalUSD || data.total || 0;
           }
         });
 
@@ -330,7 +334,7 @@ export function HomeScreen() {
         widgetDataService.updateSpendingWidget({
           monthlyTotal: total,
           monthlyBudget: budget,
-          currency: userProfile?.preferredCurrency || 'USD',
+          currency: displayCurrency,
           lastUpdated: new Date().toISOString(),
           percentUsed: budget > 0 ? (total / budget) * 100 : 0,
         });
@@ -343,7 +347,45 @@ export function HomeScreen() {
     };
 
     fetchMonthlySpending();
-  }, [userProfile?.userId, userProfile?.preferredCurrency]);
+  }, [userProfile?.userId, displayCurrency]);
+
+  // Fetch items count
+  useEffect(() => {
+    const fetchItemsCount = async () => {
+      if (!userProfile?.userId) return;
+
+      try {
+        const receiptsSnapshot = await firestore()
+          .collection('artifacts')
+          .doc('goshopperai')
+          .collection('users')
+          .doc(userProfile.userId)
+          .collection('receipts')
+          .get();
+
+        const itemsSet = new Set<string>();
+
+        receiptsSnapshot.docs.forEach(doc => {
+          const receiptData = doc.data();
+          const items = receiptData.items || [];
+
+          items.forEach((item: any) => {
+            const itemName = item.name?.toLowerCase().trim();
+            if (itemName && (item.unitPrice || 0) > 0) {
+              itemsSet.add(itemName);
+            }
+          });
+        });
+
+        setItemsCount(itemsSet.size);
+      } catch (error) {
+        console.error('Error fetching items count:', error);
+        setItemsCount(0);
+      }
+    };
+
+    fetchItemsCount();
+  }, [userProfile?.userId]);
 
   const handleScanPress = () => {
     if (!canScan) {
@@ -576,11 +618,11 @@ export function HomeScreen() {
             />
             <StatCard
               title=""
-              value="0"
-              subtitle="articles"
+              value={itemsCount}
+              subtitle="mes articles"
               color="cosmos"
               icon="cart"
-              onPress={() => navigation.push('ShoppingList')}
+              onPress={() => navigation.push('Items')}
             />
           </View>
           <View style={styles.statsRow}>
@@ -588,8 +630,8 @@ export function HomeScreen() {
               title=""
               value={
                 userProfile?.monthlyBudget
-                  ? `${userProfile.monthlyBudget} ${userProfile?.preferredCurrency || 'USD'}`
-                  : `0 ${userProfile?.preferredCurrency || 'USD'}`
+                  ? `${userProfile.monthlyBudget} ${displayCurrency}`
+                  : `0 ${displayCurrency}`
               }
               subtitle="Budget Mensuel"
               color="yellow"
@@ -601,7 +643,7 @@ export function HomeScreen() {
               value={
                 isLoadingStats
                   ? '—'
-                  : `${monthlySpending.toFixed(0)} ${userProfile?.preferredCurrency || 'USD'}`
+                  : `${monthlySpending.toFixed(0)} ${displayCurrency}`
               }
               subtitle="Dépenses Totales"
               color="yellow"
@@ -640,6 +682,12 @@ export function HomeScreen() {
             label="Mes succès"
             onPress={() => navigation.push('Achievements')}
             color="blue"
+          />
+          <QuickAction
+            icon="cart"
+            label="Mes listes"
+            onPress={() => navigation.push('ShoppingList')}
+            color="crimson"
           />
           <QuickAction
             icon="settings"
