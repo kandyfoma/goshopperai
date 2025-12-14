@@ -37,7 +37,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSpendingSuggestions = exports.processNLQuery = exports.checkSubscriptionExpiration = exports.sendAdminBroadcast = exports.sendSyncCompleteNotification = exports.sendAchievementNotification = exports.sendWeeklySavingsTips = exports.getUserAlerts = exports.createPriceAlert = exports.scheduledAlertCheck = exports.checkPriceAlerts = exports.checkIdentifierAvailability = exports.completeRegistration = exports.verifyCode = exports.sendVerificationCode = exports.getSmartPriceComparison = exports.getPriceHistory = exports.getPriceComparison = exports.savePriceData = exports.getUserStats = exports.extendTrial = exports.checkExpiredSubscriptions = exports.cancelSubscription = exports.getSubscriptionPricing = exports.renewSubscription = exports.upgradeSubscription = exports.recordScanUsage = exports.getSubscriptionStatus = exports.stripeWebhook = exports.confirmCardPayment = exports.createCardPaymentIntent = exports.mokoPaymentWebhook = exports.verifyMokoPayment = exports.initiateMokoPayment = exports.quickExtractReceipt = exports.parseReceiptV2 = exports.parseReceipt = void 0;
+exports.rebuildItemsAggregation = exports.aggregateItemsOnReceipt = exports.getSpendingSuggestions = exports.processNLQuery = exports.checkSubscriptionExpiration = exports.sendAdminBroadcast = exports.sendSyncCompleteNotification = exports.sendAchievementNotification = exports.sendWeeklySavingsTips = exports.getUserAlerts = exports.createPriceAlert = exports.scheduledAlertCheck = exports.checkPriceAlerts = exports.checkIdentifierAvailability = exports.completeRegistration = exports.verifyCode = exports.sendVerificationCode = exports.getSmartPriceComparison = exports.getPriceHistory = exports.getPriceComparison = exports.savePriceData = exports.getUserStats = exports.extendTrial = exports.checkExpiredSubscriptions = exports.cancelSubscription = exports.getSubscriptionPricing = exports.renewSubscription = exports.upgradeSubscription = exports.recordScanUsage = exports.getSubscriptionStatus = exports.stripeWebhook = exports.confirmCardPayment = exports.createCardPaymentIntent = exports.mokoPaymentWebhook = exports.verifyMokoPayment = exports.initiateMokoPayment = exports.quickExtractReceipt = exports.parseReceiptV2 = exports.parseReceipt = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin
 if (!admin.apps.length) {
@@ -106,4 +106,8 @@ Object.defineProperty(exports, "checkSubscriptionExpiration", { enumerable: true
 var naturalLanguage_1 = require("./assistant/naturalLanguage");
 Object.defineProperty(exports, "processNLQuery", { enumerable: true, get: function () { return naturalLanguage_1.processNLQuery; } });
 Object.defineProperty(exports, "getSpendingSuggestions", { enumerable: true, get: function () { return naturalLanguage_1.getSpendingSuggestions; } });
+// Item Aggregation functions
+var itemAggregation_1 = require("./items/itemAggregation");
+Object.defineProperty(exports, "aggregateItemsOnReceipt", { enumerable: true, get: function () { return itemAggregation_1.aggregateItemsOnReceipt; } });
+Object.defineProperty(exports, "rebuildItemsAggregation", { enumerable: true, get: function () { return itemAggregation_1.rebuildItemsAggregation; } });
 //# sourceMappingURL=index.js.map

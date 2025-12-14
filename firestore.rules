@@ -33,11 +33,9 @@ service cloud.firestore {
           allow read, write: if isOwner(userId);
         }
         
-        // User's receipts
+        // User's receipts - allow owner to read AND write
         match /receipts/{receiptId} {
-          allow read: if isOwner(userId);
-          // Only Cloud Functions can write receipts (after parsing)
-          allow write: if false;
+          allow read, write: if isOwner(userId);
         }
         
         // User's shops (aggregated from receipts)
@@ -47,7 +45,7 @@ service cloud.firestore {
           allow write: if false;
         }
         
-        // User's items (aggregated from receipts)
+        // User's items (aggregated from receipts) - NEW
         match /items/{itemId} {
           allow read: if isOwner(userId);
           // Only Cloud Functions can write item data
@@ -79,6 +77,12 @@ service cloud.firestore {
       
       // Public store data - anyone authenticated can read
       match /public/stores/{document=**} {
+        allow read: if isAuthenticated();
+        allow write: if false;
+      }
+      
+      // Alternative public data structure
+      match /public/data/stores/{storeId} {
         allow read: if isAuthenticated();
         allow write: if false;
       }

@@ -36,6 +36,11 @@ export type {
 export {savingsTrackerService} from './savingsTracker';
 export type {SavingsRecord, Achievement, UserStats} from './savingsTracker';
 
+// Items Service
+export {itemsService} from './itemsService';
+export type {AggregatedItem, ItemPrice} from './itemsService';
+export {migrateItemsAggregation, needsItemsMigration} from './itemsMigration';
+
 // Phase 1.2 Services
 export {shoppingListService} from './shoppingList';
 export type {

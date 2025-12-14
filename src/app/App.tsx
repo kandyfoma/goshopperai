@@ -15,7 +15,7 @@ import {UserProvider} from '@/shared/contexts/UserContext';
 import {SubscriptionProvider} from '@/shared/contexts/SubscriptionContext';
 import {ThemeProvider} from '@/shared/contexts/ThemeContext';
 import {ToastProvider} from '@/shared/contexts/ToastContext';
-import {NetworkBanner, useNetwork, OfflineBanner, SplashScreen} from '@/shared/components';
+import {OfflineBanner, SplashScreen} from '@/shared/components';
 import {initializeFirebase} from '@/shared/services/firebase/config';
 import {analyticsService} from '@/shared/services';
 import {pushNotificationService} from '@/shared/services/firebase';
@@ -28,8 +28,6 @@ LogBox.ignoreLogs([
 ]);
 
 function NetworkAwareApp(): React.JSX.Element {
-  const networkState = useNetwork();
-
   return (
     <GestureHandlerRootView style={{flex: 1}}>
       <SafeAreaProvider>
@@ -39,7 +37,6 @@ function NetworkAwareApp(): React.JSX.Element {
               <SubscriptionProvider>
                 <ToastProvider>
                   <NavigationContainer>
-                    <NetworkBanner networkState={networkState} />
                     <OfflineBanner />
                     <StatusBar
                       barStyle="dark-content"

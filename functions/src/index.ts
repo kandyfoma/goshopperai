@@ -84,3 +84,9 @@ export {
   processNLQuery,
   getSpendingSuggestions,
 } from './assistant/naturalLanguage';
+
+// Item Aggregation functions
+export {
+  aggregateItemsOnReceipt,
+  rebuildItemsAggregation,
+} from './items/itemAggregation';

@@ -3,6 +3,7 @@ import firebase from '@react-native-firebase/app';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import storage from '@react-native-firebase/storage';
+import functions from '@react-native-firebase/functions';
 
 // Firebase configuration is handled by google-services.json (Android)
 // and GoogleService-Info.plist (iOS)
@@ -40,6 +41,12 @@ export const initializeFirebase = async (): Promise<void> => {
 export const firebaseAuth = auth;
 export const firebaseFirestore = firestore;
 export const firebaseStorage = storage;
+export const firebaseFunctions = functions;
+
+// Get functions instance with region
+export const getFunctionsInstance = () => {
+  return functions();
+};
 
 // App ID for artifact paths
 export const APP_ID = 'goshopperai';
@@ -54,5 +61,5 @@ export const COLLECTIONS = {
   subscriptionStatus: (userId: string) =>
     `artifacts/${APP_ID}/users/${userId}/subscription/status`,
   prices: `artifacts/${APP_ID}/prices`,
-  stores: '', // Disabled - stores collection not yet configured
+  stores: `artifacts/${APP_ID}/public/stores`,
 } as const;

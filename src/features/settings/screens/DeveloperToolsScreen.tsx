@@ -1,0 +1,265 @@
+/**
+ * Developer Tools Screen
+ * Utilities for testing and debugging
+ */
+
+import React, {useState} from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import {
+  Colors,
+  Typography,
+  Spacing,
+  BorderRadius,
+  Shadows,
+} from '@/shared/theme/theme';
+import {Icon} from '@/shared/components';
+import {useAuth} from '@/shared/contexts';
+import {itemsService, migrateItemsAggregation} from '@/shared/services/firebase';
+
+export function DeveloperToolsScreen() {
+  const navigation = useNavigation();
+  const {user} = useAuth();
+  const [isMigrating, setIsMigrating] = useState(false);
+
+  const handleMigrateItems = async () => {
+    Alert.alert(
+      'Rebuild Items Aggregation',
+      'This will rebuild all item statistics from your receipts. This may take a few minutes if you have many receipts. Continue?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Rebuild',
+          style: 'default',
+          onPress: async () => {
+            try {
+              setIsMigrating(true);
+              const result = await migrateItemsAggregation();
+              Alert.alert(
+                'Migration Complete!',
+                `Successfully aggregated ${result.itemsCount} items from ${result.receiptsProcessed} receipts.`,
+                [{text: 'OK'}],
+              );
+            } catch (error) {
+              console.error('Migration error:', error);
+              Alert.alert(
+                'Migration Failed',
+                'Failed to rebuild items. Please try again later.',
+                [{text: 'OK'}],
+              );
+            } finally {
+              setIsMigrating(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleClearItemsCache = async () => {
+    if (!user?.uid) return;
+
+    Alert.alert(
+      'Clear Items Cache',
+      'This will clear the local cache and force a fresh load from the server. Continue?',
+      [
+        {text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await itemsService.clearCache(user.uid);
+              Alert.alert(
+                'Cache Cleared',
+                'Items cache has been cleared. The next load will fetch fresh data.',
+                [{text: 'OK'}],
+              );
+            } catch (error) {
+              console.error('Clear cache error:', error);
+              Alert.alert('Error', 'Failed to clear cache.', [{text: 'OK'}]);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}>
+          <Icon name="arrow-left" size="sm" color={Colors.text.primary} />
+        </TouchableOpacity>
+        <Text style={styles.title}>Developer Tools</Text>
+        <View style={styles.placeholder} />
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Items Aggregation</Text>
+          <Text style={styles.sectionDescription}>
+            Tools for managing item statistics and aggregation
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.toolButton, isMigrating && styles.toolButtonDisabled]}
+            onPress={handleMigrateItems}
+            disabled={isMigrating}
+            activeOpacity={0.8}>
+            <View style={styles.toolIcon}>
+              {isMigrating ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <Icon name="refresh-cw" size="md" color={Colors.primary} />
+              )}
+            </View>
+            <View style={styles.toolInfo}>
+              <Text style={styles.toolTitle}>Rebuild Items Aggregation</Text>
+              <Text style={styles.toolDescription}>
+                {isMigrating
+                  ? 'Rebuilding items from receipts...'
+                  : 'Recalculate all item statistics from your receipts'}
+              </Text>
+            </View>
+            <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.toolButton}
+            onPress={handleClearItemsCache}
+            activeOpacity={0.8}>
+            <View style={styles.toolIcon}>
+              <Icon name="trash-2" size="md" color={Colors.status.warning} />
+            </View>
+            <View style={styles.toolInfo}>
+              <Text style={styles.toolTitle}>Clear Items Cache</Text>
+              <Text style={styles.toolDescription}>
+                Remove cached items and force fresh load
+              </Text>
+            </View>
+            <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.infoBox}>
+          <Icon name="info" size="sm" color={Colors.primary} />
+          <Text style={styles.infoText}>
+            These tools are for development and testing purposes. Use them only
+            if you're experiencing issues with item data.
+          </Text>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background.primary,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    backgroundColor: Colors.white,
+    ...Shadows.sm,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.background.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+  },
+  placeholder: {
+    width: 40,
+  },
+  content: {
+    flex: 1,
+    padding: Spacing.lg,
+  },
+  section: {
+    marginBottom: Spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
+  },
+  sectionDescription: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.tertiary,
+    marginBottom: Spacing.md,
+  },
+  toolButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    ...Shadows.sm,
+  },
+  toolButtonDisabled: {
+    opacity: 0.6,
+  },
+  toolIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.background.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  toolInfo: {
+    flex: 1,
+  },
+  toolTitle: {
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
+  },
+  toolDescription: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.tertiary,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    backgroundColor: Colors.card.blue,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
+    lineHeight: Typography.fontSize.sm * 1.5,
+  },
+});
