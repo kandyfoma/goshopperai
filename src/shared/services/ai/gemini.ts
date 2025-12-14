@@ -243,39 +243,50 @@ class GeminiService {
     // Use the Firestore receipt ID if provided, otherwise generate a new one
     const receiptId = firestoreReceiptId || generateUUID();
 
-    // Transform items
-    const items: ReceiptItem[] = data.items.map((item, index) => ({
-      id: `${receiptId}-item-${index}`,
-      name: ocrCorrectionService.correctProductName(item.name),
-      nameNormalized: this.normalizeProductName(item.name),
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      totalPrice: item.totalPrice,
-      unit: item.unit,
-      category: item.category,
-      confidence: item.confidence,
-    }));
+    // Transform items - filter out undefined fields
+    const items: ReceiptItem[] = data.items.map((item, index) => {
+      const receiptItem: any = {
+        id: `${receiptId}-item-${index}`,
+        name: ocrCorrectionService.correctProductName(item.name),
+        nameNormalized: this.normalizeProductName(item.name),
+        quantity: item.quantity || 1,
+        unitPrice: item.unitPrice || 0,
+        totalPrice: item.totalPrice || 0,
+        confidence: item.confidence || 0.5,
+      };
 
-    return {
+      // Only add optional fields if they have values
+      if (item.unit) receiptItem.unit = item.unit;
+      if (item.category) receiptItem.category = item.category;
+
+      return receiptItem as ReceiptItem;
+    });
+
+    // Create receipt object with only defined fields
+    const receipt: any = {
       id: receiptId,
       userId,
-      storeName: data.storeName,
-      storeNameNormalized: this.normalizeStoreName(data.storeName),
-      storeAddress: data.storeAddress,
-      storePhone: data.storePhone,
-      receiptNumber: data.receiptNumber,
+      storeName: data.storeName || 'Magasin inconnu',
+      storeNameNormalized: this.normalizeStoreName(data.storeName || 'magasin-inconnu'),
       date: new Date(data.date),
-      currency: data.currency,
+      currency: data.currency || 'CDF',
       items,
-      subtotal: data.subtotal,
-      tax: data.tax,
-      total: data.total,
-      rawText: data.rawText,
+      total: data.total || 0,
       processingStatus: 'completed',
       createdAt: now,
       updatedAt: now,
       scannedAt: now,
     };
+
+    // Only add optional fields if they have values
+    if (data.storeAddress) receipt.storeAddress = data.storeAddress;
+    if (data.storePhone) receipt.storePhone = data.storePhone;
+    if (data.receiptNumber) receipt.receiptNumber = data.receiptNumber;
+    if (data.subtotal !== undefined) receipt.subtotal = data.subtotal;
+    if (data.tax !== undefined) receipt.tax = data.tax;
+    if (data.rawText) receipt.rawText = data.rawText;
+
+    return receipt as Receipt;
   }
 
   /**

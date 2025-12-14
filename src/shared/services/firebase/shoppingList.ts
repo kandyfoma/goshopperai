@@ -3,6 +3,7 @@
 import firestore from '@react-native-firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {APP_ID} from './config';
+import {safeToDate} from '@/shared/utils/helpers';
 
 const SHOPPING_LISTS_COLLECTION = (userId: string) =>
   `apps/${APP_ID}/users/${userId}/shoppingLists`;
@@ -175,19 +176,13 @@ class ShoppingListService {
     return {
       ...data,
       id: doc.id,
-      createdAt: data.createdAt?.toDate() || new Date(),
-      updatedAt: data.updatedAt?.toDate() || new Date(),
-      completedAt: data.completedAt?.toDate(),
+      createdAt: safeToDate(data.createdAt) || new Date(),
+      updatedAt: safeToDate(data.updatedAt) || new Date(),
+      completedAt: data.completedAt ? safeToDate(data.completedAt) : undefined,
       items: (data.items || []).map((item: any) => ({
         ...item,
-        addedAt: item.addedAt?.toDate
-          ? item.addedAt.toDate()
-          : new Date(item.addedAt),
-        checkedAt: item.checkedAt?.toDate
-          ? item.checkedAt.toDate()
-          : item.checkedAt
-          ? new Date(item.checkedAt)
-          : undefined,
+        addedAt: safeToDate(item.addedAt) || new Date(),
+        checkedAt: item.checkedAt ? safeToDate(item.checkedAt) : undefined,
       })),
     };
   }

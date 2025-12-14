@@ -21,8 +21,9 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon, EmptyState} from '@/shared/components';
-import {formatCurrency, formatDate} from '@/shared/utils/helpers';
+import {formatCurrency, formatDate, safeToDate} from '@/shared/utils/helpers';
 import {useAuth} from '@/shared/contexts';
+import {APP_ID} from '@/shared/services/firebase/config';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type ShopDetailRouteProp = RouteProp<RootStackParamList, 'ShopDetail'>;
@@ -52,7 +53,7 @@ export function ShopDetailScreen() {
 
       const receiptsSnapshot = await firestore()
         .collection('artifacts')
-        .doc('goshopperai')
+        .doc(APP_ID)
         .collection('users')
         .doc(user.uid)
         .collection('receipts')
@@ -70,7 +71,7 @@ export function ShopDetailScreen() {
           storeAddress: data.storeAddress,
           storePhone: data.storePhone,
           receiptNumber: data.receiptNumber,
-          date: data.scannedAt?.toDate() || new Date(),
+          date: safeToDate(data.scannedAt),
           currency: data.currency || 'USD',
           items: (data.items || []).map((item: any) => ({
             id: item.id || Math.random().toString(36).substring(7),
@@ -89,9 +90,9 @@ export function ShopDetailScreen() {
           totalUSD: data.totalUSD,
           totalCDF: data.totalCDF,
           processingStatus: data.processingStatus || 'completed',
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-          scannedAt: data.scannedAt?.toDate() || new Date(),
+          createdAt: safeToDate(data.createdAt),
+          updatedAt: safeToDate(data.updatedAt),
+          scannedAt: safeToDate(data.scannedAt),
         };
       });
 

@@ -216,10 +216,12 @@ export function UnifiedScannerScreen() {
   // Success animation
   useEffect(() => {
     if (state === 'success') {
-      // Trigger confetti explosion
-      if (confettiRef.current) {
-        confettiRef.current.start();
-      }
+      // Small delay to ensure confetti component is mounted
+      setTimeout(() => {
+        if (confettiRef.current) {
+          confettiRef.current.start();
+        }
+      }, 100);
       
       Animated.sequence([
         Animated.spring(bounceAnim, {
@@ -860,16 +862,18 @@ export function UnifiedScannerScreen() {
         )}
       </ScrollView>
       
-      {/* Confetti Cannon - Celebration! */}
-      <ConfettiCannon
-        ref={confettiRef}
-        count={200}
-        origin={{x: SCREEN_WIDTH / 2, y: SCREEN_HEIGHT / 2}}
-        autoStart={false}
-        fadeOut={true}
-        fallSpeed={3000}
-        colors={['#FFD700', '#FFA500', '#FF6347', '#32CD32', '#1E90FF', '#FF69B4']}
-      />
+      {/* Confetti Cannon - Celebration! Only render when successful */}
+      {state === 'success' && (
+        <ConfettiCannon
+          ref={confettiRef}
+          count={200}
+          origin={{x: SCREEN_WIDTH / 2, y: SCREEN_HEIGHT / 2}}
+          autoStart={false}
+          fadeOut={true}
+          fallSpeed={3000}
+          colors={['#FFD700', '#FFA500', '#FF6347', '#32CD32', '#1E90FF', '#FF69B4']}
+        />
+      )}
       </View>
     </SafeAreaView>
   );

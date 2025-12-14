@@ -166,3 +166,58 @@ export function safeJsonParse<T>(json: string, fallback: T): T {
     return fallback;
   }
 }
+
+/**
+ * Safely convert Firestore timestamp or other date formats to Date
+ * Handles: Firestore Timestamp, serialized timestamps from Cloud Functions, Date objects, strings, numbers
+ */
+export function safeToDate(value: any): Date {
+  if (!value) {
+    return new Date();
+  }
+
+  // Firestore Timestamp with toDate method
+  if (value.toDate && typeof value.toDate === 'function') {
+    try {
+      return value.toDate();
+    } catch (error) {
+      return new Date();
+    }
+  }
+
+  // Serialized Firestore timestamp (from Cloud Functions response)
+  if (value._type === 'timestamp' || value._seconds !== undefined) {
+    try {
+      const seconds = value._seconds || value.seconds || 0;
+      const nanoseconds = value._nanoseconds || value.nanoseconds || 0;
+      return new Date(seconds * 1000 + nanoseconds / 1000000);
+    } catch (error) {
+      return new Date();
+    }
+  }
+
+  // Firestore Timestamp-like object with seconds/nanoseconds
+  if (typeof value.seconds === 'number') {
+    try {
+      return new Date(value.seconds * 1000 + (value.nanoseconds || 0) / 1000000);
+    } catch (error) {
+      return new Date();
+    }
+  }
+
+  // Already a Date object
+  if (value instanceof Date) {
+    return value;
+  }
+
+  // String or number
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      return date;
+    }
+  }
+
+  // Fallback
+  return new Date();
+}

@@ -24,9 +24,11 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon, FadeIn, SlideIn} from '@/shared/components';
-import {formatCurrency} from '@/shared/utils/helpers';
+import {formatCurrency, safeToDate} from '@/shared/utils/helpers';
 import {useAuth, useUser} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
+import {productSearchService} from '@/shared/services/productSearchService';
+import {APP_ID} from '@/shared/services/firebase/config';
 
 interface ItemData {
   id: string;
@@ -100,7 +102,7 @@ export function ItemsScreen() {
       // Get all receipts for the user (not filtered by city since receipts may not have city field)
       const receiptsSnapshot = await firestore()
         .collection('artifacts')
-        .doc('goshopperai')
+        .doc(APP_ID)
         .collection('users')
         .doc(user.uid)
         .collection('receipts')
@@ -142,7 +144,7 @@ export function ItemsScreen() {
             storeName: receiptData.storeName || 'Inconnu',
             price: price,
             currency: receiptData.currency || 'USD',
-            date: receiptData.scannedAt?.toDate() || new Date(),
+            date: safeToDate(receiptData.scannedAt),
             receiptId: doc.id,
           });
 
@@ -185,16 +187,21 @@ export function ItemsScreen() {
       return;
     }
 
-    const query = searchQuery.toLowerCase().trim();
-    const filtered = items.filter(item =>
-      item.name.toLowerCase().includes(query),
-    );
+    const searchResults = productSearchService.searchItems(items, searchQuery);
+    const filtered = searchResults.map(result => result.item);
+
     setFilteredItems(filtered);
 
-    // Track item search
+    // Track item search with match types
+    const matchTypeCounts = searchResults.reduce((acc, result) => {
+      acc[result.matchType] = (acc[result.matchType] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
     analyticsService.logCustomEvent('item_search', {
-      query: query,
+      query: searchQuery,
       results_count: filtered.length,
+      match_types: matchTypeCounts,
     });
   };
 
@@ -309,10 +316,8 @@ export function ItemsScreen() {
                             return 'Date inconnue';
                           }
 
-                          // Handle Firestore Timestamp
-                          const jsDate = date.toDate
-                            ? date.toDate()
-                            : new Date(date);
+                          // Use safeToDate for all timestamp conversions
+                          const jsDate = safeToDate(date);
                           return jsDate.toLocaleDateString('fr-FR', {
                             day: 'numeric',
                             month: 'short',

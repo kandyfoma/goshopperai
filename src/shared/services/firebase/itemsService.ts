@@ -9,6 +9,7 @@ import firestore, {
 import functions from '@react-native-firebase/functions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {APP_ID} from './config';
+import {safeToDate} from '@/shared/utils/helpers';
 
 const ITEMS_CACHE_KEY = 'items_cache';
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -278,7 +279,7 @@ class ItemsService {
         storeName: p.storeName,
         price: p.price,
         currency: p.currency,
-        date: p.date?.toDate() || new Date(),
+        date: safeToDate(p.date),
         receiptId: p.receiptId,
       })),
       minPrice: data.minPrice || 0,
@@ -287,9 +288,9 @@ class ItemsService {
       storeCount: data.storeCount || 0,
       currency: data.currency || 'USD',
       totalPurchases: data.totalPurchases || 0,
-      lastPurchaseDate: data.lastPurchaseDate?.toDate() || new Date(),
-      createdAt: data.createdAt?.toDate() || new Date(),
-      updatedAt: data.updatedAt?.toDate() || new Date(),
+      lastPurchaseDate: safeToDate(data.lastPurchaseDate),
+      createdAt: safeToDate(data.createdAt),
+      updatedAt: safeToDate(data.updatedAt),
     };
   }
 

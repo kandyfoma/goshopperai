@@ -2,11 +2,12 @@
 import firestore from '@react-native-firebase/firestore';
 import {APP_ID} from './config';
 import {authService} from './auth';
+import {safeToDate} from '@/shared/utils/helpers';
 
 const ALERTS_COLLECTION = (userId: string) =>
-  `artifacts/goshopperai/users/${userId}/priceAlerts`;
+  `artifacts/${APP_ID}/users/${userId}/priceAlerts`;
 
-const PRICES_COLLECTION = 'artifacts/goshopperai/prices';
+const PRICES_COLLECTION = `artifacts/${APP_ID}/prices`;
 
 export interface PriceAlert {
   id: string;
@@ -165,9 +166,9 @@ class PriceAlertsService {
     return snapshot.docs.map((doc: any) => ({
       ...doc.data(),
       id: doc.id,
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-      triggeredAt: doc.data().triggeredAt?.toDate(),
+      createdAt: safeToDate(doc.data().createdAt) || new Date(),
+      updatedAt: safeToDate(doc.data().updatedAt) || new Date(),
+      triggeredAt: doc.data().triggeredAt ? safeToDate(doc.data().triggeredAt) : undefined,
     })) as PriceAlert[];
   }
 
@@ -188,9 +189,9 @@ class PriceAlertsService {
     return {
       ...data,
       id: doc.id,
-      createdAt: data.createdAt?.toDate() || new Date(),
-      updatedAt: data.updatedAt?.toDate() || new Date(),
-      triggeredAt: data.triggeredAt?.toDate(),
+      createdAt: safeToDate(data.createdAt) || new Date(),
+      updatedAt: safeToDate(data.updatedAt) || new Date(),
+      triggeredAt: data.triggeredAt ? safeToDate(data.triggeredAt) : undefined,
     } as PriceAlert;
   }
 
@@ -212,9 +213,9 @@ class PriceAlertsService {
     return snapshot.docs.map(doc => ({
       ...doc.data(),
       id: doc.id,
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-      triggeredAt: doc.data().triggeredAt?.toDate(),
+      createdAt: safeToDate(doc.data().createdAt) || new Date(),
+      updatedAt: safeToDate(doc.data().updatedAt) || new Date(),
+      triggeredAt: doc.data().triggeredAt ? safeToDate(doc.data().triggeredAt) : undefined,
     })) as PriceAlert[];
   }
 
@@ -286,9 +287,9 @@ class PriceAlertsService {
           const alerts = snapshot.docs.map(doc => ({
             ...doc.data(),
             id: doc.id,
-            createdAt: doc.data().createdAt?.toDate() || new Date(),
-            updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-            triggeredAt: doc.data().triggeredAt?.toDate(),
+            createdAt: safeToDate(doc.data().createdAt) || new Date(),
+            updatedAt: safeToDate(doc.data().updatedAt) || new Date(),
+            triggeredAt: doc.data().triggeredAt ? safeToDate(doc.data().triggeredAt) : undefined,
           })) as PriceAlert[];
 
           callback(alerts);
@@ -313,9 +314,9 @@ class PriceAlertsService {
     return snapshot.docs.map(doc => ({
       ...doc.data(),
       id: doc.id,
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-      triggeredAt: doc.data().triggeredAt?.toDate(),
+      createdAt: safeToDate(doc.data().createdAt) || new Date(),
+      updatedAt: safeToDate(doc.data().updatedAt) || new Date(),
+      triggeredAt: doc.data().triggeredAt ? safeToDate(doc.data().triggeredAt) : undefined,
     })) as PriceAlert[];
   }
 

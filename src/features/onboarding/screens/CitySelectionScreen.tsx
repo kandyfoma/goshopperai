@@ -22,6 +22,7 @@ import {
 } from '@/shared/theme/theme';
 import {Icon} from '@/shared/components';
 import firestore from '@react-native-firebase/firestore';
+import {APP_ID} from '@/shared/services/firebase/config';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -133,7 +134,7 @@ export function CitySelectionScreen() {
       // Update user profile with selected city
       await firestore()
         .collection('artifacts')
-        .doc('goshopperai')
+        .doc(APP_ID)
         .collection('users')
         .doc(user.uid)
         .set(

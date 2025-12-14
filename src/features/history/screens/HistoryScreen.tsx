@@ -16,6 +16,7 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import firestore from '@react-native-firebase/firestore';
+import {APP_ID} from '@/shared/services/firebase/config';
 import {Receipt, RootStackParamList} from '@/shared/types';
 import {
   Colors,
@@ -25,11 +26,12 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon, FadeIn, SlideIn, EmptyState, SwipeToDelete} from '@/shared/components';
-import {formatCurrency, formatDate} from '@/shared/utils/helpers';
+import {formatCurrency, formatDate, safeToDate} from '@/shared/utils/helpers';
 import {useAuth} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
 import {spotlightSearchService, offlineService} from '@/shared/services';
 import {useIsOnline} from '@/shared/hooks';
+import {APP_ID} from '@/shared/services/firebase/config';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -71,7 +73,7 @@ export function HistoryScreen() {
 
       const receiptsSnapshot = await firestore()
         .collection('artifacts')
-        .doc('goshopperai')
+        .doc(APP_ID)
         .collection('users')
         .doc(user.uid)
         .collection('receipts')
@@ -106,10 +108,7 @@ export function HistoryScreen() {
           storeAddress: data.storeAddress,
           storePhone: data.storePhone,
           receiptNumber: data.receiptNumber,
-          date: data.scannedAt?.toDate() || 
-                (data.date && typeof data.date.toDate === 'function' ? data.date.toDate() : 
-                 data.date && typeof data.date === 'object' && data.date.seconds ? new Date(data.date.seconds * 1000) :
-                 new Date()),
+          date: safeToDate(data.scannedAt || data.date),
           currency: data.currency || 'USD',
           items: processedItems,
           subtotal: data.subtotal,
@@ -118,9 +117,9 @@ export function HistoryScreen() {
           totalUSD: data.totalUSD,
           totalCDF: data.totalCDF,
           processingStatus: data.processingStatus || 'completed',
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
-          scannedAt: data.scannedAt?.toDate() || new Date(),
+          createdAt: safeToDate(data.createdAt) || new Date(),
+          updatedAt: safeToDate(data.updatedAt) || new Date(),
+          scannedAt: safeToDate(data.scannedAt) || new Date(),
         };
       });
 
@@ -245,7 +244,7 @@ export function HistoryScreen() {
       try {
         await firestore()
           .collection('artifacts')
-          .doc('goshopperai')
+          .doc(APP_ID)
           .collection('users')
           .doc(user.uid)
           .collection('receipts')

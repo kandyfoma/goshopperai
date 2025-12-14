@@ -20,10 +20,11 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon, FadeIn, SlideIn} from '@/shared/components';
-import {formatCurrency} from '@/shared/utils/helpers';
+import {formatCurrency, safeToDate} from '@/shared/utils/helpers';
 import {useAuth, useUser} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
 import {globalSettingsService} from '@/shared/services/globalSettingsService';
+import {APP_ID} from '@/shared/services/firebase/config';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
@@ -88,7 +89,7 @@ export function StatsScreen() {
 
       const receiptsSnapshot = await firestore()
         .collection('artifacts')
-        .doc('goshopperai')
+        .doc(APP_ID)
         .collection('users')
         .doc(user.uid)
         .collection('receipts')
@@ -98,7 +99,7 @@ export function StatsScreen() {
       // Filter for current month receipts in memory
       const currentMonthReceipts = receiptsSnapshot.docs.filter(doc => {
         const data = doc.data();
-        const scannedAt = data.scannedAt?.toDate();
+        const scannedAt = safeToDate(data.scannedAt);
         return scannedAt && scannedAt >= startOfMonth;
       });
 
@@ -250,7 +251,7 @@ export function StatsScreen() {
       const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
       const allReceiptsSnapshot = await firestore()
         .collection('artifacts')
-        .doc('goshopperai')
+        .doc(APP_ID)
         .collection('users')
         .doc(user.uid)
         .collection('receipts')
@@ -260,13 +261,13 @@ export function StatsScreen() {
       // Filter for last 3 months in memory
       const lastThreeMonthsReceipts = allReceiptsSnapshot.docs.filter(doc => {
         const data = doc.data();
-        const scannedAt = data.scannedAt?.toDate();
+        const scannedAt = safeToDate(data.scannedAt);
         return scannedAt && scannedAt >= threeMonthsAgo;
       });
 
       lastThreeMonthsReceipts.forEach(doc => {
         const data = doc.data();
-        const date = data.scannedAt?.toDate() || new Date();
+        const date = safeToDate(data.scannedAt);
         const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
         if (monthlyTotals[monthKey] !== undefined) {
           // Use the user's preferred currency for monthly totals

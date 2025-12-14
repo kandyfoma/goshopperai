@@ -17,6 +17,8 @@ import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme
 import {Icon} from '@/shared/components';
 import {formatDistanceToNow} from 'date-fns';
 import {fr} from 'date-fns/locale';
+import {safeToDate} from '@/shared/utils/helpers';
+import {APP_ID} from '@/shared/services/firebase/config';
 
 interface Notification {
   id: string;
@@ -43,7 +45,7 @@ export function NotificationsScreen() {
     // Fetch notifications from Firestore
     const unsubscribe = firestore()
       .collection('artifacts')
-      .doc('goshopperai')
+      .doc(APP_ID)
       .collection('users')
       .doc(user.uid)
       .collection('notifications')
@@ -54,7 +56,7 @@ export function NotificationsScreen() {
           const notifs: Notification[] = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
-            timestamp: doc.data().timestamp?.toDate() || new Date(),
+            timestamp: safeToDate(doc.data().timestamp) || new Date(),
           })) as Notification[];
           setNotifications(notifs);
           setLoading(false);
@@ -84,7 +86,7 @@ export function NotificationsScreen() {
               const batch = firestore().batch();
               const notifRef = firestore()
                 .collection('artifacts')
-                .doc('goshopperai')
+                .doc(APP_ID)
                 .collection('users')
                 .doc(user.uid)
                 .collection('notifications');
@@ -113,7 +115,7 @@ export function NotificationsScreen() {
 
       await firestore()
         .collection('artifacts')
-        .doc('goshopperai')
+        .doc(APP_ID)
         .collection('users')
         .doc(user.uid)
         .collection('notifications')

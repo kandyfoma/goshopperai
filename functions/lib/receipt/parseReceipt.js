@@ -62,7 +62,9 @@ const PARSING_PROMPT = `You are an expert receipt/invoice OCR and data extractio
 
 READ THE IMAGE CAREFULLY and extract EXACTLY what you see:
 
-REQUIRED JSON STRUCTURE:
+REQUIRED JSON RESPONSE FORMAT:
+Return ONLY a valid JSON object with double quotes around all property names and string values. No markdown, no explanations, no additional text.
+
 {
   "storeName": "ACTUAL store name from receipt (e.g., Shoprite, Carrefour, City Market)",
   "storeAddress": "ACTUAL address if visible, or null",
@@ -99,7 +101,7 @@ EXTRACTION RULES:
 9. Common DRC stores: Shoprite, Carrefour, Peloustore, Hasson & Frères, City Market, Kin Marché
 10. For handwritten receipts, do your best to interpret the text
 
-⚠️ IMPORTANT: Return ONLY the JSON object with ACTUAL data from the receipt image. No markdown formatting, no explanations, no placeholder data.`;
+⚠️ IMPORTANT: Return ONLY the JSON object with ACTUAL data from the receipt image. Use double quotes for all strings. No markdown formatting, no explanations, no placeholder data.`;
 /**
  * Generate unique ID for items
  */
@@ -166,9 +168,45 @@ async function parseWithGemini(imageBase64, mimeType) {
     if (jsonMatch) {
         jsonStr = jsonMatch[1];
     }
-    // Parse JSON
-    const parsed = JSON.parse(jsonStr.trim());
-    // Process and validate items
+    // Clean and validate JSON string
+    jsonStr = jsonStr.trim();
+    // Fix common JSON issues that Gemini might produce
+    jsonStr = jsonStr
+        .replace(/'/g, '"') // Replace single quotes with double quotes
+        .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":') // Quote unquoted property names
+        .replace(/:\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*([,}\]])/g, ':"$1"$2') // Quote unquoted string values
+        .replace(/,\s*}/g, '}') // Remove trailing commas
+        .replace(/,\s*]/g, ']'); // Remove trailing commas in arrays
+    console.log('Cleaned JSON string:', jsonStr.substring(0, 500));
+    // Parse JSON with error handling
+    let parsed;
+    try {
+        parsed = JSON.parse(jsonStr);
+    }
+    catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        console.error('Raw Gemini response:', text);
+        console.error('Cleaned JSON:', jsonStr);
+        // Try to extract partial data or provide fallback
+        const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
+        throw new Error(`Failed to parse Gemini response as JSON: ${errorMessage}. Raw response: ${text.substring(0, 200)}`);
+    }
+    // Validate parsed data structure
+    if (!parsed || typeof parsed !== 'object') {
+        throw new Error('Gemini response is not a valid object');
+    }
+    if (!parsed.storeName && !parsed.items) {
+        console.warn('Gemini response missing required fields:', parsed);
+        // Try to create a minimal valid receipt
+        parsed = {
+            storeName: 'Unknown Store',
+            date: new Date().toISOString().split('T')[0],
+            currency: 'CDF',
+            items: [],
+            total: 0,
+            ...parsed, // Merge any existing valid fields
+        };
+    }
     const items = (parsed.items || []).map((item) => ({
         id: generateItemId(),
         name: item.name || 'Unknown Item',
@@ -368,6 +406,8 @@ exports.parseReceiptV2 = functions
             tax: lastPage.tax || firstPage.tax,
             total: lastPage.total ||
                 allItems.reduce((sum, item) => sum + item.totalPrice, 0),
+            totalUSD: lastPage.totalUSD || firstPage.totalUSD || undefined,
+            totalCDF: lastPage.totalCDF || firstPage.totalCDF || undefined,
         };
         // Get user profile to include city
         const userProfileRef = db.doc(config_1.collections.userDoc(userId));
@@ -477,7 +517,7 @@ async function updateUserStats(userId, receipt) {
     try {
         const userRef = db
             .collection('artifacts')
-            .doc('goshopperai')
+            .doc(config_1.config.app.id)
             .collection('users')
             .doc(userId);
         // Get current stats

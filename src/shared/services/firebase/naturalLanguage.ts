@@ -3,9 +3,10 @@
 import functions from '@react-native-firebase/functions';
 import firestore from '@react-native-firebase/firestore';
 import {APP_ID} from './config';
+import {safeToDate} from '@/shared/utils/helpers';
 
 const RECEIPTS_COLLECTION = (userId: string) =>
-  `artifacts/goshopperai/users/${userId}/receipts`;
+  `artifacts/${APP_ID}/users/${userId}/receipts`;
 
 export interface QueryResult {
   answer: string;
@@ -313,7 +314,7 @@ class NaturalLanguageService {
     // Filter results in memory
     snapshot.docs.forEach(doc => {
       const data = doc.data();
-      const scannedAt = data.scannedAt?.toDate?.() || new Date(data.scannedAt);
+      const scannedAt = safeToDate(data.scannedAt);
 
       if (scannedAt >= period.start && scannedAt <= period.end) {
         totalSpent += data.total || 0;
@@ -402,7 +403,7 @@ class NaturalLanguageService {
     // Filter results in memory
     snapshot.docs.forEach(doc => {
       const data = doc.data();
-      const scannedAt = data.scannedAt?.toDate?.() || new Date(data.scannedAt);
+      const scannedAt = safeToDate(data.scannedAt);
 
       if (scannedAt >= period.start && scannedAt <= period.end) {
         const items = data.items || [];
@@ -498,7 +499,7 @@ class NaturalLanguageService {
     // Filter results in memory
     snapshot.docs.forEach(doc => {
       const data = doc.data();
-      const scannedAt = data.scannedAt?.toDate?.() || new Date(data.scannedAt);
+      const scannedAt = safeToDate(data.scannedAt);
 
       if (scannedAt >= period.start && scannedAt <= period.end) {
         const store = data.storeName || 'Inconnu';
@@ -625,7 +626,7 @@ class NaturalLanguageService {
       prices.push({
         store: data.storeName,
         price: data.price,
-        date: data.recordedAt?.toDate() || new Date(),
+        date: safeToDate(data.recordedAt) || new Date(),
       });
     });
 

@@ -4,6 +4,7 @@
 import functions from '@react-native-firebase/functions';
 import firestore from '@react-native-firebase/firestore';
 import {Receipt} from '@/shared/types';
+import {APP_ID} from '@/shared/services/firebase/config';
 
 interface DuplicateCheckResult {
   isDuplicate: boolean;
@@ -175,7 +176,7 @@ class DuplicateDetectionService {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
       const receiptsSnapshot = await firestore()
-        .collection(`artifacts/goshopperai/users/${userId}/receipts`)
+        .collection(`artifacts/${APP_ID}/users/${userId}/receipts`)
         .where('date', '>=', thirtyDaysAgo)
         .orderBy('date', 'desc')
         .limit(50) // Check last 50 receipts
@@ -248,7 +249,7 @@ class DuplicateDetectionService {
   }> {
     try {
       const receiptsSnapshot = await firestore()
-        .collection(`artifacts/goshopperai/users/${userId}/receipts`)
+        .collection(`artifacts/${APP_ID}/users/${userId}/receipts`)
         .get();
 
       const totalReceipts = receiptsSnapshot.size;

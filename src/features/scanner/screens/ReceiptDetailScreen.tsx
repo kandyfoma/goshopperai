@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
-import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import {RootStackParamList, Receipt} from '@/shared/types';
 import {
@@ -78,129 +77,91 @@ export function ReceiptDetailScreen() {
           return;
         }
 
-        const receiptDoc = await firestore()
-          .collection('artifacts')
-          .doc('goshopperai')
-          .collection('users')
-          .doc(userId)
-          .collection('receipts')
-          .doc(receiptId)
-          .get();
+        const fetchedReceipt = await receiptStorageService.getReceipt(
+          userId,
+          receiptId
+        );
 
-        if (!receiptDoc.exists) {
+        if (!fetchedReceipt) {
           setError('Reçu non trouvé');
           return;
         }
 
-        const data = receiptDoc.data();
-        if (data) {
-          setReceipt({
-            id: receiptDoc.id,
-            userId: data.userId,
-            storeName: data.storeName || 'Magasin inconnu',
-            storeNameNormalized: data.storeNameNormalized || '',
-            storeAddress: data.storeAddress,
-            storePhone: data.storePhone,
-            city: data.city,
-            receiptNumber: data.receiptNumber,
-            date: data.date
-              ? new Date(data.date)
-              : data.scannedAt?.toDate() || new Date(),
-            currency: data.currency || 'USD',
-            items: (data.items || []).map((item: any) => ({
-              id: item.id || Math.random().toString(36).substring(7),
-              name: item.name || 'Article inconnu',
-              nameNormalized: item.nameNormalized || '',
-              quantity: item.quantity || 1,
-              unitPrice: item.unitPrice || 0,
-              totalPrice: item.totalPrice || 0,
-              unit: item.unit,
-              category: item.category || 'Autres',
-              confidence: item.confidence || 0.85,
-            })),
-            subtotal: data.subtotal,
-            tax: data.tax,
-            total: data.total || 0,
-            processingStatus: data.processingStatus || 'completed',
-            createdAt: data.createdAt?.toDate() || new Date(),
-            updatedAt: data.updatedAt?.toDate() || new Date(),
-            scannedAt: data.scannedAt?.toDate() || new Date(),
-          });
+        setReceipt(fetchedReceipt);
 
-          // Detect city if not set
-          if (!data.city && data.storeName) {
-            const detectedCity =
-              await receiptStorageService.detectCityFromStore(data.storeName);
-            if (detectedCity) {
-              const userProfile = await authService.getUserProfile(userId);
-              const userCity = userProfile?.defaultCity;
+        // Detect city if not set
+        if (!fetchedReceipt.city && fetchedReceipt.storeName) {
+          const detectedCity =
+            await receiptStorageService.detectCityFromStore(fetchedReceipt.storeName);
+          if (detectedCity) {
+            const userProfile = await authService.getUserProfile(userId);
+            const userCity = userProfile?.defaultCity;
 
-              if (detectedCity !== userCity) {
-                Alert.alert(
-                  'Ville détectée',
-                  `Le reçu semble provenir de ${detectedCity}, mais votre ville par défaut est ${
-                    userCity || 'non définie'
-                  }. Voulez-vous enregistrer ce reçu dans ${detectedCity} ?`,
-                  [
-                    {
-                      text: 'Utiliser ma ville',
-                      onPress: () => {
-                        if (userCity) {
-                          receiptStorageService.updateReceiptCity(
-                            receiptDoc.id,
-                            userId,
-                            userCity,
-                          );
-                          setReceipt(prev =>
-                            prev ? {...prev, city: userCity} : null,
-                          );
-                          showToast(
-                            `Reçu enregistré dans ${userCity}`,
-                            'success',
-                          );
-                        }
-                      },
-                    },
-                    {
-                      text: 'Utiliser la ville détectée',
-                      onPress: () => {
+            if (detectedCity !== userCity) {
+              Alert.alert(
+                'Ville détectée',
+                `Le reçu semble provenir de ${detectedCity}, mais votre ville par défaut est ${
+                  userCity || 'non définie'
+                }. Voulez-vous enregistrer ce reçu dans ${detectedCity} ?`,
+                [
+                  {
+                    text: 'Utiliser ma ville',
+                    onPress: () => {
+                      if (userCity) {
                         receiptStorageService.updateReceiptCity(
-                          receiptDoc.id,
+                          fetchedReceipt.id,
                           userId,
-                          detectedCity,
+                          userCity,
                         );
                         setReceipt(prev =>
-                          prev ? {...prev, city: detectedCity} : null,
+                          prev ? {...prev, city: userCity} : null,
                         );
                         showToast(
-                          `Reçu enregistré dans ${detectedCity}`,
+                          `Reçu enregistré dans ${userCity}`,
                           'success',
                         );
-                      },
+                      }
                     },
-                  ],
-                );
-              } else {
-                await receiptStorageService.updateReceiptCity(
-                  receiptDoc.id,
-                  userId,
-                  detectedCity,
-                );
-                setReceipt(prev =>
-                  prev ? {...prev, city: detectedCity} : null,
-                );
-              }
+                  },
+                  {
+                    text: 'Utiliser la ville détectée',
+                    onPress: () => {
+                      receiptStorageService.updateReceiptCity(
+                        fetchedReceipt.id,
+                        userId,
+                        detectedCity,
+                      );
+                      setReceipt(prev =>
+                        prev ? {...prev, city: detectedCity} : null,
+                      );
+                      showToast(
+                        `Reçu enregistré dans ${detectedCity}`,
+                        'success',
+                      );
+                    },
+                  },
+                ],
+              );
             } else {
-              const userProfile = await authService.getUserProfile(userId);
-              const userCity = userProfile?.defaultCity;
-              if (userCity) {
-                await receiptStorageService.updateReceiptCity(
-                  receiptDoc.id,
-                  userId,
-                  userCity,
-                );
-                setReceipt(prev => (prev ? {...prev, city: userCity} : null));
-              }
+              await receiptStorageService.updateReceiptCity(
+                fetchedReceipt.id,
+                userId,
+                detectedCity,
+              );
+              setReceipt(prev =>
+                prev ? {...prev, city: detectedCity} : null,
+              );
+            }
+          } else {
+            const userProfile = await authService.getUserProfile(userId);
+            const userCity = userProfile?.defaultCity;
+            if (userCity) {
+              await receiptStorageService.updateReceiptCity(
+                fetchedReceipt.id,
+                userId,
+                userCity,
+              );
+              setReceipt(prev => (prev ? {...prev, city: userCity} : null));
             }
           }
         }
@@ -393,9 +354,22 @@ export function ReceiptDetailScreen() {
         <View style={styles.totalCard}>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalAmount}>
-              {formatCurrency(receipt.total, receipt.currency)}
-            </Text>
+            <View style={styles.totalAmountContainer}>
+              {receipt.totalUSD !== undefined && receipt.totalCDF !== undefined ? (
+                <>
+                  <Text style={styles.totalAmount}>
+                    {formatCurrency(receipt.totalUSD)}
+                  </Text>
+                  <Text style={styles.totalAmountSecondary}>
+                    {formatCurrency(receipt.totalCDF, 'CDF')}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.totalAmount}>
+                  {formatCurrency(receipt.total, receipt.currency)}
+                </Text>
+              )}
+            </View>
           </View>
           {receipt.subtotal && receipt.subtotal !== receipt.total && (
             <>
@@ -709,6 +683,15 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize['2xl'],
     fontFamily: Typography.fontFamily.bold,
     color: Colors.text.primary,
+  },
+  totalAmountContainer: {
+    alignItems: 'flex-end',
+  },
+  totalAmountSecondary: {
+    fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.secondary,
+    marginTop: Spacing.xs,
   },
   divider: {
     height: 1,

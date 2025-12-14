@@ -42,6 +42,8 @@ const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const config_1 = require("../config");
 const db = admin.firestore();
+// Default exchange rate fallback
+const DEFAULT_EXCHANGE_RATE = 2220; // 1 USD = 2,220 CDF
 // Trial configuration
 const TRIAL_DURATION_DAYS = 60; // 2 months
 const TRIAL_EXTENSION_DAYS = 30; // 1 month extension
@@ -50,6 +52,25 @@ const PLAN_SCAN_LIMITS = {
     standard: 100,
     premium: -1, // Unlimited
 };
+// Get current exchange rate from global settings
+async function getExchangeRate() {
+    var _a;
+    try {
+        const settingsRef = db.collection('artifacts').doc(config_1.config.app.id)
+            .collection('public').doc('data')
+            .collection('settings').doc('global');
+        const settingsDoc = await settingsRef.get();
+        if (settingsDoc.exists) {
+            const data = settingsDoc.data();
+            return ((_a = data === null || data === void 0 ? void 0 : data.exchangeRates) === null || _a === void 0 ? void 0 : _a.usdToCdf) || DEFAULT_EXCHANGE_RATE;
+        }
+        return DEFAULT_EXCHANGE_RATE;
+    }
+    catch (error) {
+        console.error('Error fetching exchange rate:', error);
+        return DEFAULT_EXCHANGE_RATE;
+    }
+}
 // Discount percentages for longer subscriptions
 const DURATION_DISCOUNTS = {
     1: 0, // No discount for monthly
@@ -656,7 +677,7 @@ exports.getUserStats = functions
         let receiptsSnapshot;
         try {
             const receiptsRef = db
-                .collection('artifacts/goshopperai/users')
+                .collection(`artifacts/${config_1.config.app.id}/users`)
                 .doc(userId)
                 .collection('receipts');
             receiptsSnapshot = await receiptsRef.get();
@@ -669,7 +690,8 @@ exports.getUserStats = functions
         let totalReceipts = 0;
         let totalSavings = 0;
         let totalSpent = 0;
-        receiptsSnapshot.forEach((doc) => {
+        // Process receipts sequentially to handle async operations
+        for (const doc of receiptsSnapshot.docs) {
             const receipt = doc.data();
             totalReceipts++;
             // Calculate total spent from items using totalPrice
@@ -685,13 +707,14 @@ exports.getUserStats = functions
                 totalSpent = receipt.totalUSD;
             }
             else if (receipt.totalCDF && typeof receipt.totalCDF === 'number') {
-                // Convert CDF to approximate USD (rough conversion rate)
-                totalSpent = receipt.totalCDF / 2800; // Approximate USD to CDF rate
+                // Convert CDF to USD using configurable exchange rate
+                const exchangeRate = await getExchangeRate();
+                totalSpent = receipt.totalCDF / exchangeRate;
             }
             else if (receipt.total && typeof receipt.total === 'number') {
                 totalSpent = receipt.total;
             }
-        });
+        }
         // Get subscription status using the correct collection path
         let subscriptionStatus = 'free';
         let monthlyScansUsed = 0;

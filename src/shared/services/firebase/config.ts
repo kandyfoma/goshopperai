@@ -61,5 +61,5 @@ export const COLLECTIONS = {
   subscriptionStatus: (userId: string) =>
     `artifacts/${APP_ID}/users/${userId}/subscription/status`,
   prices: `artifacts/${APP_ID}/prices`,
-  stores: `artifacts/${APP_ID}/public/stores`,
+  stores: `artifacts/${APP_ID}/stores`,
 } as const;

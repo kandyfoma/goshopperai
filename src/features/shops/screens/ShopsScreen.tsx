@@ -21,9 +21,10 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon, EmptyState, AppFooter} from '@/shared/components';
-import {formatCurrency} from '@/shared/utils/helpers';
+import {formatCurrency, safeToDate} from '@/shared/utils/helpers';
 import {useAuth} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
+import {APP_ID} from '@/shared/services/firebase/config';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -74,11 +75,10 @@ export function ShopsScreen() {
 
       const shopsSnapshot = await firestore()
         .collection('artifacts')
-        .doc('goshopperai')
+        .doc(APP_ID)
         .collection('users')
         .doc(user.uid)
         .collection('shops')
-        .orderBy('totalSpent', 'desc')
         .get();
 
       const shopsData: Shop[] = shopsSnapshot.docs.map(doc => {
@@ -92,11 +92,14 @@ export function ShopsScreen() {
           receiptCount: data.receiptCount || 0,
           totalSpent: data.totalSpent || 0,
           currency: data.currency || 'USD',
-          lastVisit: data.lastVisit?.toDate() || new Date(),
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate() || new Date(),
+          lastVisit: safeToDate(data.lastVisit),
+          createdAt: safeToDate(data.createdAt),
+          updatedAt: safeToDate(data.updatedAt),
         };
       });
+
+      // Sort by totalSpent descending
+      shopsData.sort((a, b) => b.totalSpent - a.totalSpent);
 
       setShops(shopsData);
     } catch (error) {

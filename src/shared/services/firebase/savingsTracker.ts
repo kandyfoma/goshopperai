@@ -3,12 +3,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import firestore from '@react-native-firebase/firestore';
 import {APP_ID} from './config';
 import {pushNotificationService} from './pushNotifications';
+import {safeToDate} from '@/shared/utils/helpers';
 
 const SAVINGS_COLLECTION = (userId: string) =>
-  `artifacts/goshopperai/users/${userId}/savings`;
+  `artifacts/${APP_ID}/users/${userId}/savings`;
 
 const ACHIEVEMENTS_COLLECTION = (userId: string) =>
-  `artifacts/goshopperai/users/${userId}/achievements`;
+  `artifacts/${APP_ID}/users/${userId}/achievements`;
 
 const USER_STATS_KEY = '@goshopperai/user_stats';
 
@@ -312,7 +313,7 @@ class SavingsTrackerService {
     try {
       const receiptsRef = firestore()
         .collection('artifacts')
-        .doc('goshopperai')
+        .doc(APP_ID)
         .collection('users')
         .doc(userId)
         .collection('receipts');
@@ -359,7 +360,7 @@ class SavingsTrackerService {
         }
 
         if (data.scannedAt) {
-          const scanDate = data.scannedAt.toDate();
+          const scanDate = safeToDate(data.scannedAt);
           scanDates.push(scanDate);
           if (!lastScanDate || scanDate > lastScanDate) {
             lastScanDate = scanDate;
@@ -547,7 +548,7 @@ class SavingsTrackerService {
     // Save to Firestore
     await firestore()
       .collection('artifacts')
-      .doc('goshopperai')
+      .doc(APP_ID)
       .collection('users')
       .doc(userId)
       .set({stats: updatedStats}, {merge: true});
@@ -636,7 +637,7 @@ class SavingsTrackerService {
         newlyUnlocked.forEach(achievement => {
           const achievementRef = firestore()
             .collection('artifacts')
-            .doc('goshopperai')
+            .doc(APP_ID)
             .collection('users')
             .doc(userId)
             .collection('achievements')
@@ -898,7 +899,7 @@ class SavingsTrackerService {
         return {
           ...data,
           id: doc.id,
-          unlockedAt: data.unlockedAt?.toDate(),
+          unlockedAt: data.unlockedAt ? safeToDate(data.unlockedAt) : undefined,
         } as Achievement;
       });
     } catch (error) {

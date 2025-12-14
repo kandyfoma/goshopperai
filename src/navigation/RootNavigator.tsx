@@ -4,6 +4,7 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {ActivityIndicator, View, StyleSheet} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import firestore from '@react-native-firebase/firestore';
+import {APP_ID} from '@/shared/services/firebase/config';
 import {RootStackParamList} from '@/shared/types';
 import {useAuth} from '@/shared/contexts';
 import {Colors} from '@/shared/theme/theme';
@@ -88,7 +89,7 @@ export function RootNavigator() {
       try {
         const userDoc = await firestore()
           .collection('artifacts')
-          .doc('goshopperai')
+          .doc(APP_ID)
           .collection('users')
           .doc(user.uid)
           .get();

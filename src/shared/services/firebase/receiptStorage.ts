@@ -99,13 +99,27 @@ class ReceiptStorageService {
       .doc(receipt.id);
 
     try {
-      await receiptRef.set({
+      // Log receipt data for debugging
+      console.log('Saving receipt:', {
+        id: receipt.id,
+        userId,
+        hasCreatedAt: !!receipt.createdAt,
+        createdAtType: typeof receipt.createdAt,
+        createdAtValue: receipt.createdAt,
+        dateType: typeof receipt.date,
+        dateValue: receipt.date,
+      });
+
+      // Filter out undefined values to prevent Firestore errors
+      const cleanedReceipt = this.removeUndefinedFields({
         ...receipt,
         date: firestore.Timestamp.fromDate(receipt.date),
         createdAt: firestore.FieldValue.serverTimestamp(),
         updatedAt: firestore.FieldValue.serverTimestamp(),
         scannedAt: firestore.FieldValue.serverTimestamp(),
       });
+
+      await receiptRef.set(cleanedReceipt);
 
       // Update shop in background (non-blocking, non-critical)
       // If this fails, receipt is still saved
@@ -123,7 +137,7 @@ class ReceiptStorageService {
         .collection(RECEIPTS_COLLECTION(userId))
         .doc();
 
-      await newReceiptRef.set({
+      const cleanedRetryReceipt = this.removeUndefinedFields({
         ...receipt,
         id: newReceiptRef.id,
         date: firestore.Timestamp.fromDate(receipt.date),
@@ -131,6 +145,8 @@ class ReceiptStorageService {
         updatedAt: firestore.FieldValue.serverTimestamp(),
         scannedAt: firestore.FieldValue.serverTimestamp(),
       });
+
+      await newReceiptRef.set(cleanedRetryReceipt);
 
       return newReceiptRef.id;
     }
@@ -268,9 +284,9 @@ class ReceiptStorageService {
     return snapshot.docs.map(doc => ({
       ...doc.data(),
       id: doc.id,
-      lastVisit: doc.data().lastVisit?.toDate() || new Date(),
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate() || new Date(),
+      lastVisit: this.safeToDate(doc.data().lastVisit),
+      createdAt: this.safeToDate(doc.data().createdAt),
+      updatedAt: this.safeToDate(doc.data().updatedAt),
     })) as Shop[];
   }
 
@@ -360,11 +376,11 @@ class ReceiptStorageService {
     return {
       ...data,
       id: doc.id,
-      date: data.date?.toDate() || new Date(),
-      purchaseDate: data.date?.toDate() || new Date(),
-      createdAt: data.createdAt?.toDate() || new Date(),
-      updatedAt: data.updatedAt?.toDate() || new Date(),
-      scannedAt: data.scannedAt?.toDate() || new Date(),
+      date: this.safeToDate(data.date),
+      purchaseDate: this.safeToDate(data.date),
+      createdAt: this.safeToDate(data.createdAt),
+      updatedAt: this.safeToDate(data.updatedAt),
+      scannedAt: this.safeToDate(data.scannedAt),
     } as Receipt;
   }
 
@@ -379,6 +395,82 @@ class ReceiptStorageService {
       .replace(/[^a-z0-9\s]/g, '')
       .replace(/\s+/g, '_')
       .trim();
+  }
+
+  /**
+   * Remove undefined fields to prevent Firestore errors
+   */
+  private removeUndefinedFields(obj: any): any {
+    const cleaned: any = {};
+    
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date) && !value.toDate) {
+          // Recursively clean nested objects, but skip Date objects and Firestore objects
+          cleaned[key] = this.removeUndefinedFields(value);
+        } else {
+          cleaned[key] = value;
+        }
+      }
+    }
+    
+    return cleaned;
+  }
+
+  /**
+   * Safely convert various date/timestamp formats to Date
+   */
+  private safeToDate(value: any): Date {
+    if (!value) {
+      return new Date();
+    }
+
+    // Firestore Timestamp with toDate method
+    if (value.toDate && typeof value.toDate === 'function') {
+      try {
+        return value.toDate();
+      } catch (error) {
+        console.warn('Failed to convert Firestore timestamp:', error);
+        return new Date();
+      }
+    }
+
+    // Serialized Firestore timestamp (from Cloud Functions response)
+    if (value._type === 'timestamp' || value._seconds !== undefined) {
+      try {
+        const seconds = value._seconds || value.seconds || 0;
+        const nanoseconds = value._nanoseconds || value.nanoseconds || 0;
+        return new Date(seconds * 1000 + nanoseconds / 1000000);
+      } catch (error) {
+        console.warn('Failed to convert serialized timestamp:', error);
+        return new Date();
+      }
+    }
+
+    // Firestore Timestamp-like object with seconds/nanoseconds
+    if (typeof value.seconds === 'number') {
+      try {
+        return new Date(value.seconds * 1000 + (value.nanoseconds || 0) / 1000000);
+      } catch (error) {
+        return new Date();
+      }
+    }
+
+    // Already a Date object
+    if (value instanceof Date) {
+      return value;
+    }
+
+    // String or number
+    if (typeof value === 'string' || typeof value === 'number') {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        return date;
+      }
+    }
+
+    // Fallback - don't warn for expected formats
+    return new Date();
   }
 }
 

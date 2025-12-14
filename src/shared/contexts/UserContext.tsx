@@ -13,6 +13,7 @@ import {useAuth} from './AuthContext';
 import {UserProfile} from '@/shared/types';
 import {COLLECTIONS} from '@/shared/services/firebase/config';
 import {analyticsService} from '@/shared/services';
+import {safeToDate} from '@/shared/utils/helpers';
 
 const USER_PROFILE_CACHE_KEY = '@goshopperai_user_profile';
 
@@ -92,8 +93,8 @@ export function UserProvider({children}: UserProviderProps) {
               sex: data?.sex,
               monthlyBudget: data?.monthlyBudget,
               defaultCity: data?.defaultCity,
-              createdAt: data?.createdAt?.toDate() || new Date(),
-              updatedAt: data?.updatedAt?.toDate() || new Date(),
+              createdAt: safeToDate(data?.createdAt),
+              updatedAt: safeToDate(data?.updatedAt),
             };
 
             setProfile(userProfile);
@@ -238,8 +239,8 @@ export function UserProvider({children}: UserProviderProps) {
           priceAlertsEnabled: data?.priceAlertsEnabled ?? true,
           displayName: data?.displayName,
           phoneNumber: data?.phoneNumber,
-          createdAt: data?.createdAt?.toDate() || new Date(),
-          updatedAt: data?.updatedAt?.toDate() || new Date(),
+          createdAt: safeToDate(data?.createdAt),
+          updatedAt: safeToDate(data?.updatedAt),
         };
 
         setProfile(userProfile);

@@ -3,6 +3,7 @@
 
 import firestore from '@react-native-firebase/firestore';
 import {firebaseFirestore, APP_ID} from '@/shared/services/firebase/config';
+import {safeToDate} from '@/shared/utils/helpers';
 
 export interface ExchangeRateSettings {
   usdToCdf: number; // Exchange rate: 1 USD = X CDF
@@ -51,7 +52,7 @@ class GlobalSettingsService {
           this.settings = {
             exchangeRates: {
               usdToCdf: data?.exchangeRates?.usdToCdf || DEFAULT_EXCHANGE_RATE,
-              lastUpdated: data?.exchangeRates?.lastUpdated?.toDate() || new Date(),
+              lastUpdated: safeToDate(data?.exchangeRates?.lastUpdated),
               updatedBy: data?.exchangeRates?.updatedBy,
             },
           };

@@ -6,9 +6,9 @@
 
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
+import {config} from '../config';
 
 const db = admin.firestore();
-const APP_ID = 'goshopperai';
 
 interface ItemPrice {
   storeName: string;
@@ -40,19 +40,66 @@ interface AggregatedItem {
 function normalizeItemName(name: string): string {
   return name
     .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s]/g, '')
-    .replace(/\s+/g, ' ');
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-z0-9\s]/g, '') // Remove special chars
+    .replace(/\s+/g, ' ') // Normalize spaces
+    .trim();
+}
+
+/**
+ * Get canonical form of a product name using synonyms
+ */
+function getCanonicalName(name: string): string {
+  const normalized = normalizeItemName(name);
+
+  // Common product synonyms for better grouping
+  const synonyms: Record<string, string[]> = {
+    'lait': ['milk', 'milch', 'leche'],
+    'fromage': ['cheese', 'käse', 'queso'],
+    'yaourt': ['yogurt', 'yoghurt', 'yogourt', 'yog', 'yo'],
+    'creme': ['cream', 'crema'],
+    'beurre': ['butter', 'mantequilla'],
+    'oeuf': ['egg', 'eggs', 'huevo'],
+    'pain': ['bread', 'baguette', 'pan'],
+    'viande': ['meat', 'carne'],
+    'poulet': ['chicken', 'pollo'],
+    'boeuf': ['beef', 'carne de res'],
+    'porc': ['pork', 'cerdo'],
+    'poisson': ['fish', 'pescado'],
+    'pomme': ['apple', 'apples', 'manzana'],
+    'banane': ['banana', 'bananas', 'platano'],
+    'orange': ['orange', 'oranges'],
+    'tomate': ['tomato', 'tomatoes', 'jitomate'],
+    'carotte': ['carrot', 'carrots', 'zanahoria'],
+    'eau': ['water', 'agua'],
+    'cafe': ['coffee', 'cafe'],
+    'the': ['tea', 'te'],
+    'biere': ['beer', 'cerveza'],
+    'jus': ['juice', 'jugo'],
+    'savon': ['soap', 'sav', 'savonnette'],
+    'shampooing': ['shampoo', 'shamp', 'champoing'],
+    'dentifrice': ['toothpaste', 'dent', 'pate dentifrice'],
+  };
+
+  // Check if normalized name matches any synonym
+  for (const [canonical, variations] of Object.entries(synonyms)) {
+    if (variations.some(v => normalized.includes(v) || v.includes(normalized))) {
+      return canonical;
+    }
+  }
+
+  return normalized;
 }
 
 /**
  * Aggregate items when a receipt is created or updated
- * Firestore trigger: artifacts/goshopperai/users/{userId}/receipts/{receiptId}
+ * Firestore trigger: artifacts/{config.app.id}/users/{userId}/receipts/{receiptId}
  */
 export const aggregateItemsOnReceipt = functions
   .region('europe-west1')
   .firestore.document(
-    'artifacts/goshopperai/users/{userId}/receipts/{receiptId}',
+    `artifacts/${config.app.id}/users/{userId}/receipts/{receiptId}`,
   )
   .onWrite(async (change, context) => {
     const {userId, receiptId} = context.params;
@@ -80,14 +127,14 @@ export const aggregateItemsOnReceipt = functions
 
       // Process each item in the receipt
       const batch = db.batch();
-      const itemsCollectionPath = `artifacts/${APP_ID}/users/${userId}/items`;
+      const itemsCollectionPath = `artifacts/${config.app.id}/users/${userId}/items`;
 
       for (const item of items) {
         if (!item.name || !item.unitPrice || item.unitPrice <= 0) {
           continue;
         }
 
-        const itemNameNormalized = normalizeItemName(item.name);
+        const itemNameNormalized = getCanonicalName(item.name);
         const itemRef = db.collection(itemsCollectionPath).doc(itemNameNormalized);
         const itemDoc = await itemRef.get();
 
@@ -205,7 +252,7 @@ export const rebuildItemsAggregation = functions
       console.log(`Starting items aggregation rebuild for user ${userId}`);
 
       // Clear existing items
-      const itemsCollectionPath = `artifacts/${APP_ID}/users/${userId}/items`;
+      const itemsCollectionPath = `artifacts/${config.app.id}/users/${userId}/items`;
       const existingItems = await db.collection(itemsCollectionPath).get();
       const deleteBatch = db.batch();
       existingItems.docs.forEach(doc => deleteBatch.delete(doc.ref));
@@ -214,7 +261,7 @@ export const rebuildItemsAggregation = functions
 
       // Get all receipts
       const receiptsSnapshot = await db
-        .collection(`artifacts/${APP_ID}/users/${userId}/receipts`)
+        .collection(`artifacts/${config.app.id}/users/${userId}/receipts`)
         .orderBy('scannedAt', 'desc')
         .get();
 
@@ -241,7 +288,7 @@ export const rebuildItemsAggregation = functions
             continue;
           }
 
-          const itemNameNormalized = normalizeItemName(item.name);
+          const itemNameNormalized = getCanonicalName(item.name);
           const newPrice: ItemPrice = {
             storeName,
             price: item.unitPrice,
@@ -365,7 +412,7 @@ export const getCityItems = functions
 
       // Get all users in the city
       const usersSnapshot = await db
-        .collection(`artifacts/${APP_ID}/users`)
+        .collection(`artifacts/${config.app.id}/users`)
         .where('defaultCity', '==', city)
         .get();
 
@@ -375,12 +422,17 @@ export const getCityItems = functions
       for (const userDoc of usersSnapshot.docs) {
         const userId = userDoc.id;
         const itemsSnapshot = await db
-          .collection(`artifacts/${APP_ID}/users/${userId}/items`)
+          .collection(`artifacts/${config.app.id}/users/${userId}/items`)
           .get();
 
         itemsSnapshot.docs.forEach(doc => {
           const itemData = doc.data() as AggregatedItem;
           const itemName = itemData.nameNormalized;
+
+          // Skip items without required data
+          if (!itemName || !itemData.prices || !Array.isArray(itemData.prices)) {
+            return;
+          }
 
           if (!itemsMap.has(itemName)) {
             itemsMap.set(itemName, {
@@ -399,30 +451,57 @@ export const getCityItems = functions
 
           const cityItem = itemsMap.get(itemName)!;
 
-          // Merge prices from this user
-          cityItem.prices.push(...itemData.prices.map(p => ({ ...p, userId })));
+          // Merge prices from this user (filter out invalid prices)
+          const validPrices = itemData.prices.filter(p => p && typeof p.price === 'number');
+          cityItem.prices.push(...validPrices.map(p => ({ ...p, userId })));
 
           // Update statistics
           const allPrices = cityItem.prices.map((p: any) => p.price);
-          cityItem.minPrice = Math.min(...allPrices);
-          cityItem.maxPrice = Math.max(...allPrices);
-          cityItem.avgPrice = allPrices.reduce((sum: number, p: number) => sum + p, 0) / allPrices.length;
+          if (allPrices.length > 0) {
+            cityItem.minPrice = Math.min(...allPrices);
+            cityItem.maxPrice = Math.max(...allPrices);
+            cityItem.avgPrice = allPrices.reduce((sum: number, p: number) => sum + p, 0) / allPrices.length;
+          }
           cityItem.storeCount = new Set(cityItem.prices.map((p: any) => p.storeName)).size;
           cityItem.userCount = new Set(cityItem.prices.map((p: any) => p.userId)).size;
 
-          // Update last purchase date
-          if (itemData.lastPurchaseDate.toMillis() > cityItem.lastPurchaseDate.toMillis()) {
-            cityItem.lastPurchaseDate = itemData.lastPurchaseDate;
+          // Update last purchase date (safely)
+          if (itemData.lastPurchaseDate && cityItem.lastPurchaseDate) {
+            try {
+              const newDate = itemData.lastPurchaseDate.toMillis ? itemData.lastPurchaseDate.toMillis() : 0;
+              const currentDate = cityItem.lastPurchaseDate.toMillis ? cityItem.lastPurchaseDate.toMillis() : 0;
+              if (newDate > currentDate) {
+                cityItem.lastPurchaseDate = itemData.lastPurchaseDate;
+              }
+            } catch {
+              // Keep existing date if comparison fails
+            }
           }
         });
       }
 
+      // Helper function to safely convert timestamp to Date
+      const safeToDate = (value: any): Date => {
+        if (!value) return new Date();
+        if (value.toDate && typeof value.toDate === 'function') {
+          return value.toDate();
+        }
+        if (value instanceof Date) return value;
+        if (typeof value === 'string' || typeof value === 'number') {
+          return new Date(value);
+        }
+        if (value._seconds !== undefined) {
+          return new Date(value._seconds * 1000);
+        }
+        return new Date();
+      };
+
       const cityItems = Array.from(itemsMap.values()).map(item => ({
         ...item,
-        lastPurchaseDate: item.lastPurchaseDate.toDate(),
+        lastPurchaseDate: safeToDate(item.lastPurchaseDate),
         prices: item.prices.map((p: any) => ({
           ...p,
-          date: p.date.toDate(),
+          date: safeToDate(p.date),
         })),
       }));
 

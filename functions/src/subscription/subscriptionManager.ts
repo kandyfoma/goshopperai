@@ -25,7 +25,7 @@ const PLAN_SCAN_LIMITS: Record<string, number> = {
 // Get current exchange rate from global settings
 async function getExchangeRate(): Promise<number> {
   try {
-    const settingsRef = db.collection('artifacts').doc(config.appId)
+    const settingsRef = db.collection('artifacts').doc(config.app.id)
       .collection('public').doc('data')
       .collection('settings').doc('global');
 
@@ -857,7 +857,7 @@ export const getUserStats = functions
       let receiptsSnapshot;
       try {
         const receiptsRef = db
-          .collection('artifacts/goshopperai/users')
+          .collection(`artifacts/${config.app.id}/users`)
           .doc(userId)
           .collection('receipts');
         receiptsSnapshot = await receiptsRef.get();
@@ -871,7 +871,8 @@ export const getUserStats = functions
       let totalSavings = 0;
       let totalSpent = 0;
 
-      receiptsSnapshot.forEach((doc: any) => {
+      // Process receipts sequentially to handle async operations
+      for (const doc of receiptsSnapshot.docs) {
         const receipt = doc.data();
         totalReceipts++;
 
@@ -894,7 +895,7 @@ export const getUserStats = functions
         } else if (receipt.total && typeof receipt.total === 'number') {
           totalSpent = receipt.total;
         }
-      });
+      }
 
       // Get subscription status using the correct collection path
       let subscriptionStatus = 'free';

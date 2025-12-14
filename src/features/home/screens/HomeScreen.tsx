@@ -28,6 +28,7 @@ import {Icon} from '@/shared/components';
 import {analyticsService, hapticService, widgetDataService} from '@/shared/services';
 import firestore from '@react-native-firebase/firestore';
 import {formatCurrency} from '@/shared/utils/helpers';
+import {APP_ID} from '@/shared/services/firebase/config';
 
 const {width} = Dimensions.get('window');
 const CARD_WIDTH = (width - Spacing.lg * 2 - Spacing.md) / 2;
@@ -309,7 +310,7 @@ export function HomeScreen() {
 
         const receiptsSnapshot = await firestore()
           .collection('artifacts')
-          .doc('goshopperai')
+          .doc(APP_ID)
           .collection('users')
           .doc(userProfile.userId)
           .collection('receipts')
@@ -357,7 +358,7 @@ export function HomeScreen() {
       try {
         const receiptsSnapshot = await firestore()
           .collection('artifacts')
-          .doc('goshopperai')
+          .doc(APP_ID)
           .collection('users')
           .doc(userProfile.userId)
           .collection('receipts')

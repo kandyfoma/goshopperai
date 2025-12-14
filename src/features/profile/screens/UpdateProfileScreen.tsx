@@ -28,6 +28,7 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon, Spinner} from '@/shared/components';
+import {APP_ID} from '@/shared/services/firebase/config';
 import firestore from '@react-native-firebase/firestore';
 import {analyticsService} from '@/shared/services/analytics';
 
@@ -162,7 +163,7 @@ export function UpdateProfileScreen() {
 
       await firestore()
         .collection('artifacts')
-        .doc('goshopperai')
+        .doc(APP_ID)
         .collection('users')
         .doc(user.uid)
         .set(updateData, {merge: true});

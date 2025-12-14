@@ -6,6 +6,7 @@ import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {appleAuth} from '@invertase/react-native-apple-authentication';
 import {User, UserProfile} from '@/shared/types';
 import {COLLECTIONS, APP_ID} from './config';
+import {safeToDate} from '@/shared/utils/helpers';
 
 class AuthService {
   private currentUser: FirebaseAuthTypes.User | null = null;
@@ -333,7 +334,7 @@ class AuthService {
         countryCode: data?.countryCode,
         isInDRC: data?.isInDRC,
         verified: data?.verified,
-        verifiedAt: data?.verifiedAt?.toDate(),
+        verifiedAt: data?.verifiedAt ? safeToDate(data.verifiedAt) : undefined,
         preferredLanguage: data?.preferredLanguage || 'fr',
         preferredCurrency: data?.preferredCurrency || 'USD',
         defaultCity: data?.defaultCity,
@@ -344,8 +345,8 @@ class AuthService {
         monthlyBudget: data?.monthlyBudget,
         notificationsEnabled: data?.notificationsEnabled ?? true,
         priceAlertsEnabled: data?.priceAlertsEnabled ?? true,
-        createdAt: data?.createdAt?.toDate() || new Date(),
-        updatedAt: data?.updatedAt?.toDate() || new Date(),
+        createdAt: safeToDate(data?.createdAt) || new Date(),
+        updatedAt: safeToDate(data?.updatedAt) || new Date(),
       } as UserProfile;
     } catch (error) {
       console.error('Get user profile failed:', error);

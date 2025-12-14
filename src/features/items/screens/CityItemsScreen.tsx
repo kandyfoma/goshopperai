@@ -25,9 +25,10 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon, FadeIn, SlideIn} from '@/shared/components';
-import {formatCurrency} from '@/shared/utils/helpers';
+import {formatCurrency, safeToDate} from '@/shared/utils/helpers';
 import {useAuth, useUser} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
+import {productSearchService} from '@/shared/services/productSearchService';
 import {RootStackParamList} from '@/shared/types';
 
 interface CityItemData {
@@ -162,16 +163,21 @@ export function CityItemsScreen() {
       return;
     }
 
-    const query = searchQuery.toLowerCase().trim();
-    const filtered = items.filter(item =>
-      item.name.toLowerCase().includes(query),
-    );
+    const searchResults = productSearchService.searchItems(items, searchQuery);
+    const filtered = searchResults.map(result => result.item);
+
     setFilteredItems(filtered);
 
-    // Track item search
+    // Track item search with match types
+    const matchTypeCounts = searchResults.reduce((acc, result) => {
+      acc[result.matchType] = (acc[result.matchType] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
     analyticsService.logCustomEvent('city_item_search', {
-      query: query,
+      query: searchQuery,
       results_count: filtered.length,
+      match_types: matchTypeCounts,
     });
   };
 
@@ -292,10 +298,8 @@ export function CityItemsScreen() {
                             return 'Date inconnue';
                           }
 
-                          // Handle Firestore Timestamp
-                          const jsDate = date.toDate
-                            ? date.toDate()
-                            : new Date(date);
+                          // Handle Firestore Timestamp using safeToDate
+                          const jsDate = safeToDate(date);
                           return jsDate.toLocaleDateString('fr-FR', {
                             day: 'numeric',
                             month: 'short',

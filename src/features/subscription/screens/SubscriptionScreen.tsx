@@ -28,6 +28,7 @@ import {
 import {formatCurrency} from '@/shared/utils/helpers';
 import {SubscriptionDuration, SUBSCRIPTION_DURATIONS} from '@/shared/types';
 import {analyticsService} from '@/shared/services/analytics';
+import {APP_ID} from '@/shared/services/firebase/config';
 import {
   Colors,
   Typography,
@@ -126,7 +127,7 @@ export function SubscriptionScreen() {
       try {
         const profileDoc = await firestore()
           .collection('artifacts')
-          .doc('goshopperai')
+          .doc(APP_ID)
           .collection('users')
           .doc(user.uid)
           .collection('profile')
