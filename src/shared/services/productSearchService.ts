@@ -1,5 +1,8 @@
 // Product Search and Normalization Service
 // Handles fuzzy search, synonyms, abbreviations, and multilingual product matching
+// Now integrated with the comprehensive ProductNormalizationService
+
+import {productNormalizationService} from './productNormalizationService';
 
 interface ProductSynonym {
   canonical: string;
@@ -16,6 +19,10 @@ interface SearchResult {
 }
 
 class ProductSearchService {
+  constructor() {
+    // Initialize common products
+    productNormalizationService.initializeCommonProducts();
+  }
   private synonyms: ProductSynonym[] = [
     // Dairy products
     {
@@ -212,46 +219,26 @@ class ProductSearchService {
    * Normalize product name for consistent matching
    */
   normalizeProductName(name: string): string {
-    return name
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove accents
-      .replace(/[^a-z0-9\s]/g, '') // Remove special chars
-      .replace(/\s+/g, ' ') // Normalize spaces
-      .trim();
+    return productNormalizationService.cleanText(name);
   }
 
   /**
    * Get canonical form of a product name
    */
   getCanonicalName(name: string): string {
-    const normalized = this.normalizeProductName(name);
-
-    // Check for exact synonym matches
-    for (const synonym of this.synonyms) {
-      if (synonym.variations.some(v => this.normalizeProductName(v) === normalized)) {
-        return synonym.canonical;
-      }
-    }
-
-    return normalized;
+    const match = productNormalizationService.findBestMatch(name);
+    return match ? match.product.normalizedName : this.normalizeProductName(name);
   }
 
   /**
    * Get all variations of a product name
    */
   getAllVariations(name: string): string[] {
-    const normalized = this.normalizeProductName(name);
-    const variations = [normalized];
-
-    // Add synonym variations
-    for (const synonym of this.synonyms) {
-      if (synonym.variations.some(v => this.normalizeProductName(v) === normalized)) {
-        variations.push(...synonym.variations.map(v => this.normalizeProductName(v)));
-      }
+    const match = productNormalizationService.findBestMatch(name);
+    if (match) {
+      return [match.product.normalizedName, ...match.product.commonNames];
     }
-
-    return [...new Set(variations)]; // Remove duplicates
+    return [this.normalizeProductName(name)];
   }
 
   /**
@@ -317,63 +304,90 @@ class ProductSearchService {
   /**
    * Search items with fuzzy matching, synonyms, and abbreviations
    */
+  /**
+   * Search items with comprehensive normalization and matching
+   */
   searchItems(items: any[], query: string): SearchResult[] {
     if (!query.trim()) return items.map(item => ({ item, score: 1, matchType: 'exact' as const, matchedText: item.name }));
 
-    const normalizedQuery = this.normalizeProductName(query);
     const results: SearchResult[] = [];
 
-    for (const item of items) {
-      const itemName = item.name || '';
-      const normalizedItemName = this.normalizeProductName(itemName);
-      let bestScore = 0;
-      let bestMatchType: SearchResult['matchType'] = 'exact';
-      let matchedText = itemName;
+    // First try the comprehensive normalization matching
+    const bestMatch = productNormalizationService.findBestMatch(query);
 
-      // 1. Exact match (highest priority)
-      if (normalizedItemName.includes(normalizedQuery) || itemName.toLowerCase().includes(query.toLowerCase())) {
-        bestScore = 1.0;
-        bestMatchType = 'exact';
-      }
+    if (bestMatch && bestMatch.confidence >= 0.6) {
+      // Find items that match this normalized product
+      const matchingItems = items.filter(item => {
+        const itemMatch = productNormalizationService.findBestMatch(item.name);
+        return itemMatch && itemMatch.product.productId === bestMatch.product.productId;
+      });
 
-      // 2. Synonym matching
-      if (bestScore === 0) {
-        const queryCanonical = this.getCanonicalName(query);
-        const itemCanonical = this.getCanonicalName(itemName);
-
-        if (queryCanonical === itemCanonical && queryCanonical !== normalizedQuery) {
-          bestScore = 0.95;
-          bestMatchType = 'synonym';
-          matchedText = `${itemName} (synonym of ${queryCanonical})`;
-        }
-      }
-
-      // 3. Abbreviation matching
-      if (bestScore === 0) {
-        if (this.isAbbreviation(normalizedQuery, normalizedItemName)) {
-          bestScore = 0.85;
-          bestMatchType = 'abbreviation';
-          matchedText = `${itemName} (abbrev.)`;
-        }
-      }
-
-      // 4. Fuzzy matching (lowest priority)
-      if (bestScore === 0) {
-        const similarity = this.calculateSimilarity(normalizedQuery, normalizedItemName);
-        if (similarity >= 0.6) { // Minimum similarity threshold
-          bestScore = similarity * 0.7; // Scale down fuzzy matches
-          bestMatchType = 'fuzzy';
-          matchedText = `${itemName} (~${Math.round(similarity * 100)}%)`;
-        }
-      }
-
-      if (bestScore > 0) {
+      matchingItems.forEach(item => {
         results.push({
           item,
-          score: bestScore,
-          matchType: bestMatchType,
-          matchedText
+          score: bestMatch.confidence,
+          matchType: bestMatch.matchType as any,
+          matchedText: `${item.name} → ${bestMatch.product.normalizedName}`
         });
+      });
+    }
+
+    // Fallback to the original fuzzy matching for items not in the master database
+    if (results.length === 0) {
+      const normalizedQuery = this.normalizeProductName(query);
+
+      for (const item of items) {
+        const itemName = item.name || '';
+        const normalizedItemName = this.normalizeProductName(itemName);
+        let bestScore = 0;
+        let bestMatchType: SearchResult['matchType'] = 'exact';
+        let matchedText = itemName;
+
+        // 1. Exact match
+        if (normalizedItemName.includes(normalizedQuery) || itemName.toLowerCase().includes(query.toLowerCase())) {
+          bestScore = 1.0;
+          bestMatchType = 'exact';
+        }
+
+        // 2. Synonym matching
+        if (bestScore === 0) {
+          const queryCanonical = this.getCanonicalName(query);
+          const itemCanonical = this.getCanonicalName(itemName);
+
+          if (queryCanonical === itemCanonical && queryCanonical !== normalizedQuery) {
+            bestScore = 0.95;
+            bestMatchType = 'synonym';
+            matchedText = `${itemName} (synonym of ${queryCanonical})`;
+          }
+        }
+
+        // 3. Abbreviation matching
+        if (bestScore === 0) {
+          if (this.isAbbreviation(normalizedQuery, normalizedItemName)) {
+            bestScore = 0.85;
+            bestMatchType = 'abbreviation';
+            matchedText = `${itemName} (abbrev.)`;
+          }
+        }
+
+        // 4. Fuzzy matching (lowest priority)
+        if (bestScore === 0) {
+          const similarity = this.calculateSimilarity(normalizedQuery, normalizedItemName);
+          if (similarity >= 0.6) { // Minimum similarity threshold
+            bestScore = similarity * 0.7; // Scale down fuzzy matches
+            bestMatchType = 'fuzzy';
+            matchedText = `${itemName} (~${Math.round(similarity * 100)}%)`;
+          }
+        }
+
+        if (bestScore > 0) {
+          results.push({
+            item,
+            score: bestScore,
+            matchType: bestMatchType,
+            matchedText
+          });
+        }
       }
     }
 

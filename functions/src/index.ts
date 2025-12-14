@@ -91,3 +91,10 @@ export {
   rebuildItemsAggregation,
   getCityItems,
 } from './items/itemAggregation';
+
+// Product Management functions
+export {
+  initializeMasterProducts,
+  addProductMapping,
+  searchMasterProducts,
+} from './products/productManagement';
