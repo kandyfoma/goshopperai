@@ -1,4 +1,4 @@
-package com.goshopperai.app
+package com.goshopper.app
 
 import android.util.Log
 import com.facebook.react.bridge.*

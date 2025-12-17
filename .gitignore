@@ -146,6 +146,13 @@ android/app/*.keystore
 android/app/*.properties
 android/gradle.properties
 
-# iOS provisioning profiles
+# iOS provisioning profiles and certificates
 ios/*.mobileprovision
 ios/*.provisionprofile
+*.p12
+*.cer
+*.pem
+
+# EAS credentials (NEVER COMMIT!)
+credentials.json
+play-store-key.json

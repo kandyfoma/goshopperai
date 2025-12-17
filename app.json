@@ -1,4 +1,41 @@
 {
   "name": "goshopper",
-  "displayName": "GoShopper"
+  "displayName": "GoShopper",
+  "expo": {
+    "name": "GoShopper",
+    "slug": "goshopper",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.goshopper.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.goshopper.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9f8de8c4-33d5-4416-bc79-43862413c66b"
+      }
+    }
+  },
+  "extra": {
+    "eas": {
+      "projectId": "9f8de8c4-33d5-4416-bc79-43862413c66b"
+    }
+  }
 }
