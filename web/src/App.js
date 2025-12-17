@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import emailjs from '@emailjs/browser';
 import './App.css';
 
 // Component to handle internal page scrolling
@@ -364,7 +365,7 @@ function PrivacyPolicy() {
               <li><strong>Données d'Utilisation :</strong> Fonctionnalités utilisées, temps passé dans l'app, fréquence d'utilisation, interactions</li>
               <li><strong>Données de Localisation :</strong> Localisation approximative (ville/région) pour afficher les magasins à proximité (uniquement avec votre permission explicite)</li>
               <li><strong>Données Analytiques :</strong> Rapports de plantage, métriques de performance, erreurs d'application</li>
-              <li><strong>Métadonnées Techniques :</strong> Adresse IP, informations de session, journaux d'activité</li>
+              <li><strong>Informations de Connexion :</strong> Adresse IP, informations de session, journaux d'activité</li>
             </ul>
           </div>
 
@@ -375,7 +376,7 @@ function PrivacyPolicy() {
               <li><strong>Fonctionnalité de Base :</strong> Traitement et analyse des données de reçus, suivi des prix, génération d'insights de dépenses</li>
               <li><strong>Authentification et Sécurité :</strong> Création et gestion de comptes, vérification d'identité, prévention de fraude</li>
               <li><strong>Personnalisation :</strong> Adaptation de l'expérience utilisateur, recommandations personnalisées</li>
-              <li><strong>Amélioration du Service :</strong> Développement technique, amélioration de la précision OCR, correction de bugs</li>
+              <li><strong>Amélioration du Service :</strong> Développement de fonctionnalités, amélioration de la précision d'analyse, correction d'erreurs</li>
               <li><strong>Support Client :</strong> Fourniture d'assistance technique et réponse aux demandes</li>
             </ul>
           </div>
@@ -404,7 +405,7 @@ function PrivacyPolicy() {
 
             <h3>5.2 Partage Autorisé Uniquement</h3>
             <ul>
-              <li><strong>Prestataires de Services :</strong> Google Firebase (hébergement sécurisé), services d'authentification (sous accords de confidentialité stricts)</li>
+              <li><strong>Prestataires de Services :</strong> Services d'hébergement cloud sécurisés, services d'authentification (sous accords de confidentialité stricts)</li>
               <li><strong>Obligations Légales :</strong> Lorsque requis par la loi, ordonnances judiciaires, ou pour protéger nos droits légaux</li>
               <li><strong>Protection de Sécurité :</strong> Prévention de fraude, protection contre les cyberattaques</li>
               <li><strong>Consentement Explicite :</strong> Uniquement si vous donnez votre autorisation spécifique</li>
@@ -418,7 +419,7 @@ function PrivacyPolicy() {
               <li><strong>Authentification Sécurisée :</strong> OAuth 2.0, authentification multi-facteurs optionnelle</li>
               <li><strong>Contrôles d'Accès :</strong> Accès basé sur les rôles, authentification forte des employés</li>
               <li><strong>Surveillance :</strong> Monitoring continu des activités suspectes, journaux d'audit complets</li>
-              <li><strong>Traitement Local :</strong> La reconnaissance optique de caractères (OCR) est effectuée localement sur votre appareil lorsque possible</li>
+              <li><strong>Traitement Local :</strong> Le traitement intelligent des reçus est effectué localement sur votre appareil lorsque possible</li>
             </ul>
           </div>
 
@@ -621,9 +622,9 @@ function TermsConditions() {
           <div className="legal-section">
             <h2>5. PROPRIÉTÉ INTELLECTUELLE</h2>
             <ul>
-              <li><strong>Application :</strong> Tous les droits, titres et intérêts dans l'Application, y compris le code source, algorithmes, interface utilisateur, design, fonctionnalités</li>
+              <li><strong>Application :</strong> Tous les droits, titres et intérêts dans l'Application, y compris l'interface utilisateur, design, fonctionnalités et technologies propriétaires</li>
               <li><strong>Marques :</strong> Logo GoShopper, noms commerciaux, marques de service sont notre propriété exclusive</li>
-              <li><strong>Technologies :</strong> Algorithmes d'IA, modèles d'apprentissage automatique, bases de données propriétaires</li>
+              <li><strong>Technologies :</strong> Intelligence artificielle propriétaire, systèmes d'analyse avancés, bases de données exclusives</li>
               <li><strong>Licence Accordée :</strong> Nous vous accordons une licence limitée, non exclusive, non transférable, révocable pour utiliser l'Application exclusivement pour vos besoins personnels</li>
             </ul>
             <p>Vous conservez tous droits de propriété sur vos reçus et données personnelles, mais nous accordez une licence pour traiter vos données afin de fournir le Service.</p>
@@ -632,9 +633,9 @@ function TermsConditions() {
           <div className="legal-section">
             <h2>6. PRÉCISION DES DONNÉES ET LIMITATION DE RESPONSABILITÉ</h2>
             
-            <h3>6.1 Précision de la Reconnaissance Optique (OCR)</h3>
+            <h3>6.1 Précision de l'Analyse Automatique</h3>
             <ul>
-              <li><strong>Technologie IA :</strong> L'extraction de données des reçus utilise l'intelligence artificielle qui peut occasionnellement produire des erreurs</li>
+              <li><strong>Intelligence Artificielle :</strong> L'extraction de données des reçus utilise l'intelligence artificielle qui peut occasionnellement produire des erreurs</li>
               <li><strong>Vérification Requise :</strong> Vous devez toujours vérifier l'exactitude des données extraites avant de les utiliser</li>
               <li><strong>Amélioration Continue :</strong> Nous nous efforçons d'améliorer constamment la précision, mais ne garantissons pas une précision de 100%</li>
             </ul>
@@ -811,6 +812,8 @@ function Support() {
 
   const [activeCategory, setActiveCategory] = useState('general');
   const [expandedFAQ, setExpandedFAQ] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState('');
 
   const handleInputChange = (e) => {
     setFormData({
@@ -819,11 +822,38 @@ function Support() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Here you would typically send the form data to your backend
-    alert('Merci pour votre message ! Nous vous répondrons dans les 24 heures.');
-    setFormData({ name: '', email: '', subject: '', message: '' });
+    setIsSubmitting(true);
+    setSubmitStatus('');
+
+    try {
+      // EmailJS configuration
+      const result = await emailjs.send(
+        'service_cydkyeu',
+        'template_niz6gqw',
+        {
+          name: formData.name,
+          email: formData.email,
+          subject: formData.subject,
+          message: formData.message,
+          time: new Date().toLocaleString(),
+        },
+        'gcVpnsQ20r5cXKudp'
+      );
+
+      if (result.status === 200) {
+        setSubmitStatus('success');
+        setFormData({ name: '', email: '', subject: '', message: '' });
+      } else {
+        setSubmitStatus('error');
+      }
+    } catch (error) {
+      console.error('EmailJS Error:', error);
+      setSubmitStatus('error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const toggleFAQ = (id) => {
@@ -847,12 +877,12 @@ function Support() {
         {
           id: 'accuracy',
           question: 'Quelle est la précision de la numérisation ?',
-          answer: 'GoShopper utilise l\'IA Gemini 2.5 Flash de Google pour atteindre une précision de plus de 95% sur les tickets clairs. L\'application traite d\'abord localement avec l\'OCR intégré, puis utilise l\'IA cloud pour les cas complexes.'
+          answer: 'GoShopper utilise une intelligence artificielle avancée pour atteindre une précision de plus de 95% sur les tickets clairs. L\'application traite intelligemment vos reçus pour extraire toutes les informations avec une grande précision.'
         },
         {
           id: 'offline',
           question: 'L\'application fonctionne-t-elle hors ligne ?',
-          answer: 'Oui ! GoShopper peut scanner les tickets complètement hors ligne grâce à l\'OCR local intégré. Vos données se synchronisent automatiquement dès que vous vous reconnectez à Internet.'
+          answer: 'Oui ! GoShopper peut scanner les tickets complètement hors ligne. Vos données se synchronisent automatiquement dès que vous vous reconnectez à Internet.'
         }
       ]
     },
@@ -937,7 +967,7 @@ function Support() {
         {
           id: 'data-security',
           question: 'Mes données financières sont-elles sécurisées ?',
-          answer: 'Absolument. GoShopper utilise un chiffrement AES-256 (niveau bancaire), stockage sécurisé Firebase, et ne collecte jamais d\'informations de carte bancaire. Toutes les données sont anonymisées et protégées.'
+          answer: 'Absolument. GoShopper utilise un chiffrement de niveau bancaire, stockage cloud sécurisé, et ne collecte jamais d\'informations de carte bancaire. Toutes les données sont anonymisées et protégées.'
         },
         {
           id: 'account-deletion',
@@ -947,7 +977,7 @@ function Support() {
         {
           id: 'data-backup',
           question: 'Mes données sont-elles sauvegardées ?',
-          answer: 'Oui, toutes vos données sont automatiquement sauvegardées dans le cloud Firebase. Si vous changez de téléphone, reconnectez-vous simplement pour récupérer toutes vos informations.'
+          answer: 'Oui, toutes vos données sont automatiquement sauvegardées dans le cloud sécurisé. Si vous changez de téléphone, reconnectez-vous simplement pour récupérer toutes vos informations.'
         },
         {
           id: 'multiple-devices',
@@ -1196,7 +1226,21 @@ function Support() {
                   required
                 ></textarea>
               </div>
-              <button type="submit" className="btn btn-primary">Envoyer le message</button>
+              <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                {isSubmitting ? 'Envoi en cours...' : 'Envoyer le message'}
+              </button>
+              
+              {submitStatus === 'success' && (
+                <div className="form-success-message">
+                  ✅ Merci pour votre message ! Nous vous répondrons dans les 24 heures.
+                </div>
+              )}
+              
+              {submitStatus === 'error' && (
+                <div className="form-error-message">
+                  ❌ Erreur lors de l'envoi. Veuillez réessayer ou nous contacter à support@goshopper.app
+                </div>
+              )}
             </form>
           </div>
 

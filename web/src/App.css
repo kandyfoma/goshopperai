@@ -2079,3 +2079,46 @@ body {
     font-size: 0.9rem;
   }
 }
+
+/* Form Status Messages */
+.form-status-message {
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  margin-top: var(--space-md);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.form-status-message.success {
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: var(--white);
+  border: 1px solid #10B981;
+}
+
+.form-status-message.error {
+  background: linear-gradient(135deg, #EF4444, #DC2626);
+  color: var(--white);
+  border: 1px solid #EF4444;
+}
+
+.form-status-message::before {
+  content: '✓';
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.form-status-message.error::before {
+  content: '✕';
+}
+
+.btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn[disabled]:hover {
+  transform: none;
+  box-shadow: var(--shadow-lg);
+}
