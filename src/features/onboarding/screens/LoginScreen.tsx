@@ -23,7 +23,8 @@ import {authService} from '@/shared/services/firebase';
 import {biometricService, BiometricStatus} from '@/shared/services/biometric';
 import {useAuth, useToast} from '@/shared/contexts';
 import {Icon} from '@/shared/components';
-import {logoGochujangSvg} from '../../../../assets/logo-icon';
+import Logo from '@/shared/components/Logo';
+
 
 // Gochujang Warm Design Colors
 const GOCHUJANG = {
@@ -336,7 +337,7 @@ export function LoginScreen() {
             {/* Logo & Title */}
             <View style={styles.logoSection}>
               <View style={styles.logoWrapper}>
-                <SvgXml xml={logoGochujangSvg} width={80} height={80} />
+                <Logo size={80} pulseOnLoad />
               </View>
               <Text style={styles.appName}>GoShopperAI</Text>
               <Text style={styles.tagline}>

@@ -1,0 +1,49 @@
+{
+  "short_name": "GoShopper",
+  "name": "GoShopper - Scan Reçus IA et Comparaison Prix RDC",
+  "description": "Application révolutionnaire avec IA pour scanner vos reçus, comparer les prix et gérer vos dépenses en RDC. Mobile money M-Pesa, Orange Money, Airtel Money.",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#C1121F",
+  "background_color": "#ffffff",
+  "lang": "fr-CD",
+  "scope": "/",
+  "categories": ["finance", "shopping", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Scanner Reçu",
+      "short_name": "Scan",
+      "description": "Scanner un nouveau reçu rapidement",
+      "url": "/?action=scan",
+      "icons": [{ "src": "logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Comparer Prix",
+      "short_name": "Prix",
+      "description": "Comparer les prix des produits",
+      "url": "/?action=compare",
+      "icons": [{ "src": "logo.png", "sizes": "96x96" }]
+    }
+  ]
+}

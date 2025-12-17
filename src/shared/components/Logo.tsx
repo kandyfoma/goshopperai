@@ -1,22 +1,10 @@
 import React, {useEffect, useRef} from 'react';
 import {View, StyleSheet, Animated, Easing, ViewStyle, Image} from 'react-native';
-import {SvgXml} from 'react-native-svg';
-import {
-  logoIconSvg,
-  logoIconWhiteSvg,
-  logoGochujangLightSvg,
-  logoGochujangCosmosSvg,
-} from '../../../assets/logo-icon';
 
 // PNG logo for Image component usage
-const logoPng = require('../../../assets/logo.png');
+const logoPng = require('../assets/logo.png');
 
-type LogoVariant =
-  | 'default'
-  | 'white'
-  | 'light'
-  | 'cosmos'
-  | 'png';
+type LogoVariant = 'png';
 
 interface LogoProps {
   size?: number;
@@ -29,7 +17,7 @@ interface LogoProps {
 const Logo: React.FC<LogoProps> = ({
   size = 100,
   style,
-  variant = 'default',
+  variant = 'png',
   animated = false,
   pulseOnLoad = false,
 }) => {
@@ -49,71 +37,47 @@ const Logo: React.FC<LogoProps> = ({
         Animated.timing(scaleAnim, {
           toValue: 1,
           duration: 200,
-          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ]).start();
     }
 
     if (animated) {
-      // Subtle continuous animation
+      // Continuous rotation animation
       Animated.loop(
         Animated.sequence([
-          Animated.timing(scaleAnim, {
-            toValue: 1.05,
-            duration: 1500,
-            easing: Easing.inOut(Easing.ease),
+          Animated.timing(rotateAnim, {
+            toValue: 1,
+            duration: 4000,
+            easing: Easing.linear,
             useNativeDriver: true,
           }),
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 1500,
-            easing: Easing.inOut(Easing.ease),
+          Animated.timing(rotateAnim, {
+            toValue: 0,
+            duration: 0,
             useNativeDriver: true,
           }),
         ]),
       ).start();
     }
-  }, [animated, pulseOnLoad, scaleAnim]);
+  }, [animated, pulseOnLoad, scaleAnim, rotateAnim]);
 
-  const getLogoSvg = () => {
-    switch (variant) {
-      case 'white':
-        return logoIconWhiteSvg;
-      case 'light':
-        return logoGochujangLightSvg;
-      case 'cosmos':
-        return logoGochujangCosmosSvg;
-      case 'png':
-        return null; // Use Image component instead
-      default:
-        return logoIconSvg;
-    }
-  };
+  const rotate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
-  const dimensions = {width: size, height: size};
-
-  // For PNG variant, use Image component
-  if (variant === 'png') {
-    return (
-      <Animated.View
-        style={[styles.container, style, {transform: [{scale: scaleAnim}]}]}>
-        <Image
-          source={logoPng}
-          style={{width: size, height: size, borderRadius: size * 0.22}}
-          resizeMode="contain"
-        />
-      </Animated.View>
-    );
-  }
+  const animatedStyle = animated
+    ? {transform: [{scale: scaleAnim}, {rotate}]}
+    : {transform: [{scale: scaleAnim}]};
 
   return (
     <Animated.View
-      style={[styles.container, style, {transform: [{scale: scaleAnim}]}]}>
-      <SvgXml
-        xml={getLogoSvg()}
-        width={dimensions.width}
-        height={dimensions.height}
+      style={[styles.container, style, animatedStyle]}>
+      <Image
+        source={logoPng}
+        style={{width: size, height: size, borderRadius: size * 0.22}}
+        resizeMode="contain"
       />
     </Animated.View>
   );

@@ -11,6 +11,7 @@ import {
   StatusBar,
   Animated,
   Dimensions,
+  Image,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -49,13 +50,14 @@ interface MobileMoneyOption {
   name: string;
   icon: string;
   color: string;
+  logo: any;
 }
 
 const MOBILE_MONEY_OPTIONS: MobileMoneyOption[] = [
-  {id: 'mpesa', name: 'M-Pesa', icon: 'phone', color: '#4CAF50'},
-  {id: 'orange', name: 'Orange Money', icon: 'circle', color: '#FF6600'},
-  {id: 'airtel', name: 'Airtel Money', icon: 'circle', color: '#ED1C24'},
-  {id: 'afrimoney', name: 'AfriMoney', icon: 'heart', color: '#FFB300'},
+  {id: 'mpesa', name: 'M-Pesa', icon: 'phone', color: '#4CAF50', logo: require('../../../shared/assets/money-transfer/m-pesa.png')},
+  {id: 'orange', name: 'Orange Money', icon: 'circle', color: '#FF6600', logo: require('../../../shared/assets/money-transfer/orange-money.png')},
+  {id: 'airtel', name: 'Airtel Money', icon: 'circle', color: '#ED1C24', logo: require('../../../shared/assets/money-transfer/airtal-money.png')},
+  {id: 'afrimoney', name: 'AfriMoney', icon: 'heart', color: '#FFB300', logo: require('../../../shared/assets/money-transfer/afrimoney.png')},
 ];
 
 export function SubscriptionScreen() {
@@ -761,11 +763,10 @@ export function SubscriptionScreen() {
                         styles.mobileMoneyIconContainer,
                         {backgroundColor: `${opt.color}20`},
                       ]}>
-                      <Icon 
-                        name={opt.icon} 
-                        size="lg" 
-                        color={opt.color}
-                        variant="filled"
+                      <Image 
+                        source={opt.logo}
+                        style={styles.mobileMoneyLogo}
+                        resizeMode="contain"
                       />
                     </View>
                     <Text
@@ -1354,6 +1355,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.sm,
+  },
+  mobileMoneyLogo: {
+    width: 32,
+    height: 32,
   },
   mobileMoneyIcon: {
     fontSize: 24,

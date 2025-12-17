@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  
+  <url>
+    <loc>https://goshopper.app/</loc>
+    <lastmod>2025-12-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link 
+      rel="alternate"
+      hreflang="fr-CD"
+      href="https://goshopper.app/" />
+  </url>
+  
+  <url>
+    <loc>https://goshopper.app/privacy</loc>
+    <lastmod>2025-12-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link 
+      rel="alternate"
+      hreflang="fr-CD"
+      href="https://goshopper.app/privacy" />
+  </url>
+  
+  <url>
+    <loc>https://goshopper.app/terms</loc>
+    <lastmod>2025-12-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <xhtml:link 
+      rel="alternate"
+      hreflang="fr-CD"
+      href="https://goshopper.app/terms" />
+  </url>
+  
+  <url>
+    <loc>https://goshopper.app/support</loc>
+    <lastmod>2025-12-17</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link 
+      rel="alternate"
+      hreflang="fr-CD"
+      href="https://goshopper.app/support" />
+  </url>
+  
+</urlset>

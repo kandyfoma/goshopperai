@@ -51,13 +51,22 @@ export const config = {
   // SendGrid (Email for international users)
   sendgrid: {
     apiKey: process.env.SENDGRID_API_KEY || '',
-    fromEmail: process.env.SENDGRID_FROM_EMAIL || 'noreply@goshopperai.com',
+    fromEmail: process.env.SENDGRID_FROM_EMAIL || 'noreply@goshopper.app',
+  },
+
+  // Apple Sign-In
+  apple: {
+    bundleId: process.env.APPLE_BUNDLE_ID || 'com.goshopper.app',
+    teamId: process.env.APPLE_TEAM_ID || 'WZ8VR8WS6H',
+    keyId: process.env.APPLE_KEY_ID || '',
+    privateKey: process.env.APPLE_PRIVATE_KEY || '',
+    jwksUrl: 'https://appleid.apple.com/auth/keys',
   },
 
   // App settings
   app: {
-    id: 'goshopperai',
-    region: 'europe-west1',
+    id: 'goshopper',
+    region: 'us-central1',
     trialScanLimit: -1, // Unlimited during trial
     trialDurationDays: 60, // 2 months
   },
@@ -84,4 +93,5 @@ export const collections = {
   stores: `artifacts/${config.app.id}/public/stores/data`,
   payments: (userId: string) =>
     `artifacts/${config.app.id}/users/${userId}/payments`,
+  appleNotifications: `artifacts/${config.app.id}/apple_notifications`,
 };

@@ -98,3 +98,9 @@ export {
   addProductMapping,
   searchMasterProducts,
 } from './products/productManagement';
+
+// Apple Sign-In Notification functions
+export {
+  appleNotifications,
+  testAppleNotifications,
+} from './auth/appleNotifications';
