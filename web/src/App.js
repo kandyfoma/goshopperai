@@ -483,7 +483,33 @@ function PrivacyPolicy() {
           </div>
 
           <div className="legal-section">
-            <h2>12. MODIFICATIONS DE CETTE POLITIQUE</h2>
+            <h2>12. DONNÉES DE PRIX COMMUNAUTAIRES</h2>
+            <p>Lorsque vous scannez des reçus, nous collectons et anonymisons les prix des produits, informations de magasin et données d'achat. Les données de prix sont complètement anonymisées et ne contiennent aucune information pouvant vous identifier personnellement. Les données communautaires anonymisées aident à fournir de meilleures comparaisons de prix pour tous les utilisateurs.</p>
+          </div>
+
+          <div className="legal-section">
+            <h2>13. CONTRIBUTION AUX DONNÉES COMMUNAUTAIRES</h2>
+            <p>Par défaut, votre numérisation de reçus contribue à notre base de données de prix communautaire anonymisée. Vous pouvez contrôler cela :</p>
+            <ul>
+              <li><strong>Désinscription :</strong> Désactivez la contribution aux données communautaires dans Paramètres > Confidentialité > Données communautaires</li>
+              <li><strong>Effet :</strong> Lorsque désactivé, vos données de prix ne seront pas partagées avec la communauté</li>
+              <li><strong>Impact :</strong> Les comparaisons de prix peuvent être moins complètes mais restent fonctionnelles</li>
+            </ul>
+          </div>
+
+          <div className="legal-section">
+            <h2>14. SUPPRESSION DES DONNÉES</h2>
+            <p>Vous pouvez demander la suppression de vos données personnelles :</p>
+            <ul>
+              <li><strong>Suppression de Compte :</strong> Supprimez votre compte via les paramètres de l'application</li>
+              <li><strong>Suppression des Données :</strong> Toutes les données personnelles sont supprimées définitivement dans les 30 jours</li>
+              <li><strong>Images de Reçus :</strong> Les images originales de reçus sont supprimées immédiatement</li>
+              <li><strong>Données Communautaires :</strong> Les données de prix anonymisées restent pour maintenir la qualité du service</li>
+            </ul>
+          </div>
+
+          <div className="legal-section">
+            <h2>15. MODIFICATIONS DE CETTE POLITIQUE</h2>
             <ul>
               <li>Notification via l'application pour modifications importantes</li>
               <li>E-mail de notification aux utilisateurs enregistrés</li>
@@ -494,7 +520,7 @@ function PrivacyPolicy() {
           </div>
 
           <div className="legal-section">
-            <h2>13. CONTACT ET RÉCLAMATIONS</h2>
+            <h2>16. CONTACT ET RÉCLAMATIONS</h2>
             <div className="contact-info">
               <p><strong>E-mail Confidentialité :</strong> privacy@goshopper.app</p>
               <p><strong>Support Général :</strong> support@goshopper.app</p>
@@ -595,7 +621,26 @@ function TermsConditions() {
           </div>
 
           <div className="legal-section">
-            <h2>4. UTILISATION ACCEPTABLE</h2>
+            <h2>4. FONCTIONNALITÉS COMMUNAUTAIRES ET PARTAGE DE DONNÉES</h2>
+            <p>En utilisant la fonction de numérisation de reçus, vous contribuez à notre base de données communautaire de prix. Toutes les données de prix sont complètement anonymisées avant d'être partagées avec la communauté. Aucune information personnelle ou identifiant utilisateur n'est inclus dans les données communautaires. Les données communautaires aident à fournir de meilleures comparaisons de prix pour tous les utilisateurs.</p>
+
+            <h3>4.1 Anonymisation des Données</h3>
+            <p>Les noms de produits, prix et informations de magasin sont anonymisés. Les identifiants utilisateurs, noms, emails et autres données personnelles ne sont jamais partagés. Vous pouvez vous désinscrire de la contribution aux données communautaires dans les paramètres de l'application. Les fonctionnalités communautaires fonctionnent avec ou sans votre contribution de données.</p>
+
+            <h3>4.2 Avantages Communautaires</h3>
+            <p>Accès à des comparaisons de prix complètes sur plusieurs magasins. Suivi historique des prix et tendances. Meilleurs insights d'achat et opportunités d'économies. Amélioration du service pour tous les utilisateurs grâce aux données collectives.</p>
+
+            <h3>4.3 Désinscription des Données Communautaires</h3>
+            <p>Vous avez le droit de vous désinscrire de la contribution à notre base de données de prix communautaire :</p>
+            <ul>
+              <li><strong>Comment se désinscrire :</strong> Paramètres > Confidentialité > Données communautaires et désactiver la fonctionnalité</li>
+              <li><strong>Effet de la désinscription :</strong> Vos données de reçus ne seront pas anonymisées et partagées avec la communauté</li>
+              <li><strong>Continuité du service :</strong> Toutes les autres fonctionnalités de l'application restent pleinement fonctionnelles</li>
+            </ul>
+          </div>
+
+          <div className="legal-section">
+            <h2>5. UTILISATION ACCEPTABLE</h2>
             
             <h3>4.1 Usages Autorisés</h3>
             <ul>
@@ -620,7 +665,7 @@ function TermsConditions() {
           </div>
 
           <div className="legal-section">
-            <h2>5. PROPRIÉTÉ INTELLECTUELLE</h2>
+            <h2>6. PROPRIÉTÉ INTELLECTUELLE</h2>
             <ul>
               <li><strong>Application :</strong> Tous les droits, titres et intérêts dans l'Application, y compris l'interface utilisateur, design, fonctionnalités et technologies propriétaires</li>
               <li><strong>Marques :</strong> Logo GoShopper, noms commerciaux, marques de service sont notre propriété exclusive</li>
@@ -631,7 +676,7 @@ function TermsConditions() {
           </div>
 
           <div className="legal-section">
-            <h2>6. PRÉCISION DES DONNÉES ET LIMITATION DE RESPONSABILITÉ</h2>
+            <h2>7. PRÉCISION DES DONNÉES ET LIMITATION DE RESPONSABILITÉ</h2>
             
             <h3>6.1 Précision de l'Analyse Automatique</h3>
             <ul>
@@ -649,7 +694,7 @@ function TermsConditions() {
           </div>
 
           <div className="legal-section">
-            <h2>7. ABONNEMENTS, PAIEMENTS ET REMBOURSEMENTS</h2>
+            <h2>8. ABONNEMENTS, PAIEMENTS ET REMBOURSEMENTS</h2>
             <ul>
               <li><strong>Plans d'Abonnement :</strong> Plan gratuit avec fonctionnalités limitées et plans premium avec fonctionnalités avancées</li>
               <li><strong>Facturation Périodique :</strong> Les frais d'abonnement sont facturés à l'avance pour chaque période d'abonnement</li>
@@ -662,7 +707,7 @@ function TermsConditions() {
           </div>
 
           <div className="legal-section">
-            <h2>8. GARANTIES ET EXCLUSIONS</h2>
+            <h2>9. GARANTIES ET EXCLUSIONS</h2>
             <p><strong>DANS LA MESURE MAXIMALE AUTORISÉE PAR LA LOI, LE SERVICE EST FOURNI "EN L'ÉTAT" ET "SELON DISPONIBILITÉ" SANS AUCUNE GARANTIE, EXPRESSE OU IMPLICITE, Y COMPRIS MAIS SANS S'Y LIMITER :</strong></p>
             <ul>
               <li><strong>Qualité Marchande</strong> et adaptation à un usage particulier</li>
@@ -674,7 +719,7 @@ function TermsConditions() {
           </div>
 
           <div className="legal-section">
-            <h2>9. LIMITATION DE RESPONSABILITÉ</h2>
+            <h2>10. LIMITATION DE RESPONSABILITÉ</h2>
             <p><strong>DANS LA MESURE MAXIMALE AUTORISÉE PAR LA LOI, GOSHOPPER, SES DIRIGEANTS, EMPLOYÉS, AGENTS ET PARTENAIRES NE SERONT EN AUCUN CAS RESPONSABLES DE :</strong></p>
             <ul>
               <li><strong>Dommages Indirects :</strong> Perte de profits, d'économies, d'opportunités commerciales</li>
@@ -686,7 +731,7 @@ function TermsConditions() {
           </div>
 
           <div className="legal-section">
-            <h2>10. INDEMNISATION</h2>
+            <h2>11. INDEMNISATION</h2>
             <p>Vous acceptez d'indemniser, défendre et dégager de toute responsabilité GoShopper contre toute réclamation, demande, dommage, perte, coût ou dépense découlant de :</p>
             <ul>
               <li>Votre utilisation du Service en violation de ces Conditions</li>
@@ -697,23 +742,23 @@ function TermsConditions() {
           </div>
 
           <div className="legal-section">
-            <h2>11. RÉSILIATION</h2>
+            <h2>12. RÉSILIATION</h2>
             <p>Vous pouvez résilier votre compte à tout moment. Nous pouvons résilier ou suspendre votre accès immédiatement si vous violez ces Conditions, nous cessons de fournir le Service, votre compte reste inactif, ou nous déterminons que la résiliation est nécessaire.</p>
             <p>En cas de résiliation : votre droit d'utiliser le Service cesse immédiatement, nous pouvons supprimer votre compte et toutes vos données, aucun remboursement des frais payés (sauf exceptions légales).</p>
           </div>
 
           <div className="legal-section">
-            <h2>12. FORCE MAJEURE</h2>
+            <h2>13. FORCE MAJEURE</h2>
             <p>Nous ne serons pas responsables de tout retard ou défaut d'exécution résultant de circonstances indépendantes de notre volonté : catastrophes naturelles, guerres, grèves, défaillances d'infrastructure, actions gouvernementales, pandemies.</p>
           </div>
 
           <div className="legal-section">
-            <h2>13. JURIDICTION ET LOI APPLICABLE</h2>
+            <h2>14. JURIDICTION ET LOI APPLICABLE</h2>
             <p>Ces Conditions sont régies par les lois françaises. Tout litige sera soumis à la compétence exclusive des tribunaux français, sous réserve des droits impératifs des consommateurs. Nous encourageons la résolution amiable des différends par négociation directe, médiation ou arbitrage.</p>
           </div>
 
           <div className="legal-section">
-            <h2>14. CONFORMITÉ RÉGLEMENTAIRE</h2>
+            <h2>15. CONFORMITÉ RÉGLEMENTAIRE</h2>
             <p>Le Service est développé en conformité avec :</p>
             <ul>
               <li>Réglementation européenne sur la protection des données (RGPD)</li>
@@ -724,7 +769,7 @@ function TermsConditions() {
           </div>
 
           <div className="legal-section">
-            <h2>15. DISPOSITIONS GÉNÉRALES</h2>
+            <h2>16. DISPOSITIONS GÉNÉRALES</h2>
             <ul>
               <li><strong>Intégralité de l'Accord :</strong> Ces Conditions constituent l'intégralité de l'accord entre vous et nous</li>
               <li><strong>Divisibilité :</strong> Si une disposition est jugée invalide, les autres restent en vigueur</li>
@@ -733,7 +778,7 @@ function TermsConditions() {
           </div>
 
           <div className="legal-section">
-            <h2>16. CONTACT ET SUPPORT</h2>
+            <h2>17. CONTACT ET SUPPORT</h2>
             <div className="contact-info">
               <p><strong>Support Technique :</strong> support@goshopper.app</p>
               <p><strong>Questions Légales :</strong> legal@goshopper.app</p>

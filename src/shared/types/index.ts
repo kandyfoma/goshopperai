@@ -20,6 +20,7 @@ export type RootStackParamList = {
   ProfileSetup: {firstName?: string; surname?: string};
   Main: undefined;
   Scanner: undefined;
+  ReceiptProcessing: {receiptId?: string; receiptImage?: string};
   ReceiptDetail: {receiptId: string; receipt?: Receipt};
   PriceComparison: {receiptId: string};
   Subscription: undefined;
@@ -33,7 +34,8 @@ export type RootStackParamList = {
   Achievements: undefined;
   BudgetSettings: undefined;
   // Phase 1.2 Screens
-  ShoppingList: undefined;
+  ShoppingLists: undefined;
+  ShoppingListDetail: {listId: string};
   AIAssistant: undefined;
   // Shops
   Shops: undefined;

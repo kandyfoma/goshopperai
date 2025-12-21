@@ -23,6 +23,12 @@ Welcome to GoShopper AI ("we," "our," or "the App"). We are committed to protect
 - **Location Data:** Approximate location (city/region) to show nearby stores (only with your permission)
 - **Analytics Data:** Crash reports, performance metrics, and app errors
 
+### Community Price Data
+
+- **Anonymized Price Information:** When you scan receipts, we collect and anonymize product prices, store information, and purchase data
+- **No Personal Identifiers:** Price data is completely anonymized and does not contain any information that could identify you personally
+- **Community Benefit:** Anonymized price data helps provide better price comparisons for all users
+
 ### Camera and Photo Library
 
 - We access your camera to scan receipts
@@ -54,6 +60,26 @@ We use the collected information for:
    - Detecting and preventing fraud
    - Protecting against unauthorized access
    - Maintaining account security
+
+## Your Rights and Choices
+
+### Community Data Contribution
+
+By default, your receipt scanning contributes to our anonymized community price database. You can control this:
+
+- **Opt-Out:** Disable community data contribution in Settings > Privacy > Community Data
+- **What Happens:** When disabled, your price data won't be shared with the community
+- **Impact:** Price comparisons may be less comprehensive but still functional
+- **Existing Data:** Opting out doesn't remove previously contributed anonymized data
+
+### Data Deletion
+
+You can request deletion of your personal data:
+
+- **Account Deletion:** Delete your account through the app settings
+- **Data Removal:** All personal data is permanently deleted within 30 days
+- **Receipt Images:** Original receipt images are deleted immediately
+- **Community Data:** Anonymized price data remains to maintain service quality
 
 ## Data Storage and Security
 

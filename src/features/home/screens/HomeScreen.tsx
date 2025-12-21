@@ -29,6 +29,8 @@ import {analyticsService, hapticService, widgetDataService} from '@/shared/servi
 import firestore from '@react-native-firebase/firestore';
 import {formatCurrency} from '@/shared/utils/helpers';
 import {APP_ID} from '@/shared/services/firebase/config';
+import {getCurrentMonthBudget} from '@/shared/services/firebase/budgetService';
+import {Recommendations} from '@/features/recommendations';
 
 const {width} = Dimensions.get('window');
 const CARD_WIDTH = (width - Spacing.lg * 2 - Spacing.md) / 2;
@@ -290,9 +292,45 @@ export function HomeScreen() {
   const [monthlySpending, setMonthlySpending] = useState(0);
   const [itemsCount, setItemsCount] = useState(0);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [currentBudget, setCurrentBudget] = useState(0);
 
   // Determine display currency: use preferred currency if budget is set, otherwise USD
-  const displayCurrency = userProfile?.monthlyBudget ? userProfile.preferredCurrency : 'USD';
+  const displayCurrency = userProfile?.preferredCurrency || 'USD';
+
+  // Load current month budget
+  useEffect(() => {
+    const loadBudget = async () => {
+      if (!userProfile?.userId) return;
+
+      try {
+        const budget = await getCurrentMonthBudget(
+          userProfile.userId,
+          userProfile.defaultMonthlyBudget || userProfile.monthlyBudget,
+          userProfile.preferredCurrency || 'USD',
+        );
+        setCurrentBudget(budget.amount);
+      } catch (error) {
+        console.error('Error loading budget:', error);
+        // Fallback to legacy budget
+        setCurrentBudget(userProfile.monthlyBudget || 0);
+      }
+    };
+
+    loadBudget();
+  }, [userProfile?.userId, userProfile?.defaultMonthlyBudget, userProfile?.monthlyBudget, userProfile?.preferredCurrency]);
+
+  // Update widget when budget changes
+  useEffect(() => {
+    if (currentBudget >= 0 && !isLoadingStats) {
+      widgetDataService.updateSpendingWidget({
+        monthlyTotal: monthlySpending,
+        monthlyBudget: currentBudget,
+        currency: displayCurrency,
+        lastUpdated: new Date().toISOString(),
+        percentUsed: currentBudget > 0 ? (monthlySpending / currentBudget) * 100 : 0,
+      });
+    }
+  }, [currentBudget, monthlySpending, displayCurrency, isLoadingStats]);
 
   useEffect(() => {
     analyticsService.logScreenView('Home', 'HomeScreen');
@@ -329,16 +367,6 @@ export function HomeScreen() {
         });
 
         setMonthlySpending(total);
-        
-        // Update widget data
-        const budget = userProfile?.monthlyBudget || 500;
-        widgetDataService.updateSpendingWidget({
-          monthlyTotal: total,
-          monthlyBudget: budget,
-          currency: displayCurrency,
-          lastUpdated: new Date().toISOString(),
-          percentUsed: budget > 0 ? (total / budget) * 100 : 0,
-        });
       } catch (error) {
         console.error('Error fetching monthly spending:', error);
         setMonthlySpending(0);
@@ -536,7 +564,6 @@ export function HomeScreen() {
                 analyticsService.logCustomEvent('guest_register_clicked');
                 navigation.push('Register');
               }}
-              rightIcon="arrow-right"
             />
 
             <Button
@@ -624,8 +651,8 @@ export function HomeScreen() {
             <StatCard
               title=""
               value={
-                userProfile?.monthlyBudget
-                  ? `${userProfile.monthlyBudget} ${displayCurrency}`
+                currentBudget > 0
+                  ? `${currentBudget} ${displayCurrency}`
                   : `0 ${displayCurrency}`
               }
               subtitle="Budget Mensuel"
@@ -650,6 +677,15 @@ export function HomeScreen() {
 
         {/* Main Scan Button */}
         <ScanButton onPress={handleScanPress} disabled={!canScan} />
+
+        {/* AI Recommendations */}
+        <Recommendations
+          onItemPress={item => {
+            // Navigate to item details or price comparison
+            console.log('Item pressed:', item);
+          }}
+          limit={5}
+        />
 
         {/* Quick Actions */}
         <Text style={styles.sectionTitle}>Actions rapides</Text>
@@ -681,7 +717,7 @@ export function HomeScreen() {
           <QuickAction
             icon="cart"
             label="Mes listes"
-            onPress={() => navigation.push('ShoppingList')}
+            onPress={() => navigation.push('ShoppingLists')}
             color="crimson"
           />
           <QuickAction

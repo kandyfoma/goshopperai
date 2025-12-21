@@ -31,6 +31,9 @@ import {analyticsService} from '@/shared/services/analytics';
 import {productSearchService} from '@/shared/services/productSearchService';
 import {RootStackParamList} from '@/shared/types';
 
+// City/Community item data (Tier 3: Community Prices - Anonymous)
+// Source: getCityItems Cloud Function → artifacts/{APP_ID}/users/*/items
+// Aggregates items from all users in the same city
 interface CityItemData {
   id: string;
   name: string;

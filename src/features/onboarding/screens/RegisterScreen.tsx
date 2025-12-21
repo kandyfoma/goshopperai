@@ -26,7 +26,7 @@ import {
   Spacing,
   BorderRadius,
 } from '@/shared/theme/theme';
-import {Icon, Button, PasswordStrengthIndicator, CapsLockIndicator} from '@/shared/components';
+import {Icon, Button} from '@/shared/components';
 import {passwordService} from '@/shared/services/password';
 import {useAuth} from '@/shared/contexts';
 
@@ -41,7 +41,7 @@ export function RegisterScreen() {
   const [currentStep, setCurrentStep] = useState<RegistrationStep>('step1');
   
   // Step 1: Phone number and city
-  const [selectedCountry, setSelectedCountry] = useState(countryCodeList[1]); // Default to Congo
+  const [selectedCountry, setSelectedCountry] = useState(countryCodeList[0]); // Default to RDC
   const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   const [phoneError, setPhoneError] = useState('');
@@ -65,7 +65,7 @@ export function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
 
-  let phoneCheckTimeout: NodeJS.Timeout;
+  let phoneCheckTimeout: ReturnType<typeof setTimeout>;
 
   // Phone number validation and checking
   const validatePhoneNumber = (phone: string): string => {
@@ -345,7 +345,8 @@ export function RegisterScreen() {
                 title="Continuer"
                 onPress={handleStep1Continue}
                 disabled={!isStep1Valid()}
-                rightIcon="arrow-right"
+                icon={<Icon name="arrow-right" size="sm" color={Colors.white} />}
+                iconPosition="right"
               />
 
               {/* Social Login */}
@@ -360,7 +361,8 @@ export function RegisterScreen() {
                 title="Continuer avec Google"
                 onPress={handleGoogleSignIn}
                 loading={socialLoading === 'google'}
-                leftIcon="google"
+                icon={<Icon name="google" size="sm" color={Colors.text.primary} />}
+                iconPosition="left"
               />
               
               {Platform.OS === 'ios' && (
@@ -369,7 +371,8 @@ export function RegisterScreen() {
                   title="Continuer avec Apple"
                   onPress={handleAppleSignIn}
                   loading={socialLoading === 'apple'}
-                  leftIcon="apple"
+                  icon={<Icon name="apple" size="sm" color={Colors.text.primary} />}
+                  iconPosition="left"
                 />
               )}
             </View>
@@ -405,17 +408,6 @@ export function RegisterScreen() {
                   </TouchableOpacity>
                 </View>
                 {passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
-                
-                {/* Password Strength Indicator */}
-                {password.length > 0 && (
-                  <PasswordStrengthIndicator 
-                    validation={getPasswordValidation(password)}
-                    showDetails={!passwordError}
-                  />
-                )}
-                
-                {/* Caps Lock Warning */}
-                <CapsLockIndicator password={password} />
               </View>
 
               {/* Confirm Password */}
@@ -466,7 +458,8 @@ export function RegisterScreen() {
                 onPress={handleRegistration}
                 disabled={!isStep2Valid()}
                 loading={loading}
-                rightIcon="user-plus"
+                icon={<Icon name="user-plus" size="sm" color={Colors.white} />}
+                iconPosition="right"
               />
 
               {/* Back Button */}
@@ -475,7 +468,8 @@ export function RegisterScreen() {
                 title="Retour"
                 onPress={() => setCurrentStep('step1')}
                 disabled={loading}
-                leftIcon="arrow-left"
+                icon={<Icon name="arrow-left" size="sm" color={Colors.text.primary} />}
+                iconPosition="left"
               />
             </View>
           )}

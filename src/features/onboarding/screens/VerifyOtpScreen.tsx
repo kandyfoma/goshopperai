@@ -17,7 +17,7 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {useAuth} from '@/shared/contexts';
 import {smsService} from '@/shared/services/sms';
-import {authService} from '@/shared/services/firebase';
+import {authService, userBehaviorService} from '@/shared/services/firebase';
 import {Button, Icon} from '@/shared/components';
 import {
   Colors,
@@ -101,14 +101,30 @@ const VerifyOtpScreen: React.FC = () => {
       
       if (result.success) {
         if (isRegistration && registrationData) {
-          // Complete registration
+          // Complete registration with verification
           try {
-            await authService.createUserWithPhone({
+            // First create the user account
+            const user = await authService.createUserWithPhone({
               phoneNumber,
               password: registrationData.password,
               city: registrationData.city,
               countryCode: registrationData.countryCode
             });
+            
+            // Now mark the user as verified in the profile
+            if (result.token && user.uid) {
+              await authService.completeRegistration({
+                userId: user.uid,
+                verificationToken: result.token,
+                phoneNumber,
+                countryCode: registrationData.countryCode,
+                displayName: phoneNumber
+              });
+              
+              // Initialize behavior profile for new user
+              await userBehaviorService.initializeBehaviorProfile(user.uid)
+                .catch(err => console.log('Failed to initialize behavior profile:', err));
+            }
             
             // Show success message and navigate to main app
             Alert.alert('Bienvenue!', 'Votre compte a été créé avec succès!', [

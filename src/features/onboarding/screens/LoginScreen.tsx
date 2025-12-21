@@ -28,7 +28,7 @@ import {useAuth, useToast} from '@/shared/contexts';
 import {Icon, Button} from '@/shared/components';
 import Logo from '@/shared/components/Logo';
 //Login Screen imports
-import {phoneService} from '@/shared/services/phone';
+import {PhoneService} from '@/shared/services/phone';
 import {countryCodeList} from '@/shared/constants/countries';
 import {loginSecurityService} from '@/shared/services/security/loginSecurity';
 import {passwordService} from '@/shared/services/password';
@@ -85,7 +85,7 @@ export function LoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState(countryCodeList[1]); // Default to Congo
+  const [selectedCountry, setSelectedCountry] = useState(countryCodeList[0]); // Default to RDC
   const [showCountryModal, setShowCountryModal] = useState(false);
 
   // UI state
@@ -167,7 +167,7 @@ export function LoginScreen() {
 
     // Check security status for this phone number
     if (cleanText.length >= 8) { // Only check when we have a reasonable phone number
-      const formattedPhone = phoneService.formatPhoneNumber(cleanText, selectedCountry.code);
+      const formattedPhone = PhoneService.formatPhoneNumber(selectedCountry.code, cleanText);
       const security = await loginSecurityService.getSecurityStatus(formattedPhone);
       setSecurityStatus({
         locked: security.locked,
@@ -197,9 +197,9 @@ export function LoginScreen() {
     }
     
     try {
-      const validation = phoneService.validatePhoneNumber(value, selectedCountry.code);
-      if (!validation.isValid) {
-        setPhoneError(validation.error || 'Format de numéro invalide');
+      const validation = PhoneService.validatePhoneNumber(PhoneService.formatPhoneNumber(selectedCountry.code, value));
+      if (!validation) {
+        setPhoneError('Format de numéro invalide');
         return false;
       }
       setPhoneError(null);
@@ -239,7 +239,7 @@ export function LoginScreen() {
       return;
     }
 
-    const formattedPhone = phoneService.formatPhoneNumber(phoneNumber, selectedCountry.code);
+    const formattedPhone = PhoneService.formatPhoneNumber(selectedCountry.code, phoneNumber);
 
     // Check if account is locked
     const lockStatus = await loginSecurityService.isAccountLocked(formattedPhone);
@@ -372,27 +372,6 @@ export function LoginScreen() {
       setError(err?.message || 'Échec de la connexion biométrique');
     } finally {
       setBiometricLoading(false);
-    }
-  };
-
-  // Clear field errors on change
-  const handlePhoneChange = (value: string) => {
-    setPhoneNumber(value);
-    if (phoneError) {
-      setPhoneError(null);
-    }
-    if (error) {
-      setError(null);
-    }
-  };
-
-  const handlePasswordChange = (value: string) => {
-    setPassword(value);
-    if (passwordError) {
-      setPasswordError(null);
-    }
-    if (error) {
-      setError(null);
     }
   };
 
@@ -540,9 +519,6 @@ export function LoginScreen() {
                   <Text style={styles.fieldError}>{passwordError}</Text>
                 )}
                 
-                {/* Caps Lock Warning */}
-                <CapsLockIndicator password={password} />
-                
                 {/* Security Status */}
                 {securityStatus.locked && (
                   <View style={styles.securityWarning}>
@@ -686,7 +662,8 @@ export function LoginScreen() {
                     onPress={handleBiometricLogin}
                     disabled={isLoading || biometricLoading}
                     loading={biometricLoading}
-                    leftIcon={biometricService.getBiometryIcon(biometricStatus.biometryType)}
+                    icon={<Icon name={biometricService.getBiometryIcon(biometricStatus.biometryType)} size="sm" color={GOCHUJANG.textPrimary} />}
+                    iconPosition="left"
                   />
                 </>
               )}

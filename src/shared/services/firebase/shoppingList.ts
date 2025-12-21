@@ -169,6 +169,23 @@ class ShoppingListService {
   }
 
   /**
+   * Update shopping list name
+   */
+  async updateListName(
+    userId: string,
+    listId: string,
+    name: string,
+  ): Promise<void> {
+    await firestore()
+      .collection(SHOPPING_LISTS_COLLECTION(userId))
+      .doc(listId)
+      .update({
+        name,
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      });
+  }
+
+  /**
    * Convert Firestore doc to ShoppingList
    */
   private docToList(doc: any): ShoppingList {

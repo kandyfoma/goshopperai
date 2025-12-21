@@ -86,15 +86,26 @@ export function UserProvider({children}: UserProviderProps) {
               priceAlertsEnabled: data?.priceAlertsEnabled ?? true,
               displayName: data?.displayName,
               phoneNumber: data?.phoneNumber,
+              emailVerified: data?.emailVerified,
+              phoneVerified: data?.phoneVerified,
+              verified: data?.verified,
+              verifiedAt: data?.verifiedAt ? safeToDate(data.verifiedAt) : undefined,
+              countryCode: data?.countryCode,
+              isInDRC: data?.isInDRC,
               // New profile fields
               name: data?.name,
               surname: data?.surname,
               age: data?.age,
               sex: data?.sex,
               monthlyBudget: data?.monthlyBudget,
+              defaultMonthlyBudget: data?.defaultMonthlyBudget,
               defaultCity: data?.defaultCity,
               createdAt: safeToDate(data?.createdAt),
               updatedAt: safeToDate(data?.updatedAt),
+              // ML & AI fields
+              behaviorProfile: data?.behaviorProfile,
+              recommendationPreferences: data?.recommendationPreferences,
+              engagementMetrics: data?.engagementMetrics,
             };
 
             setProfile(userProfile);

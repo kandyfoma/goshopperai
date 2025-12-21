@@ -48,8 +48,9 @@ class AnalyticsService {
       if (profile.sex) {
         properties.gender = profile.sex;
       }
-      if (profile.monthlyBudget) {
-        properties.budget_tier = this.getBudgetTier(profile.monthlyBudget);
+      const budget = profile.defaultMonthlyBudget || profile.monthlyBudget;
+      if (budget) {
+        properties.budget_tier = this.getBudgetTier(budget);
       }
 
       await analytics().setUserProperties(properties);

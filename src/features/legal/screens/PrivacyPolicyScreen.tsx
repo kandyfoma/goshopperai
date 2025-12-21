@@ -150,12 +150,27 @@ export function PrivacyPolicyScreen() {
           />
 
           <PolicySection
-            title="12. MODIFICATIONS POLITIQUE"
+            title="12. DONNÉES DE PRIX COMMUNAUTAIRES"
+            content="Lorsque vous scannez des reçus, nous collectons et anonymisons les prix des produits, informations de magasin et données d'achat. Les données de prix sont complètement anonymisées et ne contiennent aucune information pouvant vous identifier personnellement. Les données communautaires anonymisées aident à fournir de meilleures comparaisons de prix pour tous les utilisateurs."
+          />
+
+          <PolicySection
+            title="13. CONTRIBUTION AUX DONNÉES COMMUNAUTAIRES"
+            content="Par défaut, votre numérisation de reçus contribue à notre base de données de prix communautaire anonymisée. Vous pouvez contrôler cela : Désinscription : Désactivez la contribution aux données communautaires dans Paramètres > Confidentialité > Données communautaires. Effet : Lorsque désactivé, vos données de prix ne seront pas partagées avec la communauté. Impact : Les comparaisons de prix peuvent être moins complètes mais restent fonctionnelles."
+          />
+
+          <PolicySection
+            title="14. SUPPRESSION DES DONNÉES"
+            content="Vous pouvez demander la suppression de vos données personnelles : Suppression de compte : Supprimez votre compte via les paramètres de l'application. Suppression des données : Toutes les données personnelles sont supprimées définitivement dans les 30 jours. Images de reçus : Les images originales de reçus sont supprimées immédiatement. Données communautaires : Les données de prix anonymisées restent pour maintenir la qualité du service."
+          />
+
+          <PolicySection
+            title="15. MODIFICATIONS POLITIQUE"
             content="Notification changements: Via application (modifications importantes), e-mail notification utilisateurs enregistrés, publication nouvelle version site web, préavis 30 jours changements substantiels. Utilisation continue service après modifications constitue acceptation politique révisée."
           />
 
           <PolicySection
-            title="13. CONTACT ET RÉCLAMATIONS"
+            title="16. CONTACT ET RÉCLAMATIONS"
             content="Contacts: privacy@goshopper.app (confidentialité), support@goshopper.app (support général), dpo@goshopper.app (délégué protection données). Réclamations: Droit dépôt plainte autorité supervision compétente. France: CNIL. UE: Autorité protection données pays résidence. Site web: https://goshopper.app/privacy"
           />
         </View>

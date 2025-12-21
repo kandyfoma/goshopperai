@@ -66,6 +66,28 @@ service cloud.firestore {
           // Only Cloud Functions can write payment data
           allow write: if false;
         }
+        
+        // Shopping Lists - NEW
+        match /shoppingLists/{listId} {
+          allow read, write: if isOwner(userId);
+        }
+        
+        // Price Alerts - NEW
+        match /priceAlerts/{alertId} {
+          allow read, write: if isOwner(userId);
+        }
+        
+        // Notifications - NEW
+        match /notifications/{notificationId} {
+          allow read: if isOwner(userId);
+          // Only Cloud Functions can write notifications
+          allow write: if false;
+        }
+        
+        // Monthly Budgets - NEW
+        match /budgets/{monthKey} {
+          allow read, write: if isOwner(userId);
+        }
       }
       
       // Public price data - anyone authenticated can read

@@ -1,6 +1,6 @@
 "use strict";
 /**
- * GoShopperAI Cloud Functions
+ * GoShopper Cloud Functions
  * Main entry point - exports all cloud functions
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
@@ -38,7 +38,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getSpendingSuggestions = exports.processNLQuery = exports.checkSubscriptionExpiration = exports.sendAdminBroadcast = exports.sendSyncCompleteNotification = exports.sendAchievementNotification = exports.sendWeeklySavingsTips = exports.getUserAlerts = exports.createPriceAlert = exports.scheduledAlertCheck = exports.checkPriceAlerts = exports.checkIdentifierAvailability = exports.completeRegistration = exports.verifyCode = exports.sendVerificationCode = exports.getSmartPriceComparison = exports.getPriceHistory = exports.getPriceComparison = exports.savePriceData = exports.sendManualExpirationWarning = exports.checkExpirationWarnings = exports.manuallyRenewSubscription = exports.processAutoRenewals = exports.getUserStats = exports.extendTrial = exports.checkExpiredSubscriptions = exports.cancelSubscription = exports.getSubscriptionPricing = exports.renewSubscription = exports.downgradeSubscription = exports.upgradeSubscription = exports.recordScanUsage = exports.getSubscriptionStatus = exports.listDeadLetterEvents = exports.getWebhookStats = exports.retryWebhookEvent = exports.processWebhookRetries = exports.retryRefund = exports.listUserRefunds = exports.getRefundStatus = exports.requestRefund = exports.stripeWebhook = exports.confirmCardPayment = exports.createCardPaymentIntent = exports.mokoPaymentWebhook = exports.verifyMokoPayment = exports.initiateMokoPayment = exports.quickExtractReceipt = exports.parseReceiptV2 = exports.parseReceipt = void 0;
-exports.testAppleNotification = exports.appleNotifications = exports.searchMasterProducts = exports.addProductMapping = exports.initializeMasterProducts = exports.getCityItems = exports.rebuildItemsAggregation = exports.aggregateItemsOnReceipt = void 0;
+exports.calculateUserMLFeatures = exports.updateUserBehaviorProfile = exports.testAppleNotification = exports.appleNotifications = exports.manualCleanupUserData = exports.cleanupOldUserData = exports.searchMasterProducts = exports.addProductMapping = exports.initializeMasterProducts = exports.cleanupDeletedReceiptItems = exports.getCityItems = exports.rebuildItemsAggregation = exports.aggregateItemsOnReceipt = void 0;
 const admin = __importStar(require("firebase-admin"));
 // Initialize Firebase Admin
 if (!admin.apps.length) {
@@ -130,13 +130,22 @@ var itemAggregation_1 = require("./items/itemAggregation");
 Object.defineProperty(exports, "aggregateItemsOnReceipt", { enumerable: true, get: function () { return itemAggregation_1.aggregateItemsOnReceipt; } });
 Object.defineProperty(exports, "rebuildItemsAggregation", { enumerable: true, get: function () { return itemAggregation_1.rebuildItemsAggregation; } });
 Object.defineProperty(exports, "getCityItems", { enumerable: true, get: function () { return itemAggregation_1.getCityItems; } });
+Object.defineProperty(exports, "cleanupDeletedReceiptItems", { enumerable: true, get: function () { return itemAggregation_1.cleanupDeletedReceiptItems; } });
 // Product Management functions
 var productManagement_1 = require("./products/productManagement");
 Object.defineProperty(exports, "initializeMasterProducts", { enumerable: true, get: function () { return productManagement_1.initializeMasterProducts; } });
 Object.defineProperty(exports, "addProductMapping", { enumerable: true, get: function () { return productManagement_1.addProductMapping; } });
 Object.defineProperty(exports, "searchMasterProducts", { enumerable: true, get: function () { return productManagement_1.searchMasterProducts; } });
+// Data Retention and Cleanup functions
+var dataRetention_1 = require("./cleanup/dataRetention");
+Object.defineProperty(exports, "cleanupOldUserData", { enumerable: true, get: function () { return dataRetention_1.cleanupOldUserData; } });
+Object.defineProperty(exports, "manualCleanupUserData", { enumerable: true, get: function () { return dataRetention_1.manualCleanupUserData; } });
 // Apple Sign-In Notification functions
 var appleNotifications_1 = require("./auth/appleNotifications");
 Object.defineProperty(exports, "appleNotifications", { enumerable: true, get: function () { return appleNotifications_1.appleNotifications; } });
 Object.defineProperty(exports, "testAppleNotification", { enumerable: true, get: function () { return appleNotifications_1.testAppleNotification; } });
+// ML & Behavior Tracking functions
+var behaviorProfile_1 = require("./ml/behaviorProfile");
+Object.defineProperty(exports, "updateUserBehaviorProfile", { enumerable: true, get: function () { return behaviorProfile_1.updateUserBehaviorProfile; } });
+Object.defineProperty(exports, "calculateUserMLFeatures", { enumerable: true, get: function () { return behaviorProfile_1.calculateUserMLFeatures; } });
 //# sourceMappingURL=index.js.map

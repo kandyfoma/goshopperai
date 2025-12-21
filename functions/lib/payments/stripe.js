@@ -117,7 +117,7 @@ exports.createCardPaymentIntent = functions
                 transactionId,
             },
             receipt_email: email || undefined,
-            description: `GoShopperAI ${planId} subscription`,
+            description: `GoShopper ${planId} subscription`,
         });
         // Update payment record with Stripe reference
         await paymentRef.update({

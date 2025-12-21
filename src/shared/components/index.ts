@@ -10,7 +10,8 @@ export {default as Badge, NotificationBadge} from './Badge';
 export {default as ListItem, ListSection} from './ListItem';
 export {default as EmptyState} from './EmptyState';
 export {AppFooter} from './AppFooter';
-
+export {ModernTabBar, TabBarIcon} from './ModernTabBar';
+export {AppStateTracker} from './AppStateTracker';
 // Illustrations
 export {
   ScannerIllustration,

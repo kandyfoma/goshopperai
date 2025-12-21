@@ -10,6 +10,7 @@ import {
   Alert,
   SafeAreaView,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -25,6 +26,14 @@ import {
 import {Icon, Button} from '@/shared/components';
 import {formatCurrency} from '@/shared/utils/helpers';
 import {analyticsService} from '@/shared/services/analytics';
+import {
+  getCurrentMonthBudget,
+  updateCurrentMonthBudget,
+  getCurrentMonthKey,
+  formatMonthKey,
+  getBudgetHistory,
+} from '@/shared/services/firebase/budgetService';
+import {MonthlyBudget} from '@/shared/types/user.types';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -33,48 +42,116 @@ export function BudgetSettingsScreen() {
   const {profile, updateProfile} = useUser();
 
   const [budgetAmount, setBudgetAmount] = useState('');
+  const [defaultBudget, setDefaultBudget] = useState('');
   const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'CDF'>(
     'USD',
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [currentMonthBudget, setCurrentMonthBudget] = useState<{
+    amount: number;
+    currency: 'USD' | 'CDF';
+    isCustom: boolean;
+  } | null>(null);
+  const [budgetHistory, setBudgetHistory] = useState<MonthlyBudget[]>([]);
+  const [isLoadingBudget, setIsLoadingBudget] = useState(true);
 
   useEffect(() => {
     analyticsService.logScreenView('Budget Settings', 'BudgetSettingsScreen');
   }, []);
 
+  // Load current month budget and history
+  useEffect(() => {
+    if (profile?.userId) {
+      loadBudgetData();
+    }
+  }, [profile?.userId]);
+
+  // Initialize from profile
   useEffect(() => {
     if (profile) {
-      setBudgetAmount(profile.monthlyBudget?.toString() || '');
       setSelectedCurrency(profile.preferredCurrency || 'USD');
+      // Set default budget from new field or legacy field
+      const defBudget = profile.defaultMonthlyBudget || profile.monthlyBudget || 0;
+      setDefaultBudget(defBudget > 0 ? defBudget.toString() : '');
     }
   }, [profile]);
 
+  const loadBudgetData = async () => {
+    if (!profile?.userId) return;
+
+    try {
+      setIsLoadingBudget(true);
+
+      // Get current month budget
+      const currentBudget = await getCurrentMonthBudget(
+        profile.userId,
+        profile.defaultMonthlyBudget || profile.monthlyBudget,
+        profile.preferredCurrency,
+      );
+      setCurrentMonthBudget(currentBudget);
+      setBudgetAmount(currentBudget.amount > 0 ? currentBudget.amount.toString() : '');
+
+      // Get budget history
+      const history = await getBudgetHistory(profile.userId, 3);
+      setBudgetHistory(history);
+    } catch (error) {
+      console.error('Error loading budget data:', error);
+    } finally {
+      setIsLoadingBudget(false);
+    }
+  };
+
   const handleSave = async () => {
-    if (!budgetAmount.trim()) {
-      Alert.alert('Erreur', 'Veuillez saisir un montant de budget valide');
+    if (!budgetAmount.trim() && !defaultBudget.trim()) {
+      Alert.alert('Erreur', 'Veuillez saisir au moins un montant de budget');
       return;
     }
 
-    const amount = parseFloat(budgetAmount);
-    if (isNaN(amount) || amount <= 0) {
-      Alert.alert('Erreur', 'Le montant du budget doit être un nombre positif');
+    const currentAmount = budgetAmount.trim() ? parseFloat(budgetAmount) : 0;
+    const defaultAmount = defaultBudget.trim() ? parseFloat(defaultBudget) : 0;
+
+    if ((currentAmount > 0 && isNaN(currentAmount)) || (defaultAmount > 0 && isNaN(defaultAmount))) {
+      Alert.alert('Erreur', 'Les montants doivent être des nombres valides');
+      return;
+    }
+
+    if (currentAmount < 0 || defaultAmount < 0) {
+      Alert.alert('Erreur', 'Les montants ne peuvent pas être négatifs');
       return;
     }
 
     setIsLoading(true);
     try {
+      // Update current month budget if changed
+      if (currentAmount > 0 && profile?.userId) {
+        await updateCurrentMonthBudget(
+          profile.userId,
+          currentAmount,
+          selectedCurrency,
+        );
+      }
+
+      // Update default budget in profile
       await updateProfile({
-        monthlyBudget: amount,
+        defaultMonthlyBudget: defaultAmount > 0 ? defaultAmount : undefined,
+        monthlyBudget: defaultAmount > 0 ? defaultAmount : undefined, // Keep legacy field synced
         preferredCurrency: selectedCurrency,
       });
 
       analyticsService.logCustomEvent('budget_settings_updated', {
         currency: selectedCurrency,
-        amount: amount,
+        currentMonth: currentAmount,
+        default: defaultAmount,
       });
 
       Alert.alert('Succès', 'Vos paramètres de budget ont été mis à jour', [
-        {text: 'OK', onPress: () => navigation.goBack()},
+        {
+          text: 'OK',
+          onPress: () => {
+            loadBudgetData(); // Reload data
+            navigation.goBack();
+          },
+        },
       ]);
     } catch (error) {
       console.error('Failed to update budget settings:', error);
@@ -109,31 +186,70 @@ export function BudgetSettingsScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
-        <View>
-        {/* Current Budget Display */}
-        {profile?.monthlyBudget && (
-          <View style={styles.currentBudgetCard}>
-            <View style={styles.currentBudgetHeader}>
-              <Icon name="wallet" size="md" color={Colors.card.red} />
-              <Text style={styles.currentBudgetTitle}>Budget Actuel</Text>
-            </View>
-            <Text style={styles.currentBudgetAmount}>
-              {formatCurrency(profile.monthlyBudget, profile.preferredCurrency)}
-            </Text>
-            <Text style={styles.currentBudgetCurrency}>
-              {profile.preferredCurrency === 'CDF'
-                ? 'Franc Congolais'
-                : 'Dollar Américain'}
-            </Text>
+        {isLoadingBudget ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+            <Text style={styles.loadingText}>Chargement...</Text>
           </View>
-        )}
+        ) : (
+          <View>
+            {/* Current Month Budget */}
+            {currentMonthBudget && currentMonthBudget.amount > 0 && (
+              <View style={styles.currentBudgetCard}>
+                <View style={styles.currentBudgetHeader}>
+                  <Icon name="calendar" size="md" color={Colors.card.red} />
+                  <Text style={styles.currentBudgetTitle}>
+                    {formatMonthKey(getCurrentMonthKey())}
+                  </Text>
+                  {currentMonthBudget.isCustom && (
+                    <View style={styles.customBadge}>
+                      <Text style={styles.customBadgeText}>Personnalisé</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.currentBudgetAmount}>
+                  {formatCurrency(currentMonthBudget.amount, currentMonthBudget.currency)}
+                </Text>
+                {!currentMonthBudget.isCustom && (
+                  <Text style={styles.currentBudgetCurrency}>
+                    Copié du budget par défaut
+                  </Text>
+                )}
+              </View>
+            )}
 
-        {/* Currency Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Devise</Text>
-          <Text style={styles.sectionSubtitle}>
-            Choisissez la devise pour votre budget mensuel
-          </Text>
+            {/* Budget History */}
+            {budgetHistory.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Historique (3 derniers mois)</Text>
+                <View style={styles.historyList}>
+                  {budgetHistory.map((budget) => (
+                    <View key={budget.month} style={styles.historyItem}>
+                      <View style={styles.historyLeft}>
+                        <Text style={styles.historyMonth}>
+                          {formatMonthKey(budget.month)}
+                        </Text>
+                        {budget.isCustom && (
+                          <View style={styles.customBadgeSmall}>
+                            <Text style={styles.customBadgeSmallText}>Modifié</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.historyAmount}>
+                        {formatCurrency(budget.amount, budget.currency)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Currency Selection */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Devise</Text>
+              <Text style={styles.sectionSubtitle}>
+                Choisissez la devise pour vos budgets
+              </Text>
 
           <View style={styles.currencyOptions}>
             {currencies.map(currency => (
@@ -171,14 +287,11 @@ export function BudgetSettingsScreen() {
           </View>
         </View>
 
-        {/* Budget Amount Input */}
+        {/* Budget Amount Input - Current Month */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Montant du Budget</Text>
+          <Text style={styles.sectionTitle}>Budget Ce Mois-ci</Text>
           <Text style={styles.sectionSubtitle}>
-            Définissez votre budget mensuel en{' '}
-            {selectedCurrency === 'CDF'
-              ? 'Francs Congolais'
-              : 'Dollars Américains'}
+            Modifiez le budget pour {formatMonthKey(getCurrentMonthKey())}
           </Text>
 
           <View style={styles.inputContainer}>
@@ -197,8 +310,37 @@ export function BudgetSettingsScreen() {
 
           {budgetAmount && !isNaN(parseFloat(budgetAmount)) && (
             <Text style={styles.previewText}>
-              Budget:{' '}
+              Ce mois:{' '}
               {formatCurrency(parseFloat(budgetAmount), selectedCurrency)}
+            </Text>
+          )}
+        </View>
+
+        {/* Default Budget Input */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Budget par Défaut</Text>
+          <Text style={styles.sectionSubtitle}>
+            Ce montant sera automatiquement copié pour les nouveaux mois
+          </Text>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.currencyPrefix}>
+              {selectedCurrency === 'CDF' ? 'FC' : '$'}
+            </Text>
+            <TextInput
+              style={styles.budgetInput}
+              value={defaultBudget}
+              onChangeText={setDefaultBudget}
+              placeholder="0"
+              keyboardType="numeric"
+              placeholderTextColor={Colors.text.tertiary}
+            />
+          </View>
+
+          {defaultBudget && !isNaN(parseFloat(defaultBudget)) && (
+            <Text style={styles.previewText}>
+              Prochain mois:{' '}
+              {formatCurrency(parseFloat(defaultBudget), selectedCurrency)}
             </Text>
           )}
         </View>
@@ -214,6 +356,7 @@ export function BudgetSettingsScreen() {
           style={{marginBottom: Spacing.xl, marginTop: Spacing.lg}}
         />
         </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -391,5 +534,64 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.lg,
     fontWeight: Typography.fontWeight.semiBold,
     color: Colors.white,
+  },
+  loadingContainer: {
+    paddingVertical: Spacing['3xl'],
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.secondary,
+    marginTop: Spacing.md,
+  },
+  customBadge: {
+    backgroundColor: Colors.card.crimson,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
+    marginLeft: Spacing.sm,
+  },
+  customBadgeText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.white,
+  },
+  historyList: {
+    gap: Spacing.sm,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: Colors.card.cream,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    ...Shadows.sm,
+  },
+  historyLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  historyMonth: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.medium,
+    color: Colors.text.primary,
+  },
+  customBadgeSmall: {
+    backgroundColor: Colors.card.crimson,
+    paddingHorizontal: Spacing.xs,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+  },
+  customBadgeSmallText: {
+    fontSize: Typography.fontSize.xs,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.white,
+  },
+  historyAmount: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.card.crimson,
   },
 });

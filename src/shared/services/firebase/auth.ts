@@ -746,16 +746,16 @@ class AuthService {
         passwordHash: password, // In production, hash this properly
         createdAt: firestore.FieldValue.serverTimestamp(),
         lastLoginAt: firestore.FieldValue.serverTimestamp(),
-        profile: {
-          displayName: phoneNumber,
-          city,
-          countryCode,
-        },
         isAnonymous: false,
       };
       
-      // Create user document
-      await firestore().collection(COLLECTIONS.users(userId)).doc(userId).set(userData);
+      // Create user document in the main users collection
+      await firestore()
+        .collection('artifacts')
+        .doc(APP_ID)
+        .collection('users')
+        .doc(userId)
+        .set(userData);
       
       // Create a mock Firebase user for consistency
       const user: User = {
@@ -774,6 +774,47 @@ class AuthService {
     } catch (error: any) {
       console.error('❌ Create user with phone failed:', error);
       throw new Error(error.message || 'Failed to create account');
+    }
+  }
+
+  /**
+   * Complete registration and mark user as verified
+   */
+  async completeRegistration(data: {
+    userId: string;
+    verificationToken: string;
+    phoneNumber: string;
+    countryCode: string;
+    displayName?: string;
+  }): Promise<void> {
+    try {
+      const {userId, phoneNumber, countryCode, displayName} = data;
+      
+      // Update user profile with verified status
+      const profileRef = firestore()
+        .collection('artifacts')
+        .doc(APP_ID)
+        .collection('users')
+        .doc(userId);
+      
+      await profileRef.set(
+        {
+          verified: true,
+          verifiedAt: firestore.FieldValue.serverTimestamp(),
+          phoneVerified: true,
+          phoneNumber,
+          countryCode,
+          isInDRC: countryCode === 'CD',
+          displayName: displayName || phoneNumber,
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        },
+        {merge: true}
+      );
+      
+      console.log('✅ User registration completed and verified:', userId);
+    } catch (error: any) {
+      console.error('❌ Complete registration failed:', error);
+      throw new Error(error.message || 'Failed to complete registration');
     }
   }
 

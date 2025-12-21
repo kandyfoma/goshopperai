@@ -110,72 +110,92 @@ export function TermsOfServiceScreen() {
           />
 
           <TermsSection
-            title="4. UTILISATION ACCEPTABLE"
+            title="4. FONCTIONNALITÉS COMMUNAUTAIRES ET PARTAGE DE DONNÉES"
+            content="En utilisant la fonction de numérisation de reçus, vous contribuez à notre base de données communautaire de prix. Toutes les données de prix sont complètement anonymisées avant d'être partagées avec la communauté. Aucune information personnelle ou identifiant utilisateur n'est inclus dans les données communautaires. Les données communautaires aident à fournir de meilleures comparaisons de prix pour tous les utilisateurs."
+          />
+
+          <TermsSection
+            title="4.1 ANONYMISATION DES DONNÉES"
+            content="Les noms de produits, prix et informations de magasin sont anonymisés. Les identifiants utilisateurs, noms, emails et autres données personnelles ne sont jamais partagés. Vous pouvez vous désinscrire de la contribution aux données communautaires dans les paramètres de l'application. Les fonctionnalités communautaires fonctionnent avec ou sans votre contribution de données."
+          />
+
+          <TermsSection
+            title="4.2 AVANTAGES COMMUNAUTAIRES"
+            content="Accès à des comparaisons de prix complètes sur plusieurs magasins. Suivi historique des prix et tendances. Meilleurs insights d'achat et opportunités d'économies. Amélioration du service pour tous les utilisateurs grâce aux données collectives."
+          />
+
+          <TermsSection
+            title="4.3 DÉSINSCRIPTION DES DONNÉES COMMUNAUTAIRES"
+            content="Vous avez le droit de vous désinscrire de la contribution à notre base de données de prix communautaire : Comment se désinscrire : Paramètres > Confidentialité > Données communautaires et désactiver la fonctionnalité. Effet de la désinscription : Vos données de reçus ne seront pas anonymisées et partagées avec la communauté. Continuité du service : Toutes les autres fonctionnalités de l'application restent pleinement fonctionnelles."
+          />
+
+          <TermsSection
+            title="5. UTILISATION ACCEPTABLE"
             content="Usages autorisés: Besoins personnels non commerciaux, scanner vos propres reçus, gérer dépenses personnelles/budgets familiaux. Activités STRICTEMENT interdites: Utilisation frauduleuse (faux reçus, manipulation données), violations techniques (piratage, ingénierie inverse), atteintes sécurité (contournement mesures, malwares), violations droits (propriété intellectuelle, usurpation identité), usage commercial non autorisé, automatisation (robots, scrapers)."
           />
 
           <TermsSection
-            title="5. PROPRIÉTÉ INTELLECTUELLE"
+            title="6. PROPRIÉTÉ INTELLECTUELLE"
             content="Notre propriété: Application (code source, algorithmes, interface, design), marques (logo GoShopper, noms commerciaux), technologies (IA, OCR, bases données propriétaires). Licence accordée: Limitée, non exclusive, non transférable, révocable pour usage personnel exclusivement. Vos droits: Vous conservez propriété reçus/données personnelles, mais accordez licence traitement pour fournir service."
           />
 
           <TermsSection
-            title="6. PRÉCISION DONNÉES ET RESPONSABILITÉ"
+            title="7. PRÉCISION DONNÉES ET RESPONSABILITÉ"
             content="Précision OCR: Technologie IA peut occasionnellement produire erreurs, vérification requise avant utilisation, amélioration continue mais pas garantie 100%. Pas de conseil financier: Service fournit outils analyse/organisation, pas conseils financiers professionnels, toutes décisions financières votre seule responsabilité, consultation conseiller qualifié pour décisions importantes."
           />
 
           <TermsSection
-            title="7. ABONNEMENTS ET PAIEMENTS"
+            title="8. ABONNEMENTS ET PAIEMENTS"
             content="Plans: Gratuit avec fonctionnalités limitées, premium avec fonctionnalités avancées. Facturation: Périodique à l'avance, renouvellement automatique sauf annulation, moyens paiement (cartes, mobile money). Annulation: Via paramètres Application, accès premium continue jusqu'à fin période payée. Remboursements: Régis par politiques app stores. Modifications prix: Préavis 30 jours."
           />
 
           <TermsSection
-            title="8. GARANTIES ET EXCLUSIONS"
+            title="9. GARANTIES ET EXCLUSIONS"
             content="DANS MESURE MAXIMALE AUTORISÉE LOI, SERVICE FOURNI 'EN L'ÉTAT' SANS GARANTIES: Qualité marchande/adaptation usage particulier, non-contrefaçon droits propriété intellectuelle, fonctionnement ininterrompu/exempt erreurs, exactitude contenu/données, sécurité complète contre menaces. Risques assumés par utilisateur."
           />
 
           <TermsSection
-            title="9. LIMITATION DE RESPONSABILITÉ"
+            title="10. LIMITATION DE RESPONSABILITÉ"
             content="MESURE MAXIMALE AUTORISÉE LOI, GOSHOPPER PAS RESPONSABLE: Dommages indirects (perte profits, économies, opportunités), dommages consécutifs (interruption activité, perte données, réputation), dommages punitifs/exemplaires, préjudice moral/stress émotionnel. Responsabilité totale ne dépassera jamais montant payé 12 derniers mois. Exceptions: Négligence grave, faute intentionnelle, droits consommateurs impératifs."
           />
 
           <TermsSection
-            title="10. INDEMNISATION"
+            title="11. INDEMNISATION"
             content="Vous acceptez indemniser, défendre et dégager responsabilité GoShopper contre réclamations découlant de: Utilisation Service violation Conditions, violation droits tiers, négligence/faute intentionnelle, contenu soumis via Service. Protection maximale société contre risques utilisateur malveillant ou négligent."
           />
 
           <TermsSection
-            title="11. RÉSILIATION"
+            title="12. RÉSILIATION"
             content="Résiliation utilisateur: Suppression Application appareils, contact support client, fonctions suppression compte Application. Résiliation société: Immédiate avec/sans motif, violation Conditions, cessation service, inactivité prolongée, protection intérêts. Effets résiliation: Droit utilisation cesse immédiatement, suppression compte/données possible, clauses survivent, aucun remboursement (sauf exceptions légales)."
           />
 
           <TermsSection
-            title="12. FORCE MAJEURE"
+            title="13. FORCE MAJEURE"
             content="Pas responsables retard/défaut exécution circonstances indépendantes volonté raisonnable: Catastrophes naturelles, guerres, terrorisme, grèves, conflits sociaux, défaillances infrastructure internet/électrique, actions gouvernementales, changements réglementaires, pandemies, urgences sanitaires publiques. Suspension obligations pendant durée empêchement."
           />
 
           <TermsSection
-            title="13. JURIDICTION ET LOI APPLICABLE"
+            title="14. JURIDICTION ET LOI APPLICABLE"
             content="Droit applicable: Conditions régies lois françaises sans égard principes conflit lois. Compétence: Tribunaux français compétence exclusive, sous réserve droits impératifs consommateurs. Résolution alternative: Négociation directe encouragée, médiation tiers neutre, arbitrage si convenu mutuellement. Procédures amiables avant action judiciaire."
           />
 
           <TermsSection
-            title="14. CONFORMITÉ RÉGLEMENTAIRE"
+            title="15. CONFORMITÉ RÉGLEMENTAIRE"
             content="Service développé conformité: Réglementation européenne protection données (RGPD), lois françaises informatique et libertés, réglementations app stores (Apple, Google), standards sécurité industrie. Adaptation continue évolutions réglementaires pour maintenir conformité maximale."
           />
 
           <TermsSection
-            title="15. DISPOSITIONS GÉNÉRALES"
+            title="16. DISPOSITIONS GÉNÉRALES"
             content="Intégralité accord: Conditions + Politique Confidentialité constituent accord complet. Divisibilité: Si disposition invalide, autres restent vigueur. Renonciation: Défaut exercice droit pas renonciation. Cession: Vous pas céder droits sans consentement écrit, nous pouvons céder sans restriction. Pas partenariat/joint-venture/emploi/agence créé."
           />
 
           <TermsSection
-            title="16. CONTACT ET SUPPORT"
+            title="17. CONTACT ET SUPPORT"
             content="Communications officielles: support@goshopper.app (technique 48h), legal@goshopper.app (légal 5j), privacy@goshopper.app (données 30j RGPD), https://goshopper.app (site web). Délais réponse garantis pour protection utilisateurs et conformité réglementaire."
           />
 
           <TermsSection
-            title="17. ACCEPTATION FINALE"
+            title="18. ACCEPTATION FINALE"
             content="EN UTILISANT SERVICE GOSHOPPER, VOUS RECONNAISSEZ AVOIR LU, COMPRIS ET ACCEPTÉ CES CONDITIONS GÉNÉRALES D'UTILISATION DANS LEUR INTÉGRALITÉ. Accord juridiquement contraignant en vigueur. Utilisation continue constitue acceptation renouvelée."
           />
         </View>

@@ -1,5 +1,5 @@
 // Onboarding screens barrel export
-export {WelcomeScreen} from './WelcomeScreen';
+export {WelcomeScreenModern} from './WelcomeScreenModern';
 export {LoginScreen} from './LoginScreen';
 export {RegisterScreen} from './RegisterScreen';
 export {CitySelectionScreen} from './CitySelectionScreen';

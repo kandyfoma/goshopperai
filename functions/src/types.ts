@@ -122,7 +122,7 @@ export interface PricePoint {
   pricePerUnit?: number;
   recordedAt: Date;
   receiptId: string;
-  userId: string;
+  // Removed userId for privacy - data is now anonymous
   // Matching metadata
   matchConfidence?: number;
   matchType?: 'exact' | 'fuzzy' | 'semantic';
@@ -207,4 +207,8 @@ export interface UserProfileData {
   priceAlertsEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
+  // ML & AI fields
+  behaviorProfile?: any; // UserBehaviorProfile
+  recommendationPreferences?: any; // RecommendationPreferences
+  engagementMetrics?: any; // UserEngagementMetrics
 }

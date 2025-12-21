@@ -43,6 +43,8 @@ export {migrateItemsAggregation, needsItemsMigration} from './itemsMigration';
 
 // Phase 1.2 Services
 export {shoppingListService} from './shoppingList';
+export {userBehaviorService} from './userBehaviorService';
+export {recommendationEngineService} from './recommendationEngineService';
 export type {
   ShoppingList,
   ShoppingListItem,

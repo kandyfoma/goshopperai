@@ -30,9 +30,12 @@ import {analyticsService} from '@/shared/services/analytics';
 import {productSearchService} from '@/shared/services/productSearchService';
 import {APP_ID} from '@/shared/services/firebase/config';
 
+// User's personal item data (Tier 2: User Aggregated Items)
+// Source: artifacts/{APP_ID}/users/{userId}/items/{itemNameNormalized}
 interface ItemData {
   id: string;
   name: string;
+  nameNormalized?: string;
   prices: {
     storeName: string;
     price: number;
@@ -99,79 +102,37 @@ export function ItemsScreen() {
     }
 
     try {
-      // Get all receipts for the user (not filtered by city since receipts may not have city field)
-      const receiptsSnapshot = await firestore()
+      // Fetch user's aggregated items from backend (Tier 2: User Aggregated Items)
+      // This collection is automatically maintained by Cloud Functions when receipts are created/updated
+      const itemsSnapshot = await firestore()
         .collection('artifacts')
         .doc(APP_ID)
         .collection('users')
         .doc(user.uid)
-        .collection('receipts')
-        .orderBy('scannedAt', 'desc')
+        .collection('items')
+        .orderBy('lastPurchaseDate', 'desc')
         .get();
 
-      const itemsMap = new Map<string, ItemData>();
-
-      receiptsSnapshot.docs.forEach(doc => {
-        const receiptData = doc.data();
-        const items = receiptData.items || [];
-
-        items.forEach((item: any) => {
-          const itemName = item.name?.toLowerCase().trim();
-          if (!itemName) {
-            return;
-          }
-
-          const price = item.unitPrice || 0;
-          if (price <= 0) {
-            return;
-          }
-
-          if (!itemsMap.has(itemName)) {
-            itemsMap.set(itemName, {
-              id: itemName,
-              name: item.name,
-              prices: [],
-              minPrice: price,
-              maxPrice: price,
-              avgPrice: price,
-              storeCount: 1,
-              currency: receiptData.currency || 'USD',
-            });
-          }
-
-          const itemData = itemsMap.get(itemName)!;
-          itemData.prices.push({
-            storeName: receiptData.storeName || 'Inconnu',
-            price: price,
-            currency: receiptData.currency || 'USD',
-            date: safeToDate(receiptData.scannedAt),
-            receiptId: doc.id,
-          });
-
-          // Update statistics
-          itemData.minPrice = Math.min(itemData.minPrice, price);
-          itemData.maxPrice = Math.max(itemData.maxPrice, price);
-          itemData.avgPrice =
-            itemData.prices.reduce((sum, p) => sum + p.price, 0) /
-            itemData.prices.length;
-          itemData.storeCount = new Set(
-            itemData.prices.map(p => p.storeName),
-          ).size;
-
-          // Determine primary currency (most common)
-          const currencyCounts = itemData.prices.reduce((acc, p) => {
-            acc[p.currency] = (acc[p.currency] || 0) + 1;
-            return acc;
-          }, {} as Record<string, number>);
-          itemData.currency = Object.entries(currencyCounts).sort(
-            ([, a], [, b]) => b - a,
-          )[0][0] as 'USD' | 'CDF';
-        });
+      const itemsArray: ItemData[] = itemsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name || doc.id,
+          nameNormalized: data.nameNormalized || doc.id,
+          prices: (data.prices || []).map((p: any) => ({
+            storeName: p.storeName || 'Inconnu',
+            price: p.price || 0,
+            currency: p.currency || 'USD',
+            date: safeToDate(p.date),
+            receiptId: p.receiptId || '',
+          })),
+          minPrice: data.minPrice || 0,
+          maxPrice: data.maxPrice || 0,
+          avgPrice: data.avgPrice || 0,
+          storeCount: data.storeCount || 0,
+          currency: data.currency || 'USD',
+        };
       });
-
-      const itemsArray = Array.from(itemsMap.values()).sort(
-        (a, b) => b.prices.length - a.prices.length,
-      ); // Sort by frequency
 
       setItems(itemsArray);
     } catch (error) {

@@ -8,6 +8,7 @@ import {APP_ID} from '@/shared/services/firebase/config';
 import {RootStackParamList} from '@/shared/types';
 import {useAuth} from '@/shared/contexts';
 import {Colors} from '@/shared/theme/theme';
+import {AppStateTracker} from '@/shared/components';
 
 // Screens
 import {MainTabNavigator} from './MainTabNavigator';
@@ -20,12 +21,13 @@ import {
   ChangePasswordScreen,
   ProfileSetupScreen,
 } from '@/features/onboarding/screens';
-import {WelcomeScreen} from '@/features/onboarding/screens/WelcomeScreenSimple';
+import {WelcomeScreenModern} from '@/features/onboarding/screens/WelcomeScreenModern';
 import {LoginScreen as SignInScreen} from '@/features/onboarding/screens';
 import {
   UnifiedScannerScreen,
   ReceiptDetailScreen,
   PriceComparisonScreen,
+  ReceiptProcessingScreen,
 } from '@/features/scanner/screens';
 import {SubscriptionScreen} from '@/features/subscription/screens';
 import {SettingsScreen} from '@/features/settings/screens';
@@ -34,7 +36,7 @@ import {UpdateProfileScreen, BudgetSettingsScreen, SupportScreen, ContactScreen,
 // Phase 1.1 & 1.2 Screens
 import {NotificationsScreen} from '@/features/notifications';
 import {PriceAlertsScreen} from '@/features/alerts';
-import {ShoppingListScreen} from '@/features/shopping';
+import {ShoppingListsScreen, ShoppingListDetailScreen} from '@/features/shopping';
 import {AIAssistantScreen} from '@/features/assistant';
 import {AchievementsScreen} from '@/features/achievements';
 import {CitySelectionScreen} from '@/features/onboarding/screens';
@@ -163,17 +165,18 @@ export function RootNavigator() {
   }
 
   return (
-    <Stack.Navigator
-      initialRouteName={initialRoute}
-      screenOptions={{
-        headerShown: false,
-        animation: 'slide_from_right',
-      }}>
+    <React.Fragment>
+      <Stack.Navigator
+        initialRouteName={initialRoute}
+        screenOptions={{
+          headerShown: false,
+          animation: 'slide_from_right',
+        }}>
       {/* Welcome Screen - shown for first-time users who haven't logged in */}
       {isFirstLaunch && !isAuthenticated && (
         <Stack.Screen
           name="Welcome"
-          component={WelcomeScreen}
+          component={WelcomeScreenModern}
           options={{
             animation: 'fade',
             gestureEnabled: false,
@@ -263,6 +266,14 @@ export function RootNavigator() {
         options={{headerShown: false}}
       />
       <Stack.Screen
+        name="ReceiptProcessing"
+        component={ReceiptProcessingScreen}
+        options={{
+          headerShown: false,
+          gestureEnabled: false, // Prevent swipe back during processing
+        }}
+      />
+      <Stack.Screen
         name="PriceComparison"
         component={PriceComparisonScreen}
         options={{headerShown: true, title: 'Comparaison'}}
@@ -303,8 +314,13 @@ export function RootNavigator() {
       />
       {/* Phase 1.2 Screens */}
       <Stack.Screen
-        name="ShoppingList"
-        component={ShoppingListScreen}
+        name="ShoppingLists"
+        component={ShoppingListsScreen}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="ShoppingListDetail"
+        component={ShoppingListDetailScreen}
         options={{headerShown: false}}
       />
       <Stack.Screen
@@ -363,7 +379,9 @@ export function RootNavigator() {
         component={TermsScreen}
         options={{headerShown: false}}
       />
-    </Stack.Navigator>
+      </Stack.Navigator>
+      <AppStateTracker />
+    </React.Fragment>
   );
 }
 

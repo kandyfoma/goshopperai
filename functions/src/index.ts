@@ -113,6 +113,7 @@ export {
   aggregateItemsOnReceipt,
   rebuildItemsAggregation,
   getCityItems,
+  cleanupDeletedReceiptItems,
 } from './items/itemAggregation';
 
 // Product Management functions
@@ -122,8 +123,20 @@ export {
   searchMasterProducts,
 } from './products/productManagement';
 
+// Data Retention and Cleanup functions
+export {
+  cleanupOldUserData,
+  manualCleanupUserData,
+} from './cleanup/dataRetention';
+
 // Apple Sign-In Notification functions
 export {
   appleNotifications,
   testAppleNotification,
 } from './auth/appleNotifications';
+
+// ML & Behavior Tracking functions
+export {
+  updateUserBehaviorProfile,
+  calculateUserMLFeatures,
+} from './ml/behaviorProfile';

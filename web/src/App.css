@@ -152,6 +152,7 @@ body {
   height: 36px;
   object-fit: contain;
   filter: drop-shadow(0 2px 4px rgba(193, 18, 31, 0.2));
+  border-radius: 50%;
 }
 
 .logo-text {
@@ -920,6 +921,10 @@ body {
 
 .footer-brand .logo {
   margin-bottom: var(--space-6);
+}
+
+.footer-brand .logo-icon {
+  border-radius: 50%;
 }
 
 .footer-brand .logo-text {

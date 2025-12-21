@@ -15,6 +15,7 @@ GoShopper AI is a mobile application that provides:
 - Spending analytics and insights
 - Shopping list management
 - Price comparison tools
+- Community-driven price database
 
 ## 3. User Accounts
 
@@ -33,6 +34,26 @@ GoShopper AI is a mobile application that provides:
 - You may delete your account at any time
 - We may suspend or terminate accounts for Terms violations
 - Termination does not affect accrued rights and obligations
+
+## 4. Community Features and Data Sharing
+
+### 4.1 Price Data Contribution
+- By using the receipt scanning feature, you contribute to our community price database
+- All price data is completely anonymized before being shared with the community
+- No personal information or user identifiers are included in community data
+- Community data helps provide better price comparisons for all users
+
+### 4.2 Data Anonymization
+- Product names, prices, and store information are anonymized
+- User IDs, names, emails, and other personal data are never shared
+- You can opt-out of contributing to community data in app settings
+- Community features work with or without your data contribution
+
+### 4.3 Community Benefits
+- Access to comprehensive price comparisons across multiple stores
+- Historical price tracking and trends
+- Better shopping insights and savings opportunities
+- Improved service for all users through collective data
 
 ## 4. Acceptable Use
 
@@ -54,6 +75,15 @@ You may NOT:
 - Transmit malware or harmful code
 - Attempt to gain unauthorized access
 - Resell or redistribute the App or its data
+
+### 4.3 Community Data Opt-Out
+
+You have the right to opt-out of contributing to our community price database:
+
+- **How to Opt-Out:** Go to Settings > Privacy > Community Data and disable the feature
+- **Effect of Opt-Out:** Your receipt data will not be anonymized and shared with the community
+- **Service Continuity:** All other app features remain fully functional
+- **Data Removal:** Existing anonymized data cannot be removed as it is no longer attributable to you
 
 ## 5. Content and Ownership
 

@@ -105,9 +105,10 @@ export const aggregateItemsOnReceipt = functions
     const {userId, receiptId} = context.params;
 
     try {
-      // Handle deletion
+      // Handle deletion - clean up item prices from this receipt
       if (!change.after.exists) {
-        console.log(`Receipt ${receiptId} deleted - items aggregation skipped`);
+        console.log(`Receipt ${receiptId} deleted - cleaning up items`);
+        await cleanupDeletedReceiptItems(userId, receiptId);
         return null;
       }
 
@@ -230,6 +231,88 @@ export const aggregateItemsOnReceipt = functions
       return null;
     }
   });
+
+/**
+ * Clean up aggregated items when a receipt is deleted
+ * Removes prices from the deleted receipt and recalculates stats
+ */
+export async function cleanupDeletedReceiptItems(
+  userId: string,
+  receiptId: string,
+): Promise<void> {
+  const itemsCollectionPath = `artifacts/${config.app.id}/users/${userId}/items`;
+  const itemsSnapshot = await db.collection(itemsCollectionPath).get();
+
+  console.log(
+    `Cleaning up ${itemsSnapshot.size} items for deleted receipt ${receiptId}`,
+  );
+
+  const batch = db.batch();
+  let batchCount = 0;
+  const maxBatchSize = 500;
+
+  for (const itemDoc of itemsSnapshot.docs) {
+    const itemData = itemDoc.data() as AggregatedItem;
+    const prices = itemData.prices || [];
+
+    // Filter out prices from the deleted receipt
+    const updatedPrices = prices.filter(p => p.receiptId !== receiptId);
+
+    if (updatedPrices.length !== prices.length) {
+      // Prices were removed
+      if (updatedPrices.length === 0) {
+        // No prices left, delete the item
+        batch.delete(itemDoc.ref);
+        batchCount++;
+      } else {
+        // Recalculate statistics
+        const priceValues = updatedPrices.map(p => p.price);
+        const minPrice = Math.min(...priceValues);
+        const maxPrice = Math.max(...priceValues);
+        const avgPrice =
+          priceValues.reduce((sum, p) => sum + p, 0) / priceValues.length;
+        const storeCount = new Set(updatedPrices.map(p => p.storeName)).size;
+
+        // Determine primary currency (most common)
+        const currencyCounts = updatedPrices.reduce((acc, p) => {
+          acc[p.currency] = (acc[p.currency] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        const primaryCurrency = Object.entries(currencyCounts).sort(
+          ([, a], [, b]) => b - a,
+        )[0][0] as 'USD' | 'CDF';
+
+        const lastPurchaseDate = updatedPrices[0].date; // Most recent
+
+        batch.update(itemDoc.ref, {
+          prices: updatedPrices,
+          minPrice,
+          maxPrice,
+          avgPrice,
+          storeCount,
+          currency: primaryCurrency,
+          totalPurchases: updatedPrices.length,
+          lastPurchaseDate,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        batchCount++;
+      }
+
+      // Commit batch if reaching limit
+      if (batchCount >= maxBatchSize) {
+        await batch.commit();
+        batchCount = 0;
+      }
+    }
+  }
+
+  // Commit remaining operations
+  if (batchCount > 0) {
+    await batch.commit();
+  }
+
+  console.log(`✅ Cleaned up items for deleted receipt ${receiptId}`);
+}
 
 /**
  * Callable function to manually trigger item aggregation for a user

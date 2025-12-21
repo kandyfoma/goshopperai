@@ -25,6 +25,7 @@ import {useAuth, useUser} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
 import {globalSettingsService} from '@/shared/services/globalSettingsService';
 import {APP_ID} from '@/shared/services/firebase/config';
+import {getCurrentMonthBudget} from '@/shared/services/firebase/budgetService';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
@@ -60,10 +61,27 @@ export function StatsScreen() {
 
   // Separate effect to update budget when profile changes
   useEffect(() => {
-    if (profile?.monthlyBudget !== undefined) {
-      setMonthlyBudget(profile.monthlyBudget);
-    }
-  }, [profile?.monthlyBudget]);
+    const loadBudget = async () => {
+      if (profile?.userId) {
+        try {
+          const budget = await getCurrentMonthBudget(
+            profile.userId,
+            profile.defaultMonthlyBudget || profile.monthlyBudget,
+            profile.preferredCurrency || 'USD',
+          );
+          setMonthlyBudget(budget.amount);
+        } catch (error) {
+          console.error('Error loading current month budget:', error);
+          // Fallback to legacy budget
+          if (profile.monthlyBudget !== undefined) {
+            setMonthlyBudget(profile.monthlyBudget);
+          }
+        }
+      }
+    };
+
+    loadBudget();
+  }, [profile?.userId, profile?.defaultMonthlyBudget, profile?.monthlyBudget, profile?.preferredCurrency]);
 
   // Subscribe to exchange rate changes
   useEffect(() => {

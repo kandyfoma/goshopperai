@@ -34,7 +34,8 @@ import {APP_ID} from '@/shared/services/firebase/config';
 import firestore from '@react-native-firebase/firestore';
 import {analyticsService} from '@/shared/services/analytics';
 import {countryCodeList} from '@/shared/constants/countries';
-import {phoneService} from '@/shared/services/phone';
+import {PhoneService} from '@/shared/services/phone';
+const phoneService = new PhoneService();
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -114,7 +115,7 @@ export function UpdateProfileScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [citySearch, setCitySearch] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState(countryCodeList[1]); // Default to Congo
+  const [selectedCountry, setSelectedCountry] = useState(countryCodeList[0]); // Default to RDC
   const [showCountryModal, setShowCountryModal] = useState(false);
 
   useEffect(() => {
@@ -126,7 +127,7 @@ export function UpdateProfileScreen() {
         sex: profile.sex || '',
         phoneNumber: profile.phoneNumber || '',
         email: profile.email || '',
-        monthlyBudget: profile.monthlyBudget?.toString() || '',
+        monthlyBudget: (profile.defaultMonthlyBudget || profile.monthlyBudget)?.toString() || '',
         city: profile.defaultCity || '',
       });
     }
@@ -172,7 +173,9 @@ export function UpdateProfileScreen() {
         }
       }
       if (formData.monthlyBudget.trim()) {
-        updateData.monthlyBudget = parseFloat(formData.monthlyBudget.trim());
+        const budget = parseFloat(formData.monthlyBudget.trim());
+        updateData.defaultMonthlyBudget = budget;
+        updateData.monthlyBudget = budget; // Keep legacy field synced
       }
       if (formData.city.trim()) {
         updateData.defaultCity = formData.city.trim();
@@ -665,13 +668,6 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.sm,
     fontFamily: Typography.fontFamily.medium,
     color: Colors.text.tertiary,
-  },
-  inputHint: {
-    fontSize: Typography.fontSize.xs,
-    fontFamily: Typography.fontFamily.regular,
-    color: Colors.text.tertiary,
-    marginTop: Spacing.xs,
-    marginLeft: Spacing.xs,
   },
 
   // Options Row (Sex selection)

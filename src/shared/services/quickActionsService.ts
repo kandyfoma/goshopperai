@@ -111,7 +111,7 @@ export const quickActionsService = {
   getScreenForAction(actionType: QuickActionType): string {
     const screenMap: Record<QuickActionType, string> = {
       scan: 'Scanner',
-      shopping: 'ShoppingList',
+      shopping: 'ShoppingLists',
       history: 'History',
     };
 

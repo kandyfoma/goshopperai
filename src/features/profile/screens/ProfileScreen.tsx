@@ -28,6 +28,7 @@ import {SUBSCRIPTION_PLANS, TRIAL_SCAN_LIMIT} from '@/shared/utils/constants';
 import {formatCurrency, formatDate} from '@/shared/utils/helpers';
 import {firebase} from '@react-native-firebase/functions';
 import {analyticsService} from '@/shared/services/analytics';
+import {getCurrentMonthBudget} from '@/shared/services/firebase/budgetService';
 
 const {width} = Dimensions.get('window');
 
@@ -132,6 +133,7 @@ export function ProfileScreen() {
   const {user, signOut, isAuthenticated} = useAuth();
   const {subscription, trialScansUsed} = useSubscription();
   const {profile, isLoading: profileLoading} = useUser();
+  const [currentBudget, setCurrentBudget] = useState(0);
 
   const [userStats, setUserStats] = useState({
     totalReceipts: 0,
@@ -157,6 +159,27 @@ export function ProfileScreen() {
   useEffect(() => {
     analyticsService.logScreenView('Profile', 'ProfileScreen');
   }, []);
+
+  // Load current month budget
+  useEffect(() => {
+    const loadBudget = async () => {
+      if (!profile?.userId) return;
+
+      try {
+        const budget = await getCurrentMonthBudget(
+          profile.userId,
+          profile.defaultMonthlyBudget || profile.monthlyBudget,
+          profile.preferredCurrency || 'USD',
+        );
+        setCurrentBudget(budget.amount);
+      } catch (error) {
+        console.error('Error loading budget:', error);
+        setCurrentBudget(profile.monthlyBudget || 0);
+      }
+    };
+
+    loadBudget();
+  }, [profile?.userId, profile?.defaultMonthlyBudget, profile?.monthlyBudget, profile?.preferredCurrency]);
 
   useEffect(() => {
     const fetchUserStats = async () => {
@@ -265,7 +288,7 @@ export function ProfileScreen() {
           />
           <StatCard
             icon="wallet"
-            value={formatCurrency(profile?.monthlyBudget || 0, profile?.preferredCurrency || 'USD')}
+            value={formatCurrency(currentBudget, profile?.preferredCurrency || 'USD')}
             label="Budget"
             color="cosmos"
           />
@@ -340,7 +363,7 @@ export function ProfileScreen() {
             <MenuItem
               icon="wallet"
               title="Paramètres du Budget"
-              subtitle={profile?.monthlyBudget ? `${formatCurrency(profile.monthlyBudget, profile.preferredCurrency)} / mois` : `${formatCurrency(0, profile?.preferredCurrency || 'USD')} / mois`}
+              subtitle={currentBudget > 0 ? `${formatCurrency(currentBudget, profile?.preferredCurrency)} / mois` : `${formatCurrency(0, profile?.preferredCurrency || 'USD')} / mois`}
               iconColor="crimson"
               onPress={() => {
                 analyticsService.logCustomEvent('budget_settings_opened');

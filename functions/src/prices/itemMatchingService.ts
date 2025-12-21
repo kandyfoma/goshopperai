@@ -445,9 +445,9 @@ export async function findMatchingProduct(
 }
 
 /**
- * Smart upsert logic for price data
- * - Same shop + same price = skip (no update needed)
- * - Same shop + different price = update price
+ * Smart upsert logic for price data with exact duplication prevention
+ * - Same shop + same product + same price = skip (exact duplicate)
+ * - Same shop + same product + different price = create new entry (track price history)
  * - No match = create new entry
  */
 export async function smartUpsertPriceData(
@@ -489,8 +489,8 @@ export async function smartUpsertPriceData(
     const priceThreshold = 0.01; // 1 cent tolerance
     
     if (priceDiff <= priceThreshold) {
-      // Same price, no need to update - just skip
-      console.log(`Skipping ${item.name} - same price at ${receipt.storeName}`);
+      // EXACT DUPLICATE: Same product, same store, same price - skip completely
+      console.log(`Skipping exact duplicate: ${item.name} at ${receipt.storeName} for ${item.unitPrice} ${receipt.currency}`);
       return {
         action: 'skipped',
         pricePointId: matchResult.existingDoc.id,
@@ -515,7 +515,7 @@ export async function smartUpsertPriceData(
       pricePerUnit: item.unitPrice,
       recordedAt: now as unknown as Date,
       receiptId: receipt.receiptId,
-      userId: receipt.userId,
+      // Removed userId for privacy - data is now anonymous
       matchConfidence: matchResult.confidence,
       matchType: matchResult.matchType === 'none' ? undefined : matchResult.matchType,
     };
@@ -545,7 +545,7 @@ export async function smartUpsertPriceData(
     pricePerUnit: item.unitPrice,
     recordedAt: now as unknown as Date,
     receiptId: receipt.receiptId,
-    userId: receipt.userId,
+    // Removed userId for privacy - data is now anonymous
     matchConfidence: 1.0, // New entry, perfect confidence
     matchType: 'exact',
   };

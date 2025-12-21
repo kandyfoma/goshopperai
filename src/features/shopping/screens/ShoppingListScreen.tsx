@@ -1,4 +1,6 @@
 // Shopping List Screen - Smart shopping with price optimization
+// @deprecated - This screen will be replaced by ShoppingListsScreen + ShoppingListDetailScreen
+// Use navigation.navigate('ShoppingLists') instead
 import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {
   View,
@@ -18,7 +20,8 @@ import LinearGradient from 'react-native-linear-gradient';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
-import {useAuth} from '@/shared/contexts';
+import {useAuth, useUser} from '@/shared/contexts';
+import {firebase} from '@react-native-firebase/functions';
 import {
   shoppingListService,
   ShoppingList,
@@ -33,14 +36,33 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon, Spinner, Modal, SwipeToDelete} from '@/shared/components';
+import {formatCurrency} from '@/shared/utils/helpers';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
+
+// Community item from search
+interface CommunityItemData {
+  id: string;
+  name: string;
+  prices: {
+    storeName: string;
+    price: number;
+    currency: 'USD' | 'CDF';
+    date: Date | any;
+  }[];
+  minPrice: number;
+  maxPrice: number;
+  avgPrice: number;
+  storeCount: number;
+  currency: 'USD' | 'CDF';
+}
 
 export function ShoppingListScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const {user, isAuthenticated} = useAuth();
+  const {profile: userProfile} = useUser();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -66,6 +88,13 @@ export function ShoppingListScreen() {
     null,
   );
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  
+  // Community item search
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<CommunityItemData[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedItemForAdd, setSelectedItemForAdd] = useState<CommunityItemData | null>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -121,6 +150,57 @@ export function ShoppingListScreen() {
       console.error('Load suggestions error:', error);
     }
   };
+  
+  // Search community items
+  const searchCommunityItems = useCallback(async (query: string) => {
+    if (!query.trim() || !userProfile?.defaultCity) {
+      setSearchResults([]);
+      return;
+    }
+    
+    setIsSearching(true);
+    try {
+      const functionsInstance = firebase.app().functions('europe-west1');
+      const result = await functionsInstance.httpsCallable('getCityItems')({
+        city: userProfile.defaultCity,
+      });
+      
+      const data = result.data as {
+        success: boolean;
+        items: CommunityItemData[];
+      };
+      
+      if (data.success && data.items) {
+        // Filter items by search query
+        const filtered = data.items.filter(item =>
+          item.name.toLowerCase().includes(query.toLowerCase())
+        );
+        setSearchResults(filtered.slice(0, 10)); // Limit to 10 results
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [userProfile?.defaultCity]);
+  
+  // Debounced search
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      searchCommunityItems(searchQuery);
+    }, 300);
+    
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery, searchCommunityItems]);
 
   const handleCreateList = useCallback(async () => {
     if (!user?.uid || !newListName.trim()) {return;}
@@ -172,6 +252,9 @@ export function ShoppingListScreen() {
       setShowAddItemModal(false);
       setNewItemName('');
       setNewItemQuantity('1');
+      setSearchQuery('');
+      setSearchResults([]);
+      setSelectedItemForAdd(null);
     } catch (error) {
       console.error('Add item error:', error);
       Alert.alert('Erreur', "Impossible d'ajouter l'article");
@@ -179,6 +262,13 @@ export function ShoppingListScreen() {
       setIsCreating(false);
     }
   }, [user?.uid, selectedList, newItemName, newItemQuantity]);
+  
+  const handleSelectSearchResult = useCallback((item: CommunityItemData) => {
+    setSelectedItemForAdd(item);
+    setNewItemName(item.name);
+    setSearchQuery('');
+    setSearchResults([]);
+  }, []);
 
   const handleToggleItem = useCallback(
     async (itemId: string) => {
@@ -320,7 +410,7 @@ export function ShoppingListScreen() {
                 <View style={styles.quantityBadge}>
                   <Text style={styles.itemQuantity}>x{item.quantity}</Text>
                 </View>
-                {item.bestPrice && (
+                {item.bestPrice && item.bestStore && (
                   <View style={styles.priceBadge}>
                     <Icon name="tag" size="xs" color={Colors.status.success} />
                     <Text style={styles.itemPrice}>
@@ -328,7 +418,23 @@ export function ShoppingListScreen() {
                     </Text>
                   </View>
                 )}
+                {item.estimatedPrice && !item.bestPrice && (
+                  <View style={styles.estimatedPriceBadge}>
+                    <Text style={styles.itemEstimatedPrice}>
+                      ~${item.estimatedPrice.toFixed(2)}
+                    </Text>
+                  </View>
+                )}
               </View>
+              
+              {/* Price range if available */}
+              {item.bestPrice && item.estimatedPrice && item.estimatedPrice > item.bestPrice && (
+                <View style={styles.savingsBadge}>
+                  <Text style={styles.savingsText}>
+                    Économie: ${(item.estimatedPrice - item.bestPrice).toFixed(2)}
+                  </Text>
+                </View>
+              )}
             </View>
 
             <TouchableOpacity
@@ -514,13 +620,74 @@ export function ShoppingListScreen() {
               </Text>
             </View>
           ) : (
-            <FlatList
-              data={selectedList.items}
-              renderItem={renderItem}
-              keyExtractor={item => item.id}
-              contentContainerStyle={styles.itemsList}
-              showsVerticalScrollIndicator={false}
-            />
+            <>
+              <FlatList
+                data={selectedList.items}
+                renderItem={renderItem}
+                keyExtractor={item => item.id}
+                contentContainerStyle={styles.itemsList}
+                showsVerticalScrollIndicator={false}
+              />
+              
+              {/* Total Price Summary */}
+              <View style={styles.totalSummaryCard}>
+                <LinearGradient
+                  colors={[Colors.primary, Colors.primaryDark]}
+                  style={styles.totalSummaryGradient}
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 1}}>
+                  <View style={styles.totalHeader}>
+                    <Icon name="shopping-cart" size="md" color={Colors.white} />
+                    <Text style={styles.totalTitle}>Total à payer</Text>
+                  </View>
+                  
+                  {(() => {
+                    let totalUSD = 0;
+                    let totalCDF = 0;
+                    const exchangeRate = 2700; // CDF per USD
+                    
+                    selectedList.items.forEach(item => {
+                      const price = item.bestPrice || item.estimatedPrice || 0;
+                      const quantity = item.quantity || 1;
+                      
+                      if (item.bestPrice && price > 0) {
+                        // Use the currency from best price if available
+                        const currencyFromBest = selectedList.items.find(i => i.id === item.id)?.bestStore;
+                        // For now, assume USD if we have best price
+                        totalUSD += price * quantity;
+                      } else if (item.estimatedPrice && item.estimatedPrice > 0) {
+                        totalUSD += item.estimatedPrice * quantity;
+                      }
+                    });
+                    
+                    totalCDF = totalUSD * exchangeRate;
+                    
+                    return (
+                      <>
+                        <View style={styles.totalRow}>
+                          <Text style={styles.totalCurrency}>USD</Text>
+                          <Text style={styles.totalAmount}>
+                            ${totalUSD.toFixed(2)}
+                          </Text>
+                        </View>
+                        <View style={styles.totalDivider} />
+                        <View style={styles.totalRow}>
+                          <Text style={styles.totalCurrency}>CDF</Text>
+                          <Text style={styles.totalAmount}>
+                            {totalCDF.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} FC
+                          </Text>
+                        </View>
+                        <View style={styles.totalItemsCount}>
+                          <Text style={styles.totalItemsText}>
+                            {selectedList.items.length} article{selectedList.items.length > 1 ? 's' : ''}
+                          </Text>
+                        </View>
+                      </>
+                    );
+                  })()}
+                </LinearGradient>
+              </View>
+            </>
           )}
 
           {/* Quick Suggestions */}
@@ -673,12 +840,84 @@ export function ShoppingListScreen() {
         </View>
       </Modal>
 
-      {/* Add Item Modal */}
+      {/* Add Item Modal with Search */}
       <Modal
         visible={showAddItemModal}
         variant="bottom-sheet"
         title="Ajouter Article"
-        onClose={() => setShowAddItemModal(false)}>
+        onClose={() => {
+          setShowAddItemModal(false);
+          setSearchQuery('');
+          setSearchResults([]);
+          setSelectedItemForAdd(null);
+        }}>
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Rechercher dans la communauté</Text>
+          <View style={styles.inputWrapper}>
+            <Icon name="search" size="sm" color={Colors.text.tertiary} />
+            <TextInput
+              style={styles.modalInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Rechercher un article..."
+              placeholderTextColor={Colors.text.tertiary}
+            />
+            {isSearching && (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            )}
+          </View>
+        </View>
+        
+        {/* Search Results */}
+        {searchResults.length > 0 && (
+          <ScrollView style={styles.searchResultsContainer} nestedScrollEnabled>
+            <Text style={styles.searchResultsTitle}>Résultats ({searchResults.length})</Text>
+            {searchResults.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.searchResultItem}
+                onPress={() => handleSelectSearchResult(item)}>
+                <View style={styles.searchResultInfo}>
+                  <Text style={styles.searchResultName}>{item.name}</Text>
+                  <Text style={styles.searchResultStats}>
+                    {item.storeCount} magasins • {formatCurrency(item.minPrice, item.currency)} - {formatCurrency(item.maxPrice, item.currency)}
+                  </Text>
+                </View>
+                <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+        
+        {/* Selected Item Price Comparison */}
+        {selectedItemForAdd && (
+          <View style={styles.priceComparisonContainer}>
+            <Text style={styles.priceComparisonTitle}>Prix dans différents magasins</Text>
+            <ScrollView style={styles.priceList} nestedScrollEnabled>
+              {selectedItemForAdd.prices
+                .sort((a, b) => a.price - b.price)
+                .slice(0, 5)
+                .map((priceInfo, index) => (
+                  <View key={`${priceInfo.storeName}-${index}`} style={styles.priceItem}>
+                    <View style={styles.priceRank}>
+                      <Text style={styles.priceRankText}>{index + 1}</Text>
+                    </View>
+                    <View style={styles.priceStoreInfo}>
+                      <Text style={styles.priceStoreName}>{priceInfo.storeName}</Text>
+                      <Text style={styles.priceCurrency}>{priceInfo.currency}</Text>
+                    </View>
+                    <Text style={[
+                      styles.priceAmount,
+                      index === 0 && styles.priceAmountBest
+                    ]}>
+                      {formatCurrency(priceInfo.price, priceInfo.currency)}
+                    </Text>
+                  </View>
+                ))}
+            </ScrollView>
+          </View>
+        )}
+
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Nom de l'article</Text>
           <View style={styles.inputWrapper}>
@@ -689,7 +928,6 @@ export function ShoppingListScreen() {
               onChangeText={setNewItemName}
               placeholder="Ex: Sucre, Riz, Huile..."
               placeholderTextColor={Colors.text.tertiary}
-              autoFocus
             />
           </View>
         </View>
@@ -727,7 +965,12 @@ export function ShoppingListScreen() {
         <View style={styles.modalActions}>
           <TouchableOpacity
             style={styles.modalCancelButton}
-            onPress={() => setShowAddItemModal(false)}>
+            onPress={() => {
+              setShowAddItemModal(false);
+              setSearchQuery('');
+              setSearchResults([]);
+              setSelectedItemForAdd(null);
+            }}>
             <Text style={styles.modalCancelText}>Annuler</Text>
           </TouchableOpacity>
 
@@ -1060,6 +1303,190 @@ const styles = StyleSheet.create({
   itemPrice: {
     fontSize: Typography.fontSize.xs,
     fontFamily: Typography.fontFamily.medium,
+    color: Colors.status.success,
+  },
+  estimatedPriceBadge: {
+    backgroundColor: Colors.card.yellow,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+  },
+  itemEstimatedPrice: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.secondary,
+  },
+  savingsBadge: {
+    backgroundColor: Colors.card.cream,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+    marginTop: Spacing.xs,
+    alignSelf: 'flex-start',
+  },
+  savingsText: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.status.success,
+  },
+  removeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.card.blue,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Total Summary Card
+  totalSummaryCard: {
+    marginHorizontal: Spacing.lg,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.lg,
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+    ...Shadows.lg,
+  },
+  totalSummaryGradient: {
+    padding: Spacing.lg,
+  },
+  totalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  totalTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.white,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+  },
+  totalCurrency: {
+    fontSize: Typography.fontSize.md,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  totalAmount: {
+    fontSize: Typography.fontSize['2xl'],
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.white,
+  },
+  totalDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    marginVertical: Spacing.xs,
+  },
+  totalItemsCount: {
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.3)',
+  },
+  totalItemsText: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
+    color: 'rgba(255,255,255,0.8)',
+    textAlign: 'center',
+  },
+  // Search Results
+  searchResultsContainer: {
+    maxHeight: 250,
+    backgroundColor: Colors.card.blue,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  searchResultsTitle: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.secondary,
+    marginBottom: Spacing.sm,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.sm,
+    ...Shadows.sm,
+  },
+  searchResultInfo: {
+    flex: 1,
+  },
+  searchResultName: {
+    fontSize: Typography.fontSize.md,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.primary,
+  },
+  searchResultStats: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.tertiary,
+    marginTop: 2,
+  },
+  // Price Comparison
+  priceComparisonContainer: {
+    backgroundColor: Colors.card.cream,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  priceComparisonTitle: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
+  },
+  priceList: {
+    maxHeight: 200,
+  },
+  priceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.xs,
+  },
+  priceRank: {
+    width: 24,
+    height: 24,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.card.yellow,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.sm,
+  },
+  priceRankText: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
+  },
+  priceStoreInfo: {
+    flex: 1,
+  },
+  priceStoreName: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.primary,
+  },
+  priceCurrency: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.tertiary,
+  },
+  priceAmount: {
+    fontSize: Typography.fontSize.md,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.primary,
+  },
+  priceAmountBest: {
     color: Colors.status.success,
   },
   removeButton: {

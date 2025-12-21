@@ -134,7 +134,8 @@ const ForgotPasswordScreen: React.FC = () => {
               onPress={handleSendOTP}
               disabled={loading || !phoneNumber.trim()}
               loading={loading}
-              rightIcon="arrow-right"
+              icon={<Icon name="arrow-right" size="sm" color={Colors.white} />}
+              iconPosition="right"
             />
 
             {/* Back to Login */}

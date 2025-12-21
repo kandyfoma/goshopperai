@@ -27,7 +27,7 @@ import {analyticsService} from '@/shared/services/analytics';
 import {duplicateDetectionService} from '@/shared/services/duplicateDetection';
 import {hapticService} from '@/shared/services/hapticService';
 import {inAppReviewService} from '@/shared/services/inAppReviewService';
-import {offlineQueueService, receiptStorageService} from '@/shared/services/firebase';
+import {offlineQueueService, receiptStorageService, userBehaviorService} from '@/shared/services/firebase';
 import {
   Colors,
   Typography,
@@ -36,6 +36,7 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon} from '@/shared/components';
+import {TransactionAnimation} from '@/shared/components/TransactionAnimation';
 import functions from '@react-native-firebase/functions';
 
 const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
@@ -76,6 +77,8 @@ export function UnifiedScannerScreen() {
   const [state, setState] = useState<ScanState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [showTransactionAnimation, setShowTransactionAnimation] = useState(false);
+  const [transactionType, setTransactionType] = useState<'scan' | 'payment' | 'success' | 'processing'>('scan');
 
   // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -322,6 +325,10 @@ export function UnifiedScannerScreen() {
     setLoadingMessageIndex(0);
     retryCountRef.current = 0;
 
+    // Show transaction animation for scanning
+    setShowTransactionAnimation(true);
+    setTransactionType('scan');
+
     try {
       // Generate base64 from URIs on-demand to avoid memory issues
       const images = await Promise.all(
@@ -378,6 +385,17 @@ export function UnifiedScannerScreen() {
             user?.uid || 'unknown-user'
           );
 
+          // Track shopping patterns for ML
+          if (user?.uid) {
+            await userBehaviorService.updateShoppingPatterns(user.uid, {
+              total: response.receipt.total || 0,
+              itemCount: response.receipt.items?.length || 0,
+              storeName: response.receipt.storeName || '',
+              categories: [...new Set(response.receipt.items?.map(item => item.category).filter(Boolean) || [])] as string[],
+              date: new Date(),
+            }).catch(err => console.log('Failed to track shopping patterns:', err));
+          }
+
           await recordScan();
 
           analyticsService.logCustomEvent('scan_completed', {
@@ -391,6 +409,9 @@ export function UnifiedScannerScreen() {
           hapticService.success();
           setState('success');
 
+          // Show success animation
+          setTransactionType('success');
+
           // Track scan for in-app review
           inAppReviewService.incrementScanCount().then(() => {
             inAppReviewService.requestReviewIfAppropriate();
@@ -401,6 +422,7 @@ export function UnifiedScannerScreen() {
 
           // Navigate after animation
           setTimeout(() => {
+            setShowTransactionAnimation(false);
             navigation.navigate('ReceiptDetail', {
               receiptId: savedReceiptId,
             });
@@ -431,6 +453,9 @@ export function UnifiedScannerScreen() {
           hapticService.success();
           setState('success');
 
+          // Show success animation
+          setTransactionType('success');
+
           // Track scan for in-app review
           inAppReviewService.incrementScanCount().then(() => {
             inAppReviewService.requestReviewIfAppropriate();
@@ -441,6 +466,7 @@ export function UnifiedScannerScreen() {
 
           const receiptId = result.receiptId;
           setTimeout(() => {
+            setShowTransactionAnimation(false);
             navigation.navigate('ReceiptDetail', {
               receiptId: receiptId,
             });
@@ -874,6 +900,17 @@ export function UnifiedScannerScreen() {
           colors={['#FFD700', '#FFA500', '#FF6347', '#32CD32', '#1E90FF', '#FF69B4']}
         />
       )}
+
+      {/* Transaction Animation Overlay */}
+      <TransactionAnimation
+        isVisible={showTransactionAnimation}
+        transactionType={transactionType}
+        onComplete={() => {
+          if (transactionType === 'success') {
+            setShowTransactionAnimation(false);
+          }
+        }}
+      />
       </View>
     </SafeAreaView>
   );

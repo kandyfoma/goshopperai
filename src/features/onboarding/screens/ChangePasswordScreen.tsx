@@ -28,9 +28,14 @@ import {
 import {Icon, Button} from '@/shared/components';
 import {useToast} from '@/shared/contexts';
 import {passwordService} from '@/shared/services/password';
-import {PasswordStrengthIndicator, CapsLockIndicator} from '@/shared/components';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
+// Password sanitization helper
+const sanitizePassword = (password: string): string => {
+  // Remove any potential harmful characters and trim
+  return password.replace(/[<>"'&]/g, '').trim();
+};
 
 export function ChangePasswordScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -383,18 +388,6 @@ export function ChangePasswordScreen() {
                 {newPasswordError && (
                   <Text style={styles.fieldError}>{newPasswordError}</Text>
                 )}
-                
-                {/* Password Strength Indicator */}
-                <PasswordStrengthIndicator 
-                  password={newPassword}
-                  style={{ marginTop: 8 }}
-                />
-                
-                {/* Caps Lock Indicator */}
-                <CapsLockIndicator 
-                  password={newPassword}
-                  style={{ marginTop: 4 }}
-                />
               </View>
 
               {/* Confirm Password */}
