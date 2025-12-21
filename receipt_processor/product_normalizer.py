@@ -1,7 +1,7 @@
 """
 Product Normalizer Module
 Handles product name matching, normalization, and entity resolution
-for the GoShopperAI receipt processing system.
+for the GoShopper receipt processing system.
 
 This module implements a multi-layered approach to handle:
 - Product name variations across shops

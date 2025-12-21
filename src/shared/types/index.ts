@@ -14,7 +14,8 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
-  ResetPassword: {oobCode: string};
+  VerifyOtp: {phoneNumber: string; isRegistration?: boolean; registrationData?: {password: string; city: string; countryCode: string}};
+  ResetPassword: {phoneNumber: string; verificationToken: string};
   ChangePassword: undefined;
   ProfileSetup: {firstName?: string; surname?: string};
   Main: undefined;

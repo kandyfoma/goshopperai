@@ -1,5 +1,5 @@
 /**
- * GoShopperAI Design System
+ * GoShopper Design System
  *
  * Warm and inviting color palette inspired by Gochujang Red collection
  * Font: Urbanist-style (System fonts as fallback)

@@ -1,5 +1,5 @@
 // Update Profile Screen - Urbanist Design System
-// GoShopperAI - Soft Pastel Colors with Clean Typography
+// GoShopper - Soft Pastel Colors with Clean Typography
 import React, {useState, useEffect} from 'react';
 import {
   View,
@@ -14,6 +14,8 @@ import {
   Platform,
   StatusBar,
   ActivityIndicator,
+  Modal,
+  FlatList,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -27,10 +29,12 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, Spinner} from '@/shared/components';
+import {Icon, Spinner, Button} from '@/shared/components';
 import {APP_ID} from '@/shared/services/firebase/config';
 import firestore from '@react-native-firebase/firestore';
 import {analyticsService} from '@/shared/services/analytics';
+import {countryCodeList} from '@/shared/constants/countries';
+import {phoneService} from '@/shared/services/phone';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -110,6 +114,8 @@ export function UpdateProfileScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [citySearch, setCitySearch] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState(countryCodeList[1]); // Default to Congo
+  const [showCountryModal, setShowCountryModal] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -404,26 +410,25 @@ export function UpdateProfileScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Contact</Text>
 
-            {/* Phone Input */}
+            {/* Phone Input - Non-editable */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Numéro de téléphone</Text>
-              <View style={styles.inputWrapper}>
+              <View style={[styles.inputWrapper, styles.inputDisabled]}>
                 <Icon
                   name="smartphone"
                   size="sm"
                   color={Colors.text.tertiary}
                 />
-                <TextInput
-                  style={styles.input}
-                  value={formData.phoneNumber}
-                  onChangeText={value =>
-                    handleInputChange('phoneNumber', value)
-                  }
-                  placeholder="+243 XXX XXX XXX"
-                  placeholderTextColor={Colors.text.tertiary}
-                  keyboardType="phone-pad"
-                />
+                <Text style={styles.disabledText}>
+                  {formData.phoneNumber || 'Non défini'}
+                </Text>
+                <View style={styles.lockedIndicator}>
+                  <Icon name="lock" size="xs" color={Colors.text.tertiary} />
+                </View>
               </View>
+              <Text style={styles.inputHint}>
+                Le numéro de téléphone ne peut pas être modifié
+              </Text>
             </View>
 
             {/* Email Input */}
@@ -504,22 +509,16 @@ export function UpdateProfileScreen() {
           </View>
 
           {/* Save Button */}
-          <TouchableOpacity
-            style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+          <Button
+            title="Enregistrer les modifications"
             onPress={handleSave}
+            variant="primary"
+            size="lg"
+            loading={isLoading}
             disabled={isLoading}
-            activeOpacity={0.8}>
-            {isLoading ? (
-              <Spinner size="small" color={Colors.white} />
-            ) : (
-              <>
-                <Icon name="check" size="sm" color={Colors.white} />
-                <Text style={styles.saveButtonText}>
-                  Enregistrer les modifications
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
+            icon={<Icon name="check" size="sm" color={Colors.white} />}
+            style={{marginBottom: Spacing.xl}}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -633,6 +632,27 @@ const styles = StyleSheet.create({
     borderColor: Colors.border.light,
     gap: Spacing.sm,
     ...Shadows.sm,
+  },
+  inputDisabled: {
+    backgroundColor: Colors.background.secondary,
+    opacity: 0.8,
+  },
+  disabledText: {
+    flex: 1,
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.secondary,
+    paddingVertical: Spacing.xs,
+  },
+  lockedIndicator: {
+    padding: Spacing.xs,
+  },
+  inputHint: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.xs,
+    marginLeft: Spacing.xs,
+    fontStyle: 'italic',
   },
   input: {
     flex: 1,

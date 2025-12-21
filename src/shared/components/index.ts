@@ -11,11 +11,20 @@ export {default as ListItem, ListSection} from './ListItem';
 export {default as EmptyState} from './EmptyState';
 export {AppFooter} from './AppFooter';
 
+// Illustrations
+export {
+  ScannerIllustration,
+  PaymentIllustration,
+  DeliveryIllustration,
+} from './Illustrations';
+
 // New Components
 export {Toast} from './Toast';
 export {Spinner, LoadingOverlay} from './Spinner';
 export {useNetwork, NetworkBanner} from './NetworkBanner';
 export {SocialSignInButtons} from './SocialSignInButtons';
+export {PasswordStrengthIndicator} from './PasswordStrengthIndicator';
+export {CapsLockIndicator} from './CapsLockIndicator';
 
 // Animations
 export {

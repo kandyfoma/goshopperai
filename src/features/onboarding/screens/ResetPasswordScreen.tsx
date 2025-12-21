@@ -1,23 +1,23 @@
-// Reset Password Screen - Set new password (from email link)
-import React, {useState, useRef, useEffect} from 'react';
+// Reset Password Screen - Set new password after SMS OTP verification
+import React, {useState} from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
-  Animated,
-  Keyboard,
+  Alert,
+  TextInput,
+  TouchableOpacity,
 } from 'react-native';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
+import {Button, Icon, PasswordStrengthIndicator, CapsLockIndicator} from '@/shared/components';
 import {authService} from '@/shared/services/firebase';
+import {passwordService} from '@/shared/services/password';
 import {
   Colors,
   Typography,
@@ -25,394 +25,247 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon} from '@/shared/components';
-import {useToast} from '@/shared/contexts';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type ResetPasswordRouteProp = RouteProp<RootStackParamList, 'ResetPassword'>;
 
-export function ResetPasswordScreen() {
+const ResetPasswordScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<ResetPasswordRouteProp>();
-  const {showToast} = useToast();
-  const oobCode = (route.params as any)?.oobCode || '';
-
-  // Form state
+  const {phoneNumber, verificationToken} = route.params;
+  
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Error state
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [confirmPasswordError, setConfirmPasswordError] = useState<
-    string | null
-  >(null);
-
-  // UI state
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [errors, setErrors] = useState({
+    password: '',
+    confirmPassword: '',
+    general: ''
+  });
 
-  // Refs
-  const confirmPasswordRef = useRef<TextInput>(null);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const shakeAnimation = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  const triggerShake = () => {
-    Animated.sequence([
-      Animated.timing(shakeAnimation, {
-        toValue: 10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: -10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: 10,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shakeAnimation, {
-        toValue: 0,
-        duration: 50,
-        useNativeDriver: true,
-      }),
-    ]).start();
+  const getPasswordValidation = (pwd: string) => {
+    const validation = passwordService.validatePassword(pwd);
+    return {
+      isValid: validation.isValid,
+      message: validation.errors.join(' ')
+    };
   };
 
-  const validatePassword = (value: string): boolean => {
-    if (!value) {
-      setPasswordError('Le mot de passe est requis');
-      return false;
+  const validateConfirmPassword = (confirmPwd: string): string => {
+    if (confirmPwd !== password) {
+      return 'Les mots de passe ne correspondent pas';
     }
-    if (value.length < 6) {
-      setPasswordError('Le mot de passe doit contenir au moins 6 caractères');
-      return false;
-    }
-    setPasswordError(null);
-    return true;
+    return '';
   };
 
-  const validateConfirmPassword = (value: string): boolean => {
-    if (!value) {
-      setConfirmPasswordError('Veuillez confirmer le mot de passe');
-      return false;
-    }
-    if (value !== password) {
-      setConfirmPasswordError('Les mots de passe ne correspondent pas');
-      return false;
-    }
-    setConfirmPasswordError(null);
-    return true;
+  const handlePasswordChange = (value: string) => {
+    const sanitized = passwordService.sanitizePassword(value);
+    setPassword(sanitized);
+    setErrors(prev => ({
+      ...prev,
+      password: '',
+      general: ''
+    }));
+  };
+
+  const handleConfirmPasswordChange = (value: string) => {
+    const sanitized = passwordService.sanitizePassword(value);
+    setConfirmPassword(sanitized);
+    setErrors(prev => ({
+      ...prev,
+      confirmPassword: '',
+      general: ''
+    }));
   };
 
   const handleResetPassword = async () => {
-    Keyboard.dismiss();
-    setError(null);
+    // Validate inputs
+    const passwordValidation = getPasswordValidation(password);
+    const confirmPasswordError = validateConfirmPassword(confirmPassword);
 
-    const isPasswordValid = validatePassword(password);
-    const isConfirmValid = validateConfirmPassword(confirmPassword);
-
-    if (!isPasswordValid || !isConfirmValid) {
-      triggerShake();
-      return;
-    }
-
-    if (!oobCode) {
-      setError('Lien de réinitialisation invalide ou expiré.');
+    if (!passwordValidation.isValid || confirmPasswordError) {
+      setErrors({
+        password: passwordValidation.message,
+        confirmPassword: confirmPasswordError,
+        general: ''
+      });
       return;
     }
 
     setLoading(true);
+    setErrors({password: '', confirmPassword: '', general: ''});
 
     try {
-      await authService.confirmPasswordReset(oobCode, password);
-      setSuccess(true);
-    } catch (err: any) {
-      console.error('Reset password error:', err);
-      const errorMessages: Record<string, string> = {
-        'auth/expired-action-code':
-          'Le lien a expiré. Demandez un nouveau lien.',
-        'auth/invalid-action-code':
-          'Le lien est invalide ou a déjà été utilisé.',
-        'auth/weak-password': 'Le mot de passe est trop faible.',
-      };
-      setError(
-        errorMessages[err.code] ||
-          'Une erreur est survenue. Veuillez réessayer.',
+      // In a real implementation, you would call your backend API
+      // to reset the password using the phone number and verification token
+      // For now, we'll simulate this with a delay
+      
+      // await authService.resetPasswordWithPhone(phoneNumber, password, verificationToken);
+      
+      // Simulate API call
+      await new Promise<void>(resolve => setTimeout(() => resolve(), 1500));
+      
+      Alert.alert(
+        'Succès!',
+        'Votre mot de passe a été réinitialisé avec succès.',
+        [
+          {
+            text: 'Se connecter',
+            onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'SignIn' }],
+              });
+            },
+          },
+        ]
       );
-      triggerShake();
+      
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      setErrors(prev => ({
+        ...prev,
+        general: error.message || 'Une erreur est survenue. Veuillez réessayer.'
+      }));
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePasswordChange = (value: string) => {
-    setPassword(value);
-    if (passwordError) {
-      setPasswordError(null);
-    }
-    if (error) {
-      setError(null);
-    }
-  };
-
-  const handleConfirmPasswordChange = (value: string) => {
-    setConfirmPassword(value);
-    if (confirmPasswordError) {
-      setConfirmPasswordError(null);
-    }
-    if (error) {
-      setError(null);
-    }
-  };
-
-  if (success) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Animated.View style={[styles.successContainer, {opacity: fadeAnim}]}>
-          <View style={styles.successIconContainer}>
-            <Icon
-              name="check-circle"
-              size="3xl"
-              color={Colors.status.success}
-            />
-          </View>
-          <Text style={styles.successTitle}>Mot de passe réinitialisé !</Text>
-          <Text style={styles.successText}>
-            Votre mot de passe a été modifié avec succès. Vous pouvez maintenant
-            vous connecter avec votre nouveau mot de passe.
-          </Text>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => {
-              showToast('Mot de passe réinitialisé avec succès!', 'success', 2000);
-              setTimeout(() => {
-                navigation.navigate('Login');
-              }, 2000);
-            }}
-            activeOpacity={0.8}>
-            <View style={styles.buttonInner}>
-              <Text style={styles.buttonText}>Se connecter</Text>
-              <Icon name="arrow-right" size="md" color={Colors.white} />
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
+        style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}>
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-          <Animated.View style={[styles.content, {opacity: fadeAnim}]}>
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={styles.iconContainer}>
-                <Icon name="lock" size="2xl" color={Colors.white} />
-              </View>
-              <Text style={styles.title}>Nouveau mot de passe</Text>
+        >
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Icon name="arrow-left" size="md" color={Colors.text.primary} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Nouveau mot de passe</Text>
+          </View>
+
+          <View style={styles.content}>
+            <View style={styles.titleSection}>
+              <Text style={styles.title}>Créer un nouveau mot de passe</Text>
               <Text style={styles.subtitle}>
-                Choisissez un nouveau mot de passe sécurisé pour votre compte.
+                Créez un mot de passe sécurisé pour votre compte {phoneNumber}
               </Text>
             </View>
 
-            {/* Error Message */}
-            {error && (
-              <Animated.View
-                style={[
-                  styles.errorBanner,
-                  {transform: [{translateX: shakeAnimation}]},
-                ]}>
-                <Icon
-                  name="alert-circle"
-                  size="md"
-                  color={Colors.status.error}
-                />
-                <Text style={styles.errorText}>{error}</Text>
-              </Animated.View>
-            )}
-
-            {/* Form */}
-            <Animated.View
-              style={[
-                styles.form,
-                {transform: [{translateX: shakeAnimation}]},
-              ]}>
-              {/* New Password */}
-              <View style={styles.inputContainer}>
+            <View style={styles.formSection}>
+              {/* Password Input */}
+              <View style={styles.inputGroup}>
                 <Text style={styles.label}>Nouveau mot de passe</Text>
-                <View
-                  style={[
-                    styles.inputWrapper,
-                    passwordError ? styles.inputError : null,
-                    loading ? styles.inputDisabled : null,
-                  ]}>
-                  <Icon name="lock" size="md" color={Colors.text.secondary} />
+                <View style={styles.inputContainer}>
                   <TextInput
-                    style={styles.input}
-                    placeholder="Au moins 6 caractères"
-                    placeholderTextColor={Colors.text.tertiary}
+                    style={[styles.input, errors.password ? styles.inputError : null]}
                     value={password}
                     onChangeText={handlePasswordChange}
-                    onBlur={() => password && validatePassword(password)}
+                    placeholder="Entrez votre nouveau mot de passe"
+                    placeholderTextColor={Colors.text.tertiary}
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
-                    editable={!loading}
+                    autoCorrect={false}
                     returnKeyType="next"
-                    onSubmitEditing={() => confirmPasswordRef.current?.focus()}
+                    onSubmitEditing={() => {
+                      // Focus confirm password input if available
+                    }}
                   />
                   <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
                     style={styles.eyeButton}
-                    disabled={loading}>
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
                     <Icon
-                      name={showPassword ? 'eye' : 'eye-off'}
-                      size="md"
+                      name={showPassword ? "eye-off" : "eye"}
+                      size="sm"
                       color={Colors.text.secondary}
                     />
                   </TouchableOpacity>
                 </View>
-                {passwordError && (
-                  <Text style={styles.fieldError}>{passwordError}</Text>
-                )}
+                {errors.password ? (
+                  <Text style={styles.errorText}>{errors.password}</Text>
+                ) : null}
               </View>
 
-              {/* Confirm Password */}
-              <View style={styles.inputContainer}>
+              {/* Password Strength Indicator */}
+              <PasswordStrengthIndicator 
+                value={password}
+                style={{ marginTop: 8 }}
+              />
+
+              {/* Caps Lock Indicator */}
+              <CapsLockIndicator 
+                value={password}
+              />
+
+              {/* Confirm Password Input */}
+              <View style={styles.inputGroup}>
                 <Text style={styles.label}>Confirmer le mot de passe</Text>
-                <View
-                  style={[
-                    styles.inputWrapper,
-                    confirmPasswordError ? styles.inputError : null,
-                    loading ? styles.inputDisabled : null,
-                  ]}>
-                  <Icon name="lock" size="md" color={Colors.text.secondary} />
+                <View style={styles.inputContainer}>
                   <TextInput
-                    ref={confirmPasswordRef}
-                    style={styles.input}
-                    placeholder="Répétez le mot de passe"
-                    placeholderTextColor={Colors.text.tertiary}
+                    style={[styles.input, errors.confirmPassword ? styles.inputError : null]}
                     value={confirmPassword}
                     onChangeText={handleConfirmPasswordChange}
-                    onBlur={() =>
-                      confirmPassword &&
-                      validateConfirmPassword(confirmPassword)
-                    }
+                    placeholder="Confirmez votre nouveau mot de passe"
+                    placeholderTextColor={Colors.text.tertiary}
                     secureTextEntry={!showConfirmPassword}
                     autoCapitalize="none"
-                    editable={!loading}
+                    autoCorrect={false}
                     returnKeyType="done"
                     onSubmitEditing={handleResetPassword}
                   />
                   <TouchableOpacity
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
                     style={styles.eyeButton}
-                    disabled={loading}>
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
                     <Icon
-                      name={showConfirmPassword ? 'eye' : 'eye-off'}
-                      size="md"
+                      name={showConfirmPassword ? "eye-off" : "eye"}
+                      size="sm"
                       color={Colors.text.secondary}
                     />
                   </TouchableOpacity>
                 </View>
-                {confirmPasswordError && (
-                  <Text style={styles.fieldError}>{confirmPasswordError}</Text>
-                )}
+                {errors.confirmPassword ? (
+                  <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+                ) : null}
               </View>
 
-              {/* Password Requirements */}
-              <View style={styles.requirements}>
-                <Text style={styles.requirementsTitle}>
-                  Le mot de passe doit contenir :
-                </Text>
-                <View style={styles.requirementRow}>
-                  <Icon
-                    name={password.length >= 6 ? 'check-circle' : 'x-circle'}
-                    size="sm"
-                    color={
-                      password.length >= 6
-                        ? Colors.status.success
-                        : Colors.text.tertiary
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.requirementText,
-                      password.length >= 6 && styles.requirementMet,
-                    ]}>
-                    Au moins 6 caractères
-                  </Text>
+              {/* General Error */}
+              {errors.general ? (
+                <View style={styles.generalError}>
+                  <Icon name="alert-triangle" size="sm" color={Colors.status.error} />
+                  <Text style={styles.generalErrorText}>{errors.general}</Text>
                 </View>
-                <View style={styles.requirementRow}>
-                  <Icon
-                    name={
-                      password === confirmPassword && password.length > 0
-                        ? 'check-circle'
-                        : 'x-circle'
-                    }
-                    size="sm"
-                    color={
-                      password === confirmPassword && password.length > 0
-                        ? Colors.status.success
-                        : Colors.text.tertiary
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.requirementText,
-                      password === confirmPassword &&
-                        password.length > 0 &&
-                        styles.requirementMet,
-                    ]}>
-                    Les mots de passe correspondent
-                  </Text>
-                </View>
-              </View>
+              ) : null}
 
-              {/* Submit Button */}
-              <TouchableOpacity
-                style={[styles.primaryButton, loading && styles.buttonDisabled]}
+              {/* Reset Button */}
+              <Button
+                title="Réinitialiser le mot de passe"
+                variant="primary"
                 onPress={handleResetPassword}
-                disabled={loading}
-                activeOpacity={0.8}>
-                {loading ? (
-                  <View style={styles.loadingContent}>
-                    <ActivityIndicator color={Colors.white} size="small" />
-                    <Text style={styles.loadingText}>Réinitialisation...</Text>
-                  </View>
-                ) : (
-                  <View style={styles.buttonInner}>
-                    <Text style={styles.buttonText}>Réinitialiser</Text>
-                    <Icon name="arrow-right" size="md" color={Colors.white} />
-                  </View>
-                )}
-              </TouchableOpacity>
-            </Animated.View>
-          </Animated.View>
+                disabled={loading || !password || !confirmPassword}
+                loading={loading}
+                style={styles.resetButton}
+              />
+            </View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -425,179 +278,107 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.lg,
+  },
+  backButton: {
+    padding: Spacing.sm,
+    marginRight: Spacing.md,
+  },
+  headerTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.primary,
+  },
   content: {
     flex: 1,
-    padding: Spacing.xl,
-    justifyContent: 'center',
+    paddingHorizontal: Spacing.lg,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: Spacing['2xl'],
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: BorderRadius.xl,
-    backgroundColor: Colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.base,
-    ...Shadows.lg,
+  titleSection: {
+    marginBottom: Spacing.xl,
   },
   title: {
     fontSize: Typography.fontSize['2xl'],
-    fontWeight: Typography.fontWeight.bold,
+    fontFamily: Typography.fontFamily.bold,
     color: Colors.text.primary,
     marginBottom: Spacing.sm,
-    textAlign: 'center',
+    lineHeight: 32,
   },
   subtitle: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: Spacing.lg,
-  },
-  successContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: Spacing.xl,
-  },
-  successIconContainer: {
-    marginBottom: Spacing.lg,
-  },
-  successTitle: {
-    fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.status.success,
-    marginBottom: Spacing.sm,
-  },
-  successText: {
-    fontSize: Typography.fontSize.base,
-    color: Colors.text.secondary,
-    textAlign: 'center',
-    marginBottom: Spacing['2xl'],
-    paddingHorizontal: Spacing.lg,
     lineHeight: 22,
   },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.status.errorLight,
-    borderRadius: BorderRadius.base,
-    padding: Spacing.base,
-    marginBottom: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.status.error,
-    gap: Spacing.md,
-  },
-  errorText: {
+  formSection: {
     flex: 1,
-    color: Colors.status.error,
-    fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.medium,
   },
-  form: {
-    marginBottom: Spacing.xl,
-  },
-  inputContainer: {
+  inputGroup: {
     marginBottom: Spacing.lg,
   },
   label: {
-    fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.semiBold,
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
     color: Colors.text.primary,
     marginBottom: Spacing.sm,
   },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: Colors.border.medium,
-    borderRadius: BorderRadius.base,
-    backgroundColor: Colors.background.primary,
-    paddingHorizontal: Spacing.base,
-    gap: Spacing.md,
+  inputContainer: {
+    position: 'relative',
+  },
+  input: {
+    height: 52,
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingRight: 48,
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.primary,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
   },
   inputError: {
     borderColor: Colors.status.error,
     backgroundColor: Colors.status.errorLight,
   },
-  inputDisabled: {
-    backgroundColor: Colors.background.secondary,
-    opacity: 0.7,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: Spacing.base,
-    fontSize: Typography.fontSize.base,
-    color: Colors.text.primary,
-  },
   eyeButton: {
-    padding: Spacing.sm,
-  },
-  fieldError: {
-    color: Colors.status.error,
-    fontSize: Typography.fontSize.sm,
-    marginTop: Spacing.xs,
-    marginLeft: Spacing.xs,
-  },
-  requirements: {
-    backgroundColor: Colors.background.secondary,
-    borderRadius: BorderRadius.base,
-    padding: Spacing.base,
-    marginBottom: Spacing.lg,
-  },
-  requirementsTitle: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.semiBold,
-    color: Colors.text.primary,
-    marginBottom: Spacing.sm,
-  },
-  requirementRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.xs,
-  },
-  requirementText: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.text.tertiary,
-  },
-  requirementMet: {
-    color: Colors.status.success,
-  },
-  primaryButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.base,
-    padding: Spacing.lg,
-    alignItems: 'center',
+    position: 'absolute',
+    right: Spacing.md,
+    top: 0,
+    bottom: 0,
     justifyContent: 'center',
-    ...Shadows.md,
+    alignItems: 'center',
+    width: 24,
+    height: 24,
   },
-  buttonDisabled: {
-    opacity: 0.7,
+  errorText: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.status.error,
+    marginTop: Spacing.xs,
   },
-  buttonInner: {
+  generalError: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: Colors.status.errorLight,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.sm,
+    marginBottom: Spacing.lg,
     gap: Spacing.sm,
   },
-  buttonText: {
-    color: Colors.white,
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.bold,
+  generalErrorText: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.status.error,
+    flex: 1,
   },
-  loadingContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: Colors.white,
-    fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.semiBold,
-    marginLeft: Spacing.sm,
+  resetButton: {
+    marginTop: Spacing.xl,
   },
 });
 

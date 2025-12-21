@@ -47,7 +47,7 @@ export const AppFooter: React.FC<AppFooterProps> = ({
             />
           </View>
           <Text style={[styles.appName, isDarkMode && styles.textDark]}>
-            GoShopperAI
+            GoShopper
           </Text>
         </View>
       )}
@@ -59,7 +59,7 @@ export const AppFooter: React.FC<AppFooterProps> = ({
           </Text>
         )}
         <Text style={[styles.copyrightText, isDarkMode && styles.textSecondaryDark]}>
-          © {currentYear} GoShopperAI. Tous droits réservés.
+          © {currentYear} GoShopper. Tous droits réservés.
         </Text>
         <Text style={[styles.taglineText, isDarkMode && styles.textSecondaryDark]}>
           Scannez vos reçus, économisez plus

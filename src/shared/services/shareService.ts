@@ -107,7 +107,7 @@ Analysé avec GoShopperAI 📱`;
         ? sortedPrices[sortedPrices.length - 1].price - bestPrice.price
         : 0;
 
-      const message = `💰 Comparaison de prix - GoShopperAI
+      const message = `💰 Comparaison de prix - GoShopper
 
 🔍 Article: ${itemName}
 
@@ -118,7 +118,7 @@ ${sortedPrices.map((p, i) =>
 
 ${savings > 0 ? `💸 Économie possible: $${savings.toFixed(2)}` : ''}
 
-Trouvé avec GoShopperAI 📱`;
+Trouvé avec GoShopper 📱`;
 
       return await this.shareText(message, `Prix - ${itemName}`);
     } catch (error) {
@@ -154,7 +154,7 @@ Trouvé avec GoShopperAI 📱`;
         ).join('\n');
       }
 
-      message += `\n\nCréée avec GoShopperAI 📱`;
+      message += `\n\nCréée avec GoShopper 📱`;
 
       return await this.shareText(message, listName || 'Ma liste de courses');
     } catch (error) {

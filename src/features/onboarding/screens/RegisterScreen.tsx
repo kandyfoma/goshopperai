@@ -1,5 +1,5 @@
-// Register Screen - Email/password registration
-import React, {useState} from 'react';
+// Register Screen - 2-step phone registration
+import React, {useState, useEffect} from 'react';
 import {
   View,
   Text,
@@ -10,107 +10,219 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {authService} from '@/shared/services/firebase';
+import {smsService} from '@/shared/services/sms';
+import {PhoneService} from '@/shared/services/phone';
+import {countryCodeList, congoCities} from '@/shared/constants/countries';
 import {
   Colors,
   Typography,
   Spacing,
   BorderRadius,
-  Shadows,
 } from '@/shared/theme/theme';
-import {Icon, Button} from '@/shared/components';
+import {Icon, Button, PasswordStrengthIndicator, CapsLockIndicator} from '@/shared/components';
+import {passwordService} from '@/shared/services/password';
 import {useAuth} from '@/shared/contexts';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type RegistrationStep = 'step1' | 'step2';
 
 export function RegisterScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const {signInWithGoogle, signInWithApple, signInWithFacebook} = useAuth();
+  const {signInWithGoogle, signInWithApple} = useAuth();
+  
+  // Step management
+  const [currentStep, setCurrentStep] = useState<RegistrationStep>('step1');
+  
+  // Step 1: Phone number and city
+  const [selectedCountry, setSelectedCountry] = useState(countryCodeList[1]); // Default to Congo
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [email, setEmail] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [phoneExists, setPhoneExists] = useState(false);
+  const [checkingPhone, setCheckingPhone] = useState(false);
+  
+  // Step 2: Password and terms
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  
+  // Modal states
+  const [showCountryModal, setShowCountryModal] = useState(false);
+  const [showCityModal, setShowCityModal] = useState(false);
+  
+  // Loading states
   const [loading, setLoading] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
-  const [showVerification, setShowVerification] = useState(false);
-  const [verificationId, setVerificationId] = useState('');
-  const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | 'facebook' | null>(
-    null,
-  );
+  const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
 
-  const handleRegister = async () => {
-    if (!phoneNumber || !password || !confirmPassword) {
-      Alert.alert('Erreur', 'Veuillez saisir un numéro de téléphone et un mot de passe');
-      return;
+  let phoneCheckTimeout: NodeJS.Timeout;
+
+  // Phone number validation and checking
+  const validatePhoneNumber = (phone: string): string => {
+    if (!phone.trim()) {
+      return 'Le numéro de téléphone est requis';
     }
-
-    // Validate phone number format (basic validation)
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-    if (!phoneRegex.test(phoneNumber.replace(/\s/g, ''))) {
-      Alert.alert('Erreur', 'Veuillez saisir un numéro de téléphone valide');
-      return;
+    
+    const formatted = PhoneService.formatPhoneNumber(selectedCountry.code, phone);
+    if (!PhoneService.validatePhoneNumber(formatted)) {
+      return 'Numéro de téléphone invalide';
     }
+    
+    return '';
+  };
 
-    if (password !== confirmPassword) {
-      Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert(
-        'Erreur',
-        'Le mot de passe doit contenir au moins 6 caractères',
-      );
-      return;
-    }
-
-    setLoading(true);
+  const checkPhoneExists = async (phone: string) => {
+    if (!phone.trim()) return;
+    
+    const formatted = PhoneService.formatPhoneNumber(selectedCountry.code, phone);
+    const error = validatePhoneNumber(phone);
+    if (error) return;
+    
+    setCheckingPhone(true);
     try {
-      // Start phone verification
-      const confirmation = await authService.signUpWithPhoneNumber(phoneNumber, email);
-      setVerificationId(confirmation.verificationId);
-      setShowVerification(true);
-      Alert.alert('Code envoyé', 'Un code de vérification a été envoyé à votre téléphone');
-    } catch (error: any) {
-      Alert.alert('Erreur', error.message || 'Inscription échouée');
+      const exists = await PhoneService.checkPhoneExists(formatted);
+      setPhoneExists(exists);
+    } catch (err) {
+      console.error('Error checking phone:', err);
     } finally {
-      setLoading(false);
+      setCheckingPhone(false);
     }
   };
 
-  const handleVerifyCode = async () => {
-    if (!verificationCode || verificationCode.length !== 6) {
-      Alert.alert('Erreur', 'Veuillez saisir le code de vérification à 6 chiffres');
-      return;
-    }
+  const handlePhoneChange = (text: string) => {
+    setPhoneNumber(text);
+    setPhoneError('');
+    setPhoneExists(false);
+    
+    // Debounce phone checking
+    clearTimeout(phoneCheckTimeout);
+    phoneCheckTimeout = setTimeout(() => {
+      checkPhoneExists(text);
+    }, 800);
+  };
 
-    setLoading(true);
-    try {
-      await authService.confirmPhoneVerification(verificationId, verificationCode, password, email);
-      Alert.alert('Succès', 'Votre compte a été créé avec succès !');
-      // Navigation will be handled by AuthContext
-    } catch (error: any) {
-      Alert.alert('Erreur', error.message || 'Code de vérification invalide');
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    return () => {
+      if (phoneCheckTimeout) {
+        clearTimeout(phoneCheckTimeout);
+      }
+    };
+  }, []);
+
+  // Password validation with comprehensive edge cases
+  const validatePassword = (pwd: string): string => {
+    const validation = passwordService.validatePassword(
+      pwd,
+      passwordService.getRequirements('register'),
+      { phone: phoneNumber, name: '' }
+    );
+    
+    return validation.errors[0] || ''; // Return first error or empty string
+  };
+
+  const getPasswordValidation = (pwd: string) => {
+    return passwordService.validatePassword(
+      pwd,
+      passwordService.getRequirements('register'),
+      { phone: phoneNumber, name: '' }
+    );
+  };
+
+  const handlePasswordChange = (text: string) => {
+    // Sanitize password input
+    const sanitized = passwordService.sanitizePassword(text);
+    setPassword(sanitized);
+    const error = validatePassword(sanitized);
+    setPasswordError(error);
+  };
+
+  const handleConfirmPasswordChange = (text: string) => {
+    const sanitized = passwordService.sanitizePassword(text);
+    setConfirmPassword(sanitized);
+    if (sanitized && !passwordService.passwordsMatch(password, sanitized)) {
+      setConfirmPasswordError('Les mots de passe ne correspondent pas');
+    } else {
+      setConfirmPasswordError('');
     }
   };
 
-  const handleResendOTP = async () => {
+  // Step 1 validation
+  const isStep1Valid = (): boolean => {
+    return (
+      phoneNumber.trim() !== '' &&
+      selectedCity !== '' &&
+      !phoneError &&
+      !phoneExists &&
+      !checkingPhone
+    );
+  };
+
+  // Step 2 validation
+  const isStep2Valid = (): boolean => {
+    return (
+      password !== '' &&
+      confirmPassword !== '' &&
+      !passwordError &&
+      !confirmPasswordError &&
+      acceptedTerms
+    );
+  };
+
+  const handleStep1Continue = () => {
+    const error = validatePhoneNumber(phoneNumber);
+    if (error) {
+      setPhoneError(error);
+      return;
+    }
+    
+    if (!selectedCity) {
+      Alert.alert('Erreur', 'Veuillez sélectionner votre ville');
+      return;
+    }
+    
+    if (phoneExists) {
+      return; // User should see the error message already
+    }
+    
+    setCurrentStep('step2');
+  };
+
+  const handleRegistration = async () => {
+    if (!isStep2Valid()) return;
+    
     setLoading(true);
     try {
-      console.log('🔄 Resending OTP to:', phoneNumber);
-      const confirmation = await authService.resendOTP(phoneNumber);
-      setVerificationId(confirmation.verificationId);
-      Alert.alert('Code renvoyé', 'Un nouveau code de vérification a été envoyé');
+      const formattedPhone = PhoneService.formatPhoneNumber(selectedCountry.code, phoneNumber);
+      
+      // Send OTP for registration
+      const result = await smsService.sendOTP(formattedPhone);
+      
+      if (result.success) {
+        // Navigate to OTP verification with registration data
+        navigation.navigate('VerifyOtp', { 
+          phoneNumber: formattedPhone,
+          isRegistration: true,
+          registrationData: {
+            password,
+            city: selectedCity,
+            countryCode: selectedCountry.code
+          }
+        });
+      } else {
+        Alert.alert('Erreur', result.error || 'Erreur lors de l\'envoi du code');
+      }
     } catch (error: any) {
-      Alert.alert('Erreur', error.message || 'Échec de renvoi du code');
+      Alert.alert('Erreur', error.message || 'Erreur lors de l\'inscription');
     } finally {
       setLoading(false);
     }
@@ -138,223 +250,312 @@ export function RegisterScreen() {
     }
   };
 
-  const handleFacebookSignIn = async () => {
-    setSocialLoading('facebook');
-    try {
-      await signInWithFacebook();
-    } catch (err: any) {
-      Alert.alert('Erreur', err?.message || 'Échec de la connexion Facebook');
-    } finally {
-      setSocialLoading(null);
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           {/* Header */}
           <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}>
+              <Icon name="arrow-left" size="md" color={Colors.text.primary} />
+            </TouchableOpacity>
+            
             <View style={styles.logoContainer}>
               <Icon
                 name="user-plus"
-                size="2xl"
-                color={Colors.text.primary}
-                variant="filled"
+                size="3xl"
+                color={Colors.accent}
               />
             </View>
             <Text style={styles.title}>Créer un compte</Text>
             <Text style={styles.subtitle}>
-              Commencez à économiser aujourd'hui
+              {currentStep === 'step1' 
+                ? 'Commençons par vos informations de base'
+                : 'Sécurisez votre compte'
+              }
             </Text>
+            
+            {/* Progress indicator */}
+            <View style={styles.progressContainer}>
+              <View style={[styles.progressStep, currentStep === 'step1' && styles.progressStepActive]}>
+                <Text style={[styles.progressStepText, currentStep === 'step1' && styles.progressStepTextActive]}>1</Text>
+              </View>
+              <View style={[styles.progressLine, currentStep === 'step2' && styles.progressLineActive]} />
+              <View style={[styles.progressStep, currentStep === 'step2' && styles.progressStepActive]}>
+                <Text style={[styles.progressStepText, currentStep === 'step2' && styles.progressStepTextActive]}>2</Text>
+              </View>
+            </View>
           </View>
 
-          {/* Form */}
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Numéro de téléphone *</Text>
-              <View style={styles.inputWrapper}>
-                <Icon name="phone" size="md" color={Colors.text.secondary} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="+243 xxx xxx xxx"
-                  placeholderTextColor={Colors.text.tertiary}
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  keyboardType="phone-pad"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!loading && !showVerification}
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email (optionnel)</Text>
-              <View style={styles.inputWrapper}>
-                <Icon name="mail" size="md" color={Colors.text.secondary} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="votre@email.com"
-                  placeholderTextColor={Colors.text.tertiary}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!loading && !showVerification}
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Mot de passe</Text>
-              <View style={styles.inputWrapper}>
-                <Icon name="lock" size="md" color={Colors.text.secondary} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Au moins 6 caractères"
-                  placeholderTextColor={Colors.text.tertiary}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  editable={!loading}
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Confirmer le mot de passe</Text>
-              <View style={styles.inputWrapper}>
-                <Icon name="lock" size="md" color={Colors.text.secondary} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Répétez le mot de passe"
-                  placeholderTextColor={Colors.text.tertiary}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  editable={!loading}
-                />
-              </View>
-            </View>
-
-            {showVerification && (
+          {/* Step 1: Phone and City */}
+          {currentStep === 'step1' && (
+            <View style={styles.form}>
+              {/* Country Code and Phone Number */}
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Code de vérification</Text>
-                <View style={styles.inputWrapper}>
-                  <Icon name="key" size="md" color={Colors.text.secondary} />
+                <Text style={styles.label}>Numéro de téléphone *</Text>
+                <View style={styles.phoneContainer}>
+                  <TouchableOpacity 
+                    style={styles.countrySelector} 
+                    onPress={() => setShowCountryModal(true)}>
+                    <Text style={styles.countryFlag}>{selectedCountry.flag}</Text>
+                    <Text style={styles.countryCode}>{selectedCountry.code}</Text>
+                    <Icon name="chevron-down" size="sm" color={Colors.text.secondary} />
+                  </TouchableOpacity>
+                  
                   <TextInput
-                    style={styles.input}
-                    placeholder="Code à 6 chiffres"
+                    style={[styles.phoneInput, phoneError ? styles.inputError : null]}
+                    placeholder="81 234 5678"
                     placeholderTextColor={Colors.text.tertiary}
-                    value={verificationCode}
-                    onChangeText={setVerificationCode}
-                    keyboardType="number-pad"
-                    maxLength={6}
+                    value={phoneNumber}
+                    onChangeText={handlePhoneChange}
+                    keyboardType="phone-pad"
+                    autoCorrect={false}
                     editable={!loading}
                   />
                 </View>
+                {phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
+                {checkingPhone && <Text style={styles.infoText}>Vérification du numéro...</Text>}
+                {phoneExists && <Text style={styles.errorText}>Ce numéro existe déjà. Connectez-vous à la place.</Text>}
               </View>
-            )}
 
-            <Button
-              variant="primary"
-              title={showVerification ? 'Vérifier le code' : 'S\'inscrire'}
-              onPress={showVerification ? handleVerifyCode : handleRegister}
-              disabled={loading}
-              loading={loading}
-              rightIcon="arrow-right"
-            />
+              {/* City Selection */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Ville *</Text>
+                <TouchableOpacity 
+                  style={[styles.inputWrapper, !selectedCity && styles.inputPlaceholder]}
+                  onPress={() => setShowCityModal(true)}>
+                  <Icon name="map-pin" size="md" color={Colors.text.secondary} />
+                  <Text style={[
+                    styles.input,
+                    !selectedCity && styles.placeholderText
+                  ]}>
+                    {selectedCity || 'Sélectionnez votre ville'}
+                  </Text>
+                  <Icon name="chevron-down" size="sm" color={Colors.text.secondary} />
+                </TouchableOpacity>
+              </View>
 
-            {showVerification && (
+              {/* Continue Button */}
+              <Button
+                variant="primary"
+                title="Continuer"
+                onPress={handleStep1Continue}
+                disabled={!isStep1Valid()}
+                rightIcon="arrow-right"
+              />
+
+              {/* Social Login */}
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>ou</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
               <Button
                 variant="outline"
-                title="Renvoyer le code"
-                onPress={handleResendOTP}
-                disabled={loading}
-                leftIcon="refresh-cw"
+                title="Continuer avec Google"
+                onPress={handleGoogleSignIn}
+                loading={socialLoading === 'google'}
+                leftIcon="google"
               />
-            )}
-
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>ou</Text>
-              <View style={styles.dividerLine} />
+              
+              {Platform.OS === 'ios' && (
+                <Button
+                  variant="outline"
+                  title="Continuer avec Apple"
+                  onPress={handleAppleSignIn}
+                  loading={socialLoading === 'apple'}
+                  leftIcon="apple"
+                />
+              )}
             </View>
+          )}
 
-            {/* Social buttons */}
-            <TouchableOpacity
-              style={[styles.button, styles.socialButton]}
-              onPress={handleGoogleSignIn}
-              disabled={loading || socialLoading !== null}>
-              {socialLoading === 'google' ? (
-                <ActivityIndicator color={Colors.text.primary} />
-              ) : (
-                <>
-                  <Icon name="logo-google" size="md" color={Colors.text.primary} />
-                  <Text style={styles.socialButtonText}>
-                    Continuer avec Google
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            {Platform.OS === 'ios' && (
-              <TouchableOpacity
-                style={[styles.button, styles.socialButton, styles.appleButton]}
-                onPress={handleAppleSignIn}
-                disabled={loading || socialLoading !== null}>
-                {socialLoading === 'apple' ? (
-                  <ActivityIndicator color={Colors.white} />
-                ) : (
-                  <>
-                    <Icon name="logo-apple" size="md" color={Colors.white} />
-                    <Text
-                      style={[styles.socialButtonText, styles.appleButtonText]}>
-                      Continuer avec Apple
-                    </Text>
-                  </>
+          {/* Step 2: Password and Terms */}
+          {currentStep === 'step2' && (
+            <View style={styles.form}>
+              {/* Password */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Mot de passe *</Text>
+                <View style={[styles.inputWrapper, passwordError ? styles.inputError : null]}>
+                  <Icon name="lock" size="md" color={Colors.text.secondary} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Au moins 6 caractères avec 1 chiffre"
+                    placeholderTextColor={Colors.text.tertiary}
+                    value={password}
+                    onChangeText={handlePasswordChange}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!loading}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowPassword(!showPassword)}>
+                    <Icon
+                      name={showPassword ? 'eye-off' : 'eye'}
+                      size="sm"
+                      color={Colors.text.secondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+                {passwordError && <Text style={styles.errorText}>{passwordError}</Text>}
+                
+                {/* Password Strength Indicator */}
+                {password.length > 0 && (
+                  <PasswordStrengthIndicator 
+                    validation={getPasswordValidation(password)}
+                    showDetails={!passwordError}
+                  />
                 )}
-              </TouchableOpacity>
-            )}
+                
+                {/* Caps Lock Warning */}
+                <CapsLockIndicator password={password} />
+              </View>
 
-{/* Facebook Sign-In - Temporarily disabled
-            <TouchableOpacity
-              style={[styles.button, styles.socialButton, styles.facebookButton]}
-              onPress={handleFacebookSignIn}
-              disabled={loading || socialLoading !== null}>
-              {socialLoading === 'facebook' ? (
-                <ActivityIndicator color={Colors.white} />
-              ) : (
-                <>
-                  <Icon name="logo-facebook" size="md" color={Colors.white} />
-                  <Text
-                    style={[styles.socialButtonText, styles.facebookButtonText]}>
-                    Continuer avec Facebook
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-            */}
-          </View>
+              {/* Confirm Password */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Confirmer le mot de passe *</Text>
+                <View style={[styles.inputWrapper, confirmPasswordError ? styles.inputError : null]}>
+                  <Icon name="lock" size="md" color={Colors.text.secondary} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Répétez votre mot de passe"
+                    placeholderTextColor={Colors.text.tertiary}
+                    value={confirmPassword}
+                    onChangeText={handleConfirmPasswordChange}
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!loading}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                    <Icon
+                      name={showConfirmPassword ? 'eye-off' : 'eye'}
+                      size="sm"
+                      color={Colors.text.secondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+                {confirmPasswordError && <Text style={styles.errorText}>{confirmPasswordError}</Text>}
+              </View>
+
+              {/* Terms and Privacy */}
+              <TouchableOpacity 
+                style={styles.checkboxContainer}
+                onPress={() => setAcceptedTerms(!acceptedTerms)}>
+                <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
+                  {acceptedTerms && <Icon name="check" size="sm" color={Colors.white} />}
+                </View>
+                <Text style={styles.checkboxText}>
+                  J'accepte les <Text style={styles.linkInText}>conditions d'utilisation</Text> et la <Text style={styles.linkInText}>politique de confidentialité</Text>
+                </Text>
+              </TouchableOpacity>
+
+              {/* Register Button */}
+              <Button
+                variant="primary"
+                title="Créer mon compte"
+                onPress={handleRegistration}
+                disabled={!isStep2Valid()}
+                loading={loading}
+                rightIcon="user-plus"
+              />
+
+              {/* Back Button */}
+              <Button
+                variant="outline"
+                title="Retour"
+                onPress={() => setCurrentStep('step1')}
+                disabled={loading}
+                leftIcon="arrow-left"
+              />
+            </View>
+          )}
 
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Vous avez déjà un compte ?</Text>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Login')}
-              disabled={loading}>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
               <Text style={styles.linkText}>Se connecter</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Quick Action Footer */}
+          <View style={styles.guestFooter}>
+            <Text style={styles.guestFooterText}>
+              En vous inscrivant, c'est{' '}
+              <Text style={styles.guestFooterHighlight}>gratuit, rapide et sécurisé</Text>
+            </Text>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Country Modal */}
+      <Modal
+        visible={showCountryModal}
+        animationType="slide"
+        presentationStyle="pageSheet">
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Sélectionnez votre pays</Text>
+            <TouchableOpacity onPress={() => setShowCountryModal(false)}>
+              <Icon name="x" size="md" color={Colors.text.primary} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalContent}>
+            {countryCodeList.map((country, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.countryItem}
+                onPress={() => {
+                  setSelectedCountry(country);
+                  setShowCountryModal(false);
+                }}>
+                <Text style={styles.countryItemFlag}>{country.flag}</Text>
+                <Text style={styles.countryItemName}>{country.name}</Text>
+                <Text style={styles.countryItemCode}>{country.code}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* City Modal */}
+      <Modal
+        visible={showCityModal}
+        animationType="slide"
+        presentationStyle="pageSheet">
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Sélectionnez votre ville</Text>
+            <TouchableOpacity onPress={() => setShowCityModal(false)}>
+              <Icon name="x" size="md" color={Colors.text.primary} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.modalContent}>
+            {congoCities.map((city, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.cityItem}
+                onPress={() => {
+                  setSelectedCity(city);
+                  setShowCityModal(false);
+                }}>
+                <Icon name="map-pin" size="sm" color={Colors.text.secondary} />
+                <Text style={styles.cityItemName}>{city}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -369,92 +570,187 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    padding: Spacing.xl,
-    justifyContent: 'center',
+    paddingHorizontal: Spacing.lg,
   },
   header: {
     alignItems: 'center',
+    paddingTop: Spacing.xl,
     marginBottom: Spacing['2xl'],
   },
-  logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: BorderRadius['2xl'],
-    backgroundColor: Colors.card.cream,
-    justifyContent: 'center',
+  backButton: {
+    position: 'absolute',
+    top: Spacing.md,
+    left: 0,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.background.secondary,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoContainer: {
     marginBottom: Spacing.lg,
-    ...Shadows.md,
   },
   title: {
     fontSize: Typography.fontSize['2xl'],
-    fontFamily: Typography.fontFamily.bold,
+    fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
+    textAlign: 'center',
     marginBottom: Spacing.sm,
   },
   subtitle: {
-    fontSize: Typography.fontSize.lg,
-    fontFamily: Typography.fontFamily.regular,
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  progressStep: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.background.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.border.light,
+  },
+  progressStepActive: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
+  },
+  progressStepText: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semiBold,
     color: Colors.text.secondary,
   },
+  progressStepTextActive: {
+    color: Colors.white,
+  },
+  progressLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: Colors.border.light,
+    marginHorizontal: Spacing.md,
+  },
+  progressLineActive: {
+    backgroundColor: Colors.accent,
+  },
   form: {
-    marginBottom: Spacing['2xl'],
+    flex: 1,
   },
   inputContainer: {
     marginBottom: Spacing.lg,
   },
   label: {
     fontSize: Typography.fontSize.md,
-    fontFamily: Typography.fontFamily.semiBold,
+    fontWeight: Typography.fontWeight.medium,
     color: Colors.text.primary,
     marginBottom: Spacing.sm,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: Colors.border.light,
-    borderRadius: BorderRadius.xl,
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.base,
     paddingHorizontal: Spacing.base,
-    backgroundColor: Colors.white,
-    gap: Spacing.md,
+    minHeight: 52,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  inputPlaceholder: {
+    borderColor: Colors.border.medium,
   },
   input: {
     flex: 1,
-    paddingVertical: Spacing.base,
     fontSize: Typography.fontSize.base,
-    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
+    marginLeft: Spacing.sm,
   },
-  button: {
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    alignItems: 'center',
-    marginBottom: Spacing.md,
+  placeholderText: {
+    color: Colors.text.tertiary,
   },
-  primaryButton: {
-    backgroundColor: Colors.text.primary,
-    ...Shadows.md,
-  },
-  secondaryButton: {
-    backgroundColor: Colors.white,
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-  },
-  secondaryButtonText: {
-    color: Colors.primary,
-    fontSize: Typography.fontSize.lg,
-    fontFamily: Typography.fontFamily.bold,
-  },
-  buttonInner: {
+  phoneContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    borderRadius: BorderRadius.base,
+    backgroundColor: Colors.background.secondary,
   },
-  buttonText: {
-    color: Colors.white,
+  countrySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.base,
+    borderRightWidth: 1,
+    borderRightColor: Colors.border.light,
+  },
+  countryFlag: {
     fontSize: Typography.fontSize.lg,
-    fontFamily: Typography.fontFamily.bold,
+    marginRight: Spacing.xs,
+  },
+  countryCode: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+    marginRight: Spacing.sm,
+  },
+  phoneInput: {
+    flex: 1,
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.base,
+  },
+  inputError: {
+    borderColor: Colors.status.error,
+  },
+  errorText: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.status.error,
+    marginTop: Spacing.xs,
+  },
+  infoText: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
+    marginTop: Spacing.xs,
+  },
+  eyeButton: {
+    padding: Spacing.xs,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.lg,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: Colors.border.medium,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.sm,
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.accent,
+    borderColor: Colors.accent,
+  },
+  checkboxText: {
+    flex: 1,
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.secondary,
+    lineHeight: Typography.lineHeight.relaxed,
+  },
+  linkInText: {
+    color: Colors.accent,
+    fontWeight: Typography.fontWeight.semiBold,
   },
   divider: {
     flexDirection: 'row',
@@ -467,63 +763,96 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border.light,
   },
   dividerText: {
-    marginHorizontal: Spacing.base,
-    color: Colors.text.tertiary,
     fontSize: Typography.fontSize.md,
-    fontFamily: Typography.fontFamily.regular,
-  },
-  socialButton: {
-    backgroundColor: Colors.white,
-    borderWidth: 1.5,
-    borderColor: Colors.border.light,
-    borderRadius: BorderRadius.xl,
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  googleIcon: {
-    fontSize: Typography.fontSize.xl,
-    fontFamily: Typography.fontFamily.bold,
-    color: '#4285F4',
-  },
-  socialButtonText: {
-    color: Colors.text.primary,
-    fontSize: Typography.fontSize.base,
-    fontFamily: Typography.fontFamily.semiBold,
-  },
-  appleButton: {
-    backgroundColor: Colors.text.primary,
-    borderColor: Colors.text.primary,
-  },
-  appleButtonText: {
-    color: Colors.white,
-  },
-  facebookButton: {
-    backgroundColor: '#1877F2',
-    borderColor: '#1877F2',
-  },
-  facebookButtonText: {
-    color: Colors.white,
-  },
-  facebookIcon: {
-    fontSize: Typography.fontSize.xl,
-    fontFamily: Typography.fontFamily.bold,
-    color: Colors.white,
+    color: Colors.text.secondary,
+    paddingHorizontal: Spacing.base,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: Spacing.xs,
+    paddingVertical: Spacing.xl,
   },
   footerText: {
-    color: Colors.text.secondary,
     fontSize: Typography.fontSize.md,
-    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.secondary,
   },
   linkText: {
-    color: Colors.accent,
     fontSize: Typography.fontSize.md,
-    fontFamily: Typography.fontFamily.bold,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.accent,
+    marginLeft: Spacing.xs,
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: Colors.background.primary,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.base,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+  },
+  modalTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.text.primary,
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: Spacing.lg,
+  },
+  countryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.base,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+  },
+  countryItemFlag: {
+    fontSize: Typography.fontSize.lg,
+    marginRight: Spacing.base,
+  },
+  countryItemName: {
+    flex: 1,
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+  },
+  countryItemCode: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.secondary,
+  },
+  cityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.base,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+  },
+  cityItemName: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.text.primary,
+    marginLeft: Spacing.base,
+  },
+
+  // Guest Footer
+  guestFooter: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+    marginTop: Spacing.base,
+  },
+  guestFooterText: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+  },
+  guestFooterHighlight: {
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.primary,
   },
 });
 

@@ -1,7 +1,7 @@
 // App-wide constants
 
 // App Info
-export const APP_NAME = 'GoShopperAI';
+export const APP_NAME = 'GoShopper';
 export const APP_VERSION = '1.0.0';
 
 // Trial Configuration

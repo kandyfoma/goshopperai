@@ -1,5 +1,5 @@
 /**
- * GoShopperAI Cloud Functions
+ * GoShopper Cloud Functions
  * Main entry point - exports all cloud functions
  */
 

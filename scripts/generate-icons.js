@@ -1,4 +1,4 @@
-// Icon Generator Script for GoShopperAI
+// Icon Generator Script for GoShopper
 // Generates all required Android and iOS app icons from a 1024x1024 source image
 
 const sharp = require('sharp');
@@ -132,7 +132,7 @@ async function generateiOSIcons() {
 }
 
 async function main() {
-  console.log('🚀 Starting icon generation for GoShopperAI...\n');
+  console.log('🚀 Starting icon generation for GoShopper...\n');
   console.log(`📁 Source: ${SOURCE_ICON}\n`);
   
   if (!fs.existsSync(SOURCE_ICON)) {

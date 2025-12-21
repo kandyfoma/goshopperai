@@ -245,7 +245,7 @@ async function processMokoRenewal(
         provider: subscription.mobileMoneyProvider,
         planId,
         transactionId,
-        description: `GoShopperAI ${planId} plan auto-renewal`,
+        description: `GoShopper ${planId} plan auto-renewal`,
         userId,
       }),
     });

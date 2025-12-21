@@ -4,7 +4,7 @@
  * A versatile, animated button component with multiple variants
  */
 
-import React, {useRef} from 'react';
+import React, {useRef, useState} from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -14,6 +14,8 @@ import {
   ViewStyle,
   TextStyle,
   View,
+  Vibration,
+  Platform,
 } from 'react-native';
 import {
   Colors,
@@ -40,6 +42,7 @@ interface ButtonProps {
   fullWidth?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  hapticFeedback?: boolean; // Enable/disable vibration feedback
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -54,23 +57,118 @@ const Button: React.FC<ButtonProps> = ({
   fullWidth = true,
   style,
   textStyle,
+  hapticFeedback = true,
 }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const successAnim = useRef(new Animated.Value(0)).current;
+  const [isSubmitPressed, setIsSubmitPressed] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  // Check if this is a submit-type button that should have enhanced effects
+  const isSubmitButton = variant === 'primary' || variant === 'danger';
+
+  const triggerVibration = () => {
+    if (Platform.OS === 'ios') {
+      // iOS haptic feedback
+      Vibration.vibrate([10]);
+    } else {
+      // Android vibration
+      Vibration.vibrate(50);
+    }
+  };
+
+  const triggerSubmitAnimation = () => {
+    setIsSubmitPressed(true);
+    
+    // Pulse animation for submit buttons
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 0.92,
+          tension: 300,
+          friction: 10,
+          useNativeDriver: true,
+        }),
+        Animated.spring(pulseAnim, {
+          toValue: 1.1,
+          tension: 300,
+          friction: 10,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 300,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        Animated.spring(pulseAnim, {
+          toValue: 1,
+          tension: 300,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start(() => {
+      setTimeout(() => setIsSubmitPressed(false), 100);
+    });
+  };
+
+  // Public method to trigger success animation (can be called from parent)
+  const triggerSuccessAnimation = () => {
+    setShowSuccess(true);
+    Animated.sequence([
+      Animated.spring(successAnim, {
+        toValue: 1,
+        tension: 200,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+      Animated.delay(800),
+      Animated.spring(successAnim, {
+        toValue: 0,
+        tension: 200,
+        friction: 8,
+        useNativeDriver: true,
+      })
+    ]).start(() => {
+      setShowSuccess(false);
+    });
+  };
 
   const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.96,
-      ...Animations.spring.stiff,
-      useNativeDriver: true,
-    }).start();
+    if (isSubmitButton && !disabled && !loading) {
+      if (hapticFeedback) {
+        triggerVibration();
+      }
+      triggerSubmitAnimation();
+    } else {
+      // Standard animation for non-submit buttons
+      Animated.spring(scaleAnim, {
+        toValue: 0.96,
+        ...Animations.spring.stiff,
+        useNativeDriver: true,
+      }).start();
+    }
   };
 
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      ...Animations.spring.gentle,
-      useNativeDriver: true,
-    }).start();
+    if (!isSubmitButton || disabled || loading) {
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        ...Animations.spring.gentle,
+        useNativeDriver: true,
+      }).start();
+    }
+    // Submit buttons handle animation in triggerSubmitAnimation
+  };
+
+  const handlePress = () => {
+    if (!disabled && !loading) {
+      onPress();
+    }
   };
 
   const getButtonStyles = (): ViewStyle => {
@@ -174,6 +272,22 @@ const Button: React.FC<ButtonProps> = ({
       );
     }
 
+    if (showSuccess) {
+      return (
+        <Animated.View 
+          style={[
+            styles.successContainer,
+            { 
+              opacity: successAnim,
+              transform: [{ scale: successAnim }]
+            }
+          ]}
+        >
+          <Text style={styles.successIcon}>✓</Text>
+        </Animated.View>
+      );
+    }
+
     return (
       <>
         {icon && iconPosition === 'left' && (
@@ -187,15 +301,35 @@ const Button: React.FC<ButtonProps> = ({
     );
   };
 
+  const animationStyle = isSubmitButton ? {
+    transform: [
+      { scale: scaleAnim },
+      { scale: pulseAnim }
+    ]
+  } : {
+    transform: [{ scale: scaleAnim }]
+  };
+
+  const buttonStyle = getButtonStyles();
+  const enhancedButtonStyle = isSubmitPressed && isSubmitButton ? [
+    buttonStyle,
+    {
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 8,
+    }
+  ] : buttonStyle;
+
   return (
-    <Animated.View style={[{transform: [{scale: scaleAnim}]}, style]}>
+    <Animated.View style={[animationStyle, style]}>
       <TouchableOpacity
-        onPress={onPress}
+        onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={disabled || loading}
-        activeOpacity={0.9}
-        style={getButtonStyles()}>
+        activeOpacity={isSubmitButton ? 0.85 : 0.9}
+        style={enhancedButtonStyle}>
         {renderContent()}
       </TouchableOpacity>
     </Animated.View>
@@ -208,6 +342,15 @@ const styles = StyleSheet.create({
   },
   iconRight: {
     marginLeft: Spacing.sm,
+  },
+  successContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successIcon: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.white,
   },
 });
 

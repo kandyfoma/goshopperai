@@ -1,5 +1,5 @@
 /**
- * GoShopperAI - Invoice Intelligence App
+ * GoShopper - Invoice Intelligence App
  * Main Application Entry Point
  */
 

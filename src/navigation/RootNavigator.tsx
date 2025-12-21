@@ -15,6 +15,7 @@ import {
   LoginScreen,
   RegisterScreen,
   ForgotPasswordScreen,
+  VerifyOtpScreen,
   ResetPasswordScreen,
   ChangePasswordScreen,
   ProfileSetupScreen,
@@ -210,6 +211,11 @@ export function RootNavigator() {
       <Stack.Screen
         name="ForgotPassword"
         component={ForgotPasswordScreen}
+        options={{animation: 'slide_from_right'}}
+      />
+      <Stack.Screen
+        name="VerifyOtp"
+        component={VerifyOtpScreen}
         options={{animation: 'slide_from_right'}}
       />
       <Stack.Screen

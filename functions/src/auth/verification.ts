@@ -45,7 +45,7 @@ async function sendSMS(phoneNumber: string, code: string): Promise<boolean> {
       body: new URLSearchParams({
         username: config.sms.username,
         to: phoneNumber,
-        message: `Votre code de vérification GoShopperAI est: ${code}. Valide pendant ${CODE_EXPIRY_MINUTES} minutes.`,
+        message: `Votre code de vérification GoShopper est: ${code}. Valide pendant ${CODE_EXPIRY_MINUTES} minutes.`,
         from: config.sms.senderId,
       }),
     });
@@ -71,14 +71,14 @@ async function sendVerificationEmail(
   try {
     const subject =
       language === 'fr'
-        ? 'Code de vérification GoShopperAI'
-        : 'GoShopperAI Verification Code';
+        ? 'Code de vérification GoShopper'
+        : 'GoShopper Verification Code';
 
     const htmlContent =
       language === 'fr'
         ? `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #10b981;">GoShopperAI</h2>
+          <h2 style="color: #10b981;">GoShopper</h2>
           <p>Bonjour,</p>
           <p>Votre code de vérification est:</p>
           <h1 style="font-size: 36px; letter-spacing: 8px; color: #333; background: #f3f4f6; padding: 20px; text-align: center; border-radius: 8px;">
@@ -92,7 +92,7 @@ async function sendVerificationEmail(
       `
         : `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #10b981;">GoShopperAI</h2>
+          <h2 style="color: #10b981;">GoShopper</h2>
           <p>Hello,</p>
           <p>Your verification code is:</p>
           <h1 style="font-size: 36px; letter-spacing: 8px; color: #333; background: #f3f4f6; padding: 20px; text-align: center; border-radius: 8px;">
@@ -101,7 +101,7 @@ async function sendVerificationEmail(
           <p>This code expires in <strong>${CODE_EXPIRY_MINUTES} minutes</strong>.</p>
           <p>If you didn't request this code, please ignore this email.</p>
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
-          <p style="color: #6b7280; font-size: 12px;">© ${new Date().getFullYear()} GoShopperAI</p>
+          <p style="color: #6b7280; font-size: 12px;">© ${new Date().getFullYear()} GoShopper</p>
         </div>
       `;
 
@@ -114,7 +114,7 @@ async function sendVerificationEmail(
       },
       body: JSON.stringify({
         personalizations: [{to: [{email}]}],
-        from: {email: config.sendgrid.fromEmail, name: 'GoShopperAI'},
+        from: {email: config.sendgrid.fromEmail, name: 'GoShopper'},
         subject,
         content: [{type: 'text/html', value: htmlContent}],
       }),

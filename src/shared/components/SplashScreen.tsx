@@ -38,7 +38,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({onAnimationComplete}) => {
 
       <Animated.View style={[styles.content, {opacity: fadeAnim}]}>
         {/* App name */}
-        <Text style={styles.appName}>GoShopperAI</Text>
+        <Text style={styles.appName}>GoShopper</Text>
         
         {/* Spinner */}
         <ActivityIndicator 

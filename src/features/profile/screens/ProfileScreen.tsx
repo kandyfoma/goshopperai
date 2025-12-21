@@ -1,5 +1,5 @@
 // Profile Screen - Urbanist Design System
-// GoShopperAI - Soft Pastel Colors with Clean Typography
+// GoShopper - Soft Pastel Colors with Clean Typography
 import React, {useState, useEffect} from 'react';
 import {
   View,
@@ -23,7 +23,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, AppFooter} from '@/shared/components';
+import {Icon, AppFooter, Button} from '@/shared/components';
 import {SUBSCRIPTION_PLANS, TRIAL_SCAN_LIMIT} from '@/shared/utils/constants';
 import {formatCurrency, formatDate} from '@/shared/utils/helpers';
 import {firebase} from '@react-native-firebase/functions';
@@ -387,10 +387,14 @@ export function ProfileScreen() {
         </View>
 
         {/* Sign Out */}
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Icon name="logout" size="sm" color={Colors.status.error} />
-          <Text style={styles.signOutText}>Se déconnecter</Text>
-        </TouchableOpacity>
+        <Button
+          title="Se déconnecter"
+          onPress={handleSignOut}
+          variant="danger"
+          size="lg"
+          icon={<Icon name="logout" size="sm" color={Colors.white} />}
+          style={{marginTop: Spacing.lg, marginBottom: Spacing.xl}}
+        />
 
         {/* App Footer */}
         <AppFooter compact />

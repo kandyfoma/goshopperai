@@ -45,7 +45,7 @@ class CameraService {
         {
           title: 'Permission Caméra',
           message:
-            "GoShopperAI a besoin d'accéder à votre caméra pour scanner les factures.",
+            "GoShopper a besoin d'accéder à votre caméra pour scanner les factures.",
           buttonNeutral: 'Plus tard',
           buttonNegative: 'Refuser',
           buttonPositive: 'Autoriser',

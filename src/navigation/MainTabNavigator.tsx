@@ -2,6 +2,7 @@
 import React, {useEffect, useRef} from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {View, Text, StyleSheet, Animated, Platform} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import {MainTabParamList} from '@/shared/types';
 import {
   Colors,
@@ -19,7 +20,66 @@ import {UnifiedScannerScreen} from '@/features/scanner/screens';
 import {ItemsScreen, CityItemsScreen} from '@/features/items';
 import {ProfileScreen} from '@/features/profile/screens';
 
-const Tab = createBottomTabNavigator<MainTabParamList>();
+// Custom Tab Bar Component
+function CustomTabBar({state, descriptors, navigation}: any) {
+  return (
+    <View style={styles.tabBarContainer}>
+      <LinearGradient
+        colors={[Colors.primary, Colors.primaryDark]}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}
+        style={styles.tabBarGradient}>
+        <View style={styles.tabBarContent}>
+          {state.routes.map((route: any, index: number) => {
+            const {options} = descriptors[route.key];
+            const label =
+              options.tabBarLabel !== undefined
+                ? options.tabBarLabel
+                : options.title !== undefined
+                ? options.title
+                : route.name;
+
+            const isFocused = state.index === index;
+
+            const onPress = () => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
+
+              if (!isFocused && !event.defaultPrevented) {
+                navigation.navigate(route.name, route.params);
+              }
+            };
+
+            const onLongPress = () => {
+              navigation.emit({
+                type: 'tabLongPress',
+                target: route.key,
+              });
+            };
+
+            return (
+              <Animated.View key={index} style={styles.tabItem}>
+                <Animated.Pressable
+                  accessibilityRole="button"
+                  accessibilityState={isFocused ? {selected: true} : {}}
+                  accessibilityLabel={options.tabBarAccessibilityLabel}
+                  testID={options.tabBarTestID}
+                  onPress={onPress}
+                  onLongPress={onLongPress}
+                  style={styles.tabButton}>
+                  {options.tabBarIcon ? options.tabBarIcon({focused: isFocused}) : null}
+                </Animated.Pressable>
+              </Animated.View>
+            );
+          })}
+        </View>
+      </LinearGradient>
+    </View>
+  );
+}
 
 interface TabIconProps {
   focused: boolean;
@@ -130,14 +190,33 @@ export function MainTabNavigator() {
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border.light,
-    height: Platform.OS === 'ios' ? 84 : 64,
-    paddingTop: Spacing.xs,
-    paddingBottom: Platform.OS === 'ios' ? 24 : Spacing.xs,
-    paddingHorizontal: Spacing.md,
+  tabBarContainer: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 24 : 16,
+    left: 16,
+    right: 16,
+    ...Shadows.lg,
+  },
+  tabBarGradient: {
+    borderRadius: 24,
+    paddingVertical: Platform.OS === 'ios' ? 12 : 8,
+    paddingHorizontal: 16,
+  },
+  tabBarContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    minHeight: 56,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  tabButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   tabIconContainer: {
     alignItems: 'center',
@@ -145,24 +224,34 @@ const styles = StyleSheet.create({
     minWidth: 56,
   },
   iconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
+    position: 'relative',
   },
   iconWrapperFocused: {
-    backgroundColor: Colors.background.secondary,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  activeIndicator: {
+    position: 'absolute',
+    top: -2,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.white,
   },
   tabLabel: {
     fontSize: Typography.fontSize.xs,
-    color: Colors.text.tertiary,
+    color: Colors.white,
     fontWeight: Typography.fontWeight.medium,
-    marginTop: 2,
+    marginTop: 4,
+    opacity: 0.7,
   },
   tabLabelFocused: {
-    color: Colors.primary,
+    opacity: 1,
     fontWeight: Typography.fontWeight.semiBold,
   },
 });

@@ -247,7 +247,7 @@ async function generateAndroidAdaptiveIcons() {
  * Main function
  */
 async function main() {
-  console.log('🎨 GoShopperAI App Icon Generator\n');
+  console.log('🎨 GoShopper App Icon Generator\n');
   console.log('='.repeat(50));
   
   try {

@@ -1,5 +1,5 @@
 // History Screen - List of past receipts
-// Styled with GoShopperAI Design System (Blue + Gold)
+// Styled with GoShopper Design System (Blue + Gold)
 import React, {useState, useEffect, useCallback, useRef} from 'react';
 import {
   View,

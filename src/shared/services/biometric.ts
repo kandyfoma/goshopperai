@@ -204,7 +204,7 @@ class BiometricService {
       }
 
       // Authenticate
-      const {success, error} = await this.authenticate('Connectez-vous à GoShopperAI');
+      const {success, error} = await this.authenticate('Connectez-vous à GoShopper');
       
       if (success) {
         return {success: true, credentials};

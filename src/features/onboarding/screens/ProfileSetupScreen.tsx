@@ -193,7 +193,7 @@ export function ProfileSetupScreen() {
         );
 
       // Navigate to main app
-      showToast('Bienvenue sur GoShopperAI!', 'success', 3000);
+      showToast('Bienvenue sur GoShopper!', 'success', 3000);
       navigation.reset({
         index: 0,
         routes: [{name: 'Main'}],

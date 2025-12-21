@@ -1,5 +1,5 @@
 // Budget Settings Screen - Urbanist Design System
-// GoShopperAI - Soft Pastel Colors with Clean Typography
+// GoShopper - Soft Pastel Colors with Clean Typography
 import React, {useState, useEffect} from 'react';
 import {
   View,
@@ -22,7 +22,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon} from '@/shared/components';
+import {Icon, Button} from '@/shared/components';
 import {formatCurrency} from '@/shared/utils/helpers';
 import {analyticsService} from '@/shared/services/analytics';
 
@@ -204,14 +204,15 @@ export function BudgetSettingsScreen() {
         </View>
 
         {/* Save Button */}
-        <TouchableOpacity
-          style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+        <Button
+          title={isLoading ? 'Enregistrement...' : 'Enregistrer les Paramètres'}
           onPress={handleSave}
-          disabled={isLoading}>
-          <Text style={styles.saveButtonText}>
-            {isLoading ? 'Enregistrement...' : 'Enregistrer les Paramètres'}
-          </Text>
-        </TouchableOpacity>
+          variant="primary"
+          size="lg"
+          loading={isLoading}
+          disabled={isLoading}
+          style={{marginBottom: Spacing.xl, marginTop: Spacing.lg}}
+        />
         </View>
       </ScrollView>
     </SafeAreaView>

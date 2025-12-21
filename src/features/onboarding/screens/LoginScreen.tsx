@@ -14,6 +14,8 @@ import {
   Keyboard,
   StatusBar,
   Alert,
+  Modal,
+  FlatList,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -25,6 +27,12 @@ import {biometricService, BiometricStatus} from '@/shared/services/biometric';
 import {useAuth, useToast} from '@/shared/contexts';
 import {Icon, Button} from '@/shared/components';
 import Logo from '@/shared/components/Logo';
+//Login Screen imports
+import {phoneService} from '@/shared/services/phone';
+import {countryCodeList} from '@/shared/constants/countries';
+import {loginSecurityService} from '@/shared/services/security/loginSecurity';
+import {passwordService} from '@/shared/services/password';
+import {CapsLockIndicator} from '@/shared/components';
 
 
 // Gochujang Warm Design Colors
@@ -77,6 +85,8 @@ export function LoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState(countryCodeList[1]); // Default to Congo
+  const [showCountryModal, setShowCountryModal] = useState(false);
 
   // UI state
   const [loading, setLoading] = useState(false);
@@ -89,6 +99,11 @@ export function LoginScreen() {
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [securityStatus, setSecurityStatus] = useState({
+    locked: false,
+    remainingAttempts: 5,
+    lockTimeRemaining: 0,
+  });
 
   // Refs
   const passwordInputRef = useRef<TextInput>(null);
@@ -139,19 +154,60 @@ export function LoginScreen() {
     ]).start();
   };
 
+  // Handle phone number input
+  const handlePhoneChange = async (text: string) => {
+    // Clean the input and format it
+    const cleanText = text.replace(/[^0-9]/g, '');
+    setPhoneNumber(cleanText);
+    
+    // Clear error when user starts typing
+    if (phoneError) {
+      setPhoneError(null);
+    }
+
+    // Check security status for this phone number
+    if (cleanText.length >= 8) { // Only check when we have a reasonable phone number
+      const formattedPhone = phoneService.formatPhoneNumber(cleanText, selectedCountry.code);
+      const security = await loginSecurityService.getSecurityStatus(formattedPhone);
+      setSecurityStatus({
+        locked: security.locked,
+        remainingAttempts: security.remainingAttempts,
+        lockTimeRemaining: security.remainingLockTime || 0,
+      });
+    }
+  };
+
+  // Handle password input
+  const handlePasswordChange = (text: string) => {
+    // Sanitize password input
+    const sanitized = passwordService.sanitizePassword(text);
+    setPassword(sanitized);
+    
+    // Clear error when user starts typing
+    if (passwordError) {
+      setPasswordError(null);
+    }
+  };
+
   // Validate phone number
   const validatePhoneNumber = (value: string): boolean => {
     if (!value.trim()) {
       setPhoneError('Le numéro de téléphone est requis');
       return false;
     }
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-    if (!phoneRegex.test(value.replace(/\s/g, ''))) {
+    
+    try {
+      const validation = phoneService.validatePhoneNumber(value, selectedCountry.code);
+      if (!validation.isValid) {
+        setPhoneError(validation.error || 'Format de numéro invalide');
+        return false;
+      }
+      setPhoneError(null);
+      return true;
+    } catch (error) {
       setPhoneError('Format de numéro invalide');
       return false;
     }
-    setPhoneError(null);
-    return true;
   };
 
   // Validate password
@@ -168,7 +224,7 @@ export function LoginScreen() {
     return true;
   };
 
-  // Handle login
+  // Handle login with comprehensive security
   const handleLogin = async () => {
     Keyboard.dismiss();
     setError(null);
@@ -183,29 +239,67 @@ export function LoginScreen() {
       return;
     }
 
+    const formattedPhone = phoneService.formatPhoneNumber(phoneNumber, selectedCountry.code);
+
+    // Check if account is locked
+    const lockStatus = await loginSecurityService.isAccountLocked(formattedPhone);
+    if (lockStatus.locked) {
+      const timeRemaining = loginSecurityService.formatRemainingTime(lockStatus.remainingTime || 0);
+      setError(`Compte temporairement bloqué. Réessayez dans ${timeRemaining}.`);
+      triggerShake();
+      return;
+    }
+
+    // Check if we should delay login (rate limiting)
+    const delayInfo = await loginSecurityService.shouldDelayLogin(formattedPhone);
+    if (delayInfo.delay) {
+      setError(`Trop de tentatives. Patientez ${delayInfo.seconds} secondes.`);
+      triggerShake();
+      // Optional: Add a countdown timer here
+      setTimeout(() => setError(null), delayInfo.seconds * 1000);
+      return;
+    }
+
     setLoading(true);
     try {
-      await authService.signInWithPhone(phoneNumber.trim(), password);
+      await authService.signInWithPhone(formattedPhone, password);
+      
+      // Record successful login
+      await loginSecurityService.recordAttempt(formattedPhone, true);
       setSuccessMessage('Connexion réussie!');
     } catch (err: any) {
+      // Record failed login attempt
+      await loginSecurityService.recordAttempt(formattedPhone, false);
+      
       const errorMessage = getErrorMessage(err.code || '');
       setError(errorMessage);
       triggerShake();
+
+      // Update security status after failed attempt
+      const security = await loginSecurityService.getSecurityStatus(formattedPhone);
+      setSecurityStatus({
+        locked: security.locked,
+        remainingAttempts: security.remainingAttempts,
+        lockTimeRemaining: security.remainingLockTime || 0,
+      });
+
+      // Show warning if close to lockout
+      if (security.remainingAttempts <= 2 && security.remainingAttempts > 0) {
+        setError(`${errorMessage} Attention: ${security.remainingAttempts} tentatives restantes avant blocage.`);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle forgot password - redirect to contact support
+  // Handle forgot password - navigate to forgot password flow
   const handleForgotPassword = () => {
-    Alert.alert(
-      'Mot de passe oublié',
-      'Pour réinitialiser votre mot de passe, veuillez contacter notre support.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Contacter le support', onPress: () => navigation.navigate('Contact') }
-      ]
-    );
+    navigation.navigate('ForgotPassword');
+  };
+
+  // Check if form is valid for submission
+  const isFormValid = () => {
+    return phoneNumber.trim().length > 0 && password.length >= 6;
   };
 
   // Handle Google sign in
@@ -370,16 +464,28 @@ export function LoginScreen() {
               {/* Phone Number Input */}
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Numéro de téléphone</Text>
+                
+                {/* Country Code Selector */}
+                <TouchableOpacity
+                  style={[styles.countrySelector, isLoading && styles.inputDisabled]}
+                  onPress={() => !isLoading && setShowCountryModal(true)}
+                  disabled={isLoading}
+                >
+                  <Text style={styles.flagEmoji}>{selectedCountry.flag}</Text>
+                  <Text style={styles.countryCode}>{selectedCountry.code}</Text>
+                  <Icon name="chevron-down" size="xs" color={GOCHUJANG.textMuted} />
+                </TouchableOpacity>
+
+                {/* Phone Input */}
                 <View
                   style={[
-                    styles.inputWrapper,
+                    styles.phoneInputWrapper,
                     !!phoneError && styles.inputError,
                     isLoading && styles.inputDisabled,
                   ]}>
-                  <Icon name="phone" size="sm" color={GOCHUJANG.textMuted} />
                   <TextInput
-                    style={styles.input}
-                    placeholder="+243 xxx xxx xxx"
+                    style={styles.phoneInput}
+                    placeholder={selectedCountry.code === '+243' ? '123456789' : '123456789'}
                     placeholderTextColor={GOCHUJANG.textMuted}
                     value={phoneNumber}
                     onChangeText={handlePhoneChange}
@@ -433,6 +539,28 @@ export function LoginScreen() {
                 {passwordError && (
                   <Text style={styles.fieldError}>{passwordError}</Text>
                 )}
+                
+                {/* Caps Lock Warning */}
+                <CapsLockIndicator password={password} />
+                
+                {/* Security Status */}
+                {securityStatus.locked && (
+                  <View style={styles.securityWarning}>
+                    <Icon name="shield-off" size="xs" color={GOCHUJANG.error} />
+                    <Text style={styles.securityWarningText}>
+                      Compte temporairement bloqué
+                    </Text>
+                  </View>
+                )}
+                
+                {!securityStatus.locked && securityStatus.remainingAttempts <= 2 && (
+                  <View style={styles.securityInfo}>
+                    <Icon name="alert-triangle" size="xs" color="#ffa502" />
+                    <Text style={styles.securityInfoText}>
+                      {securityStatus.remainingAttempts} tentatives restantes
+                    </Text>
+                  </View>
+                )}
               </View>
 
               {/* Forgot Password */}
@@ -450,9 +578,10 @@ export function LoginScreen() {
                 variant="primary"
                 title="Se connecter"
                 onPress={handleLogin}
-                disabled={isLoading}
+                disabled={isLoading || !isFormValid()}
                 loading={loading}
-                rightIcon="arrow-right"
+                icon={<Icon name="arrow-right" size="sm" color="white" />}
+                iconPosition="right"
               />
 
               {/* Divider */}
@@ -590,9 +719,61 @@ export function LoginScreen() {
                 Politique de confidentialité
               </Text>
             </Text>
+
+            {/* Footer */}
+            <View style={styles.guestFooter}>
+              <Text style={styles.footerText}>
+                Se connecter c'est{' '}
+                <Text style={styles.footerHighlight}>gratuit, rapide et sécurisé</Text>
+              </Text>
+            </View>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Country Selection Modal */}
+      <Modal
+        visible={showCountryModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCountryModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Sélectionner le pays</Text>
+              <TouchableOpacity
+                onPress={() => setShowCountryModal(false)}
+                style={styles.closeButton}
+              >
+                <Icon name="x" size="md" color={GOCHUJANG.textMuted} />
+              </TouchableOpacity>
+            </View>
+            
+            <FlatList
+              data={countryCodeList}
+              keyExtractor={(item) => item.code}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.countryItem,
+                    selectedCountry.code === item.code && styles.selectedCountryItem
+                  ]}
+                  onPress={() => {
+                    setSelectedCountry(item);
+                    setShowCountryModal(false);
+                  }}
+                >
+                  <Text style={styles.countryFlag}>{item.flag}</Text>
+                  <Text style={styles.countryName}>{item.name}</Text>
+                  <Text style={styles.countryCodeText}>{item.code}</Text>
+                </TouchableOpacity>
+              )}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -737,6 +918,101 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 6,
     marginLeft: 4,
+  },
+
+  // Country Selector
+  countrySelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: GOCHUJANG.background,
+    borderWidth: 1.5,
+    borderColor: GOCHUJANG.border,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 12,
+    gap: 8,
+  },
+  flagEmoji: {
+    fontSize: 20,
+  },
+  countryCode: {
+    fontSize: 16,
+    color: GOCHUJANG.textPrimary,
+    fontWeight: '500',
+    flex: 1,
+  },
+  
+  // Phone Input
+  phoneInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: GOCHUJANG.background,
+    borderWidth: 1.5,
+    borderColor: GOCHUJANG.border,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+  },
+  phoneInput: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: GOCHUJANG.textPrimary,
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 20,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: GOCHUJANG.border,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: GOCHUJANG.textPrimary,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  countryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  selectedCountryItem: {
+    backgroundColor: GOCHUJANG.secondaryAccent,
+  },
+  countryFlag: {
+    fontSize: 24,
+    width: 30,
+  },
+  countryName: {
+    flex: 1,
+    fontSize: 16,
+    color: GOCHUJANG.textPrimary,
+  },
+  countryCodeText: {
+    fontSize: 14,
+    color: GOCHUJANG.textMuted,
+    fontWeight: '500',
   },
 
   // Forgot Password
@@ -890,6 +1166,54 @@ const styles = StyleSheet.create({
   termsLink: {
     color: GOCHUJANG.primary,
     fontWeight: '600',
+  },
+
+  // Guest Footer
+  guestFooter: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    marginTop: 8,
+  },
+  footerText: {
+    fontSize: 14,
+    color: GOCHUJANG.textSecondary,
+    textAlign: 'center',
+  },
+  footerHighlight: {
+    fontWeight: '700',
+    color: GOCHUJANG.primary,
+  },
+
+  // Security Indicators
+  securityWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 8,
+    gap: 6,
+  },
+  securityWarningText: {
+    fontSize: 12,
+    color: GOCHUJANG.error,
+    flex: 1,
+  },
+  securityInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 8,
+    gap: 6,
+  },
+  securityInfoText: {
+    fontSize: 12,
+    color: '#ffa502',
+    flex: 1,
   },
 });
 

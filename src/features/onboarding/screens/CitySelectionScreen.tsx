@@ -20,7 +20,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon} from '@/shared/components';
+import {Icon, Button} from '@/shared/components';
 import firestore from '@react-native-firebase/firestore';
 import {APP_ID} from '@/shared/services/firebase/config';
 
@@ -200,22 +200,16 @@ export function CitySelectionScreen() {
       />
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[
-            styles.continueButton,
-            (!selectedCity || isSaving) && styles.continueButtonDisabled,
-          ]}
+        <Button
+          title="Continuer"
           onPress={handleCitySelect}
-          disabled={!selectedCity || isSaving}>
-          {isSaving ? (
-            <ActivityIndicator color={Colors.white} size="small" />
-          ) : (
-            <View style={styles.buttonInner}>
-              <Text style={styles.continueButtonText}>Continuer</Text>
-              <Icon name="arrow-right" size="md" color={Colors.white} />
-            </View>
-          )}
-        </TouchableOpacity>
+          variant="primary"
+          size="lg"
+          loading={isSaving}
+          disabled={!selectedCity || isSaving}
+          icon={<Icon name="arrow-right" size="sm" color={Colors.white} />}
+          iconPosition="right"
+        />
       </View>
     </SafeAreaView>
   );

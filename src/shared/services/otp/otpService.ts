@@ -195,7 +195,7 @@ class OTPService {
     const client = require('twilio')(accountSid, authToken);
     
     await client.messages.create({
-      body: `Votre code de vérification GoShopperAI est: ${code}`,
+      body: `Votre code de vérification GoShopper est: ${code}`,
       from: process.env.TWILIO_PHONE_NUMBER,
       to: phoneNumber
     });
@@ -209,7 +209,7 @@ class OTPService {
     const sns = new AWS.SNS();
     
     await sns.publish({
-      Message: `Votre code de vérification GoShopperAI est: ${code}`,
+      Message: `Votre code de vérification GoShopper est: ${code}`,
       PhoneNumber: phoneNumber,
       MessageAttributes: {
         'AWS.SNS.SMS.SMSType': {
@@ -232,7 +232,7 @@ class OTPService {
     const sms = AfricasTalking.SMS;
     await sms.send({
       to: phoneNumber,
-      message: `Votre code de vérification GoShopperAI est: ${code}`
+      message: `Votre code de vérification GoShopper est: ${code}`
     });
   }
   */

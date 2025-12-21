@@ -32,7 +32,7 @@ const SLIDES: OnboardingSlide[] = [
   {
     id: '1',
     icon: 'sparkles',
-    title: 'Bienvenue sur GoShopperAI',
+    title: 'Bienvenue sur GoShopper',
     description: 'Votre assistant intelligent pour des achats plus malins.',
   },
   {
@@ -77,7 +77,7 @@ export function WelcomeScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.appName}>GoShopperAI</Text>
+        <Text style={styles.appName}>GoShopper</Text>
         <Pressable
           onPress={handleSkip}
           style={styles.skipButton}

@@ -42,7 +42,7 @@ export function TermsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>1. Acceptation des conditions</Text>
           <Text style={styles.text}>
-            En utilisant GoShopperAI, vous acceptez d'être lié par ces conditions d'utilisation. 
+            En utilisant GoShopper, vous acceptez d'être lié par ces conditions d'utilisation. 
             Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser notre application.
           </Text>
         </View>
@@ -50,7 +50,7 @@ export function TermsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>2. Description du service</Text>
           <Text style={styles.text}>
-            GoShopperAI est une application mobile qui utilise l'intelligence artificielle pour 
+            GoShopper est une application mobile qui utilise l'intelligence artificielle pour 
             analyser vos reçus d'achat, suivre vos dépenses et vous fournir des informations 
             sur vos habitudes de consommation.
           </Text>
@@ -72,7 +72,7 @@ export function TermsScreen() {
           <Text style={styles.sectionTitle}>4. Propriété intellectuelle</Text>
           <Text style={styles.text}>
             Tous les contenus, marques, logos et propriété intellectuelle dans l'application 
-            sont la propriété de GoShopperAI ou de ses concédants de licence. Vous ne pouvez 
+            sont la propriété de GoShopper ou de ses concédants de licence. Vous ne pouvez 
             pas reproduire, distribuer ou créer des œuvres dérivées sans autorisation.
           </Text>
         </View>
@@ -89,7 +89,7 @@ export function TermsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>6. Limitation de responsabilité</Text>
           <Text style={styles.text}>
-            GoShopperAI est fourni "en l'état" sans garanties. Nous ne sommes pas responsables 
+            GoShopper est fourni "en l'état" sans garanties. Nous ne sommes pas responsables 
             des dommages directs, indirects, accessoires ou consécutifs résultant de l'utilisation 
             de l'application.
           </Text>
@@ -113,7 +113,7 @@ export function TermsScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            En continuant à utiliser GoShopperAI, vous confirmez que vous avez lu, 
+            En continuant à utiliser GoShopper, vous confirmez que vous avez lu, 
             compris et accepté ces conditions d'utilisation.
           </Text>
         </View>

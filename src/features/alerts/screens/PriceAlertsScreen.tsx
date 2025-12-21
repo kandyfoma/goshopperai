@@ -26,7 +26,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, Spinner, Modal} from '@/shared/components';
+import {Icon, Spinner, Modal, Button} from '@/shared/components';
 
 export function PriceAlertsScreen() {
   const navigation = useNavigation();
@@ -392,36 +392,29 @@ export function PriceAlertsScreen() {
         </View>
 
         <View style={styles.modalActions}>
-          <TouchableOpacity
-            style={styles.cancelButton}
+          <Button
+            title="Annuler"
             onPress={() => {
               setShowAddModal(false);
               setNewProductName('');
               setNewTargetPrice('');
               setNewCity('');
-            }}>
-            <Text style={styles.cancelButtonText}>Annuler</Text>
-          </TouchableOpacity>
+            }}
+            variant="outline"
+            size="lg"
+            style={{flex: 1, marginRight: Spacing.sm}}
+          />
 
-          <TouchableOpacity
-            style={[
-              styles.createButton,
-              (!newProductName.trim() || !newTargetPrice) &&
-                styles.createButtonDisabled,
-            ]}
+          <Button
+            title="Créer"
             onPress={handleCreateAlert}
-            disabled={
-              !newProductName.trim() || !newTargetPrice || isCreating
-            }>
-            {isCreating ? (
-              <Spinner size="small" color={Colors.white} />
-            ) : (
-              <>
-                <Icon name="plus" size="sm" color={Colors.white} />
-                <Text style={styles.createButtonText}>Créer</Text>
-              </>
-            )}
-          </TouchableOpacity>
+            variant="primary"
+            size="lg"
+            loading={isCreating}
+            disabled={!newProductName.trim() || !newTargetPrice || isCreating}
+            icon={<Icon name="plus" size="sm" color={Colors.white} />}
+            style={{flex: 1, marginLeft: Spacing.sm}}
+          />
         </View>
       </Modal>
     </View>

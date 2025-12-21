@@ -230,7 +230,7 @@ class PushNotificationService {
   ): Promise<void> {
     const notification: PushNotification = {
       id: message.messageId || `notif_${Date.now()}`,
-      title: message.notification?.title || 'GoShopperAI',
+      title: message.notification?.title || 'GoShopper',
       body: message.notification?.body || '',
       data: message.data as Record<string, string>,
       receivedAt: new Date(),

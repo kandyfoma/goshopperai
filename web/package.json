@@ -1,7 +1,7 @@
 {
   "name": "goshopperai-landing",
   "version": "1.0.0",
-  "description": "Landing page for GoShopperAI app",
+  "description": "Landing page for GoShopper app",
   "main": "index.js",
   "scripts": {
     "start": "react-scripts start",

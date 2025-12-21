@@ -19,7 +19,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, Header} from '@/shared/components';
+import {Icon, Header, Button} from '@/shared/components';
 import {analyticsService} from '@/shared/services/analytics';
 
 const {width} = Dimensions.get('window');
@@ -31,8 +31,8 @@ const FAQ_DATA = [
   {
     id: '1',
     category: 'Général',
-    question: 'Comment GoShopperAI fonctionne-t-il ?',
-    answer: 'GoShopperAI utilise l\'intelligence artificielle pour analyser vos reçus et vous aider à suivre vos dépenses. Scannez simplement vos reçus avec l\'appareil photo et l\'application extraira automatiquement les informations importantes.'
+    question: 'Comment GoShopper fonctionne-t-il ?',
+    answer: 'GoShopper utilise l\'intelligence artificielle pour analyser vos reçus et vous aider à suivre vos dépenses. Scannez simplement vos reçus avec l\'appareil photo et l\'application extraira automatiquement les informations importantes.'
   },
   {
     id: '2',
@@ -216,10 +216,14 @@ export function SupportScreen() {
         {/* Contact Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Besoin d'aide supplémentaire ?</Text>
-          <TouchableOpacity style={styles.contactButton} onPress={handleContactPress}>
-            <Icon name="mail" size="sm" color={Colors.white} />
-            <Text style={styles.contactButtonText}>Nous contacter</Text>
-          </TouchableOpacity>
+          <Button
+            title="Nous contacter"
+            onPress={handleContactPress}
+            variant="primary"
+            size="lg"
+            icon={<Icon name="mail" size="sm" color={Colors.white} />}
+            style={{marginTop: Spacing.md}}
+          />
         </View>
       </ScrollView>
     </SafeAreaView>

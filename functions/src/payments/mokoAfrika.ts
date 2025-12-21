@@ -130,7 +130,7 @@ export const initiateMokoPayment = functions
         currency: request.currency || 'USD',
         phone_number: request.phoneNumber.replace(/\s/g, ''),
         provider: getProviderCode(request.provider),
-        description: `GoShopperAI ${request.planId} subscription`,
+        description: `GoShopper ${request.planId} subscription`,
         callback_url: config.moko.callbackUrl,
         metadata: {
           user_id: userId,

@@ -25,8 +25,10 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon} from '@/shared/components';
+import {Icon, Button} from '@/shared/components';
 import {useToast} from '@/shared/contexts';
+import {passwordService} from '@/shared/services/password';
+import {PasswordStrengthIndicator, CapsLockIndicator} from '@/shared/components';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -109,18 +111,33 @@ export function ChangePasswordScreen() {
       setNewPasswordError('Le nouveau mot de passe est requis');
       return false;
     }
-    if (value.length < 6) {
-      setNewPasswordError(
-        'Le mot de passe doit contenir au moins 6 caractères',
-      );
+    
+    // Use comprehensive password validation
+    const validation = passwordService.validatePassword(
+      value,
+      passwordService.getRequirements('change'),
+      { phone: '', name: '' } // Could add user info from context
+    );
+    
+    if (!validation.isValid) {
+      setNewPasswordError(validation.errors[0]);
       return false;
     }
+    
     if (value === currentPassword) {
       setNewPasswordError('Le nouveau mot de passe doit être différent');
       return false;
     }
     setNewPasswordError(null);
     return true;
+  };
+
+  const getPasswordValidation = (pwd: string) => {
+    return passwordService.validatePassword(
+      pwd,
+      passwordService.getRequirements('change'),
+      { phone: '', name: '' }
+    );
   };
 
   const validateConfirmPassword = (value: string): boolean => {
@@ -134,6 +151,22 @@ export function ChangePasswordScreen() {
     }
     setConfirmPasswordError(null);
     return true;
+  };
+
+  // Check if form is valid for submission
+  const isFormValid = () => {
+    if (!currentPassword || !newPassword || !confirmPassword) return false;
+    
+    const passwordValidation = passwordService.validatePassword(
+      newPassword,
+      passwordService.getRequirements('change')
+    );
+    
+    return (
+      passwordValidation.isValid &&
+      passwordService.passwordsMatch(newPassword, confirmPassword) &&
+      newPassword !== currentPassword
+    );
   };
 
   const handleChangePassword = async () => {
@@ -188,20 +221,20 @@ export function ChangePasswordScreen() {
             Votre mot de passe a été mis à jour avec succès. Utilisez votre
             nouveau mot de passe lors de votre prochaine connexion.
           </Text>
-          <TouchableOpacity
-            style={styles.primaryButton}
+          <Button
+            title="Retour aux paramètres"
             onPress={() => {
               showToast('Mot de passe modifié avec succès!', 'success', 2000);
               setTimeout(() => {
                 navigation.goBack();
               }, 2000);
             }}
-            activeOpacity={0.8}>
-            <View style={styles.buttonInner}>
-              <Text style={styles.buttonText}>Retour aux paramètres</Text>
-              <Icon name="arrow-right" size="md" color={Colors.white} />
-            </View>
-          </TouchableOpacity>
+            variant="primary"
+            size="lg"
+            icon={<Icon name="arrow-right" size="sm" color={Colors.white} />}
+            iconPosition="right"
+            style={{marginTop: Spacing.lg}}
+          />
         </Animated.View>
       </SafeAreaView>
     );
@@ -321,7 +354,8 @@ export function ChangePasswordScreen() {
                     placeholderTextColor={Colors.text.tertiary}
                     value={newPassword}
                     onChangeText={value => {
-                      setNewPassword(value);
+                      const sanitized = sanitizePassword(value);
+                      setNewPassword(sanitized);
                       if (newPasswordError) {
                         setNewPasswordError(null);
                       }
@@ -349,6 +383,18 @@ export function ChangePasswordScreen() {
                 {newPasswordError && (
                   <Text style={styles.fieldError}>{newPasswordError}</Text>
                 )}
+                
+                {/* Password Strength Indicator */}
+                <PasswordStrengthIndicator 
+                  password={newPassword}
+                  style={{ marginTop: 8 }}
+                />
+                
+                {/* Caps Lock Indicator */}
+                <CapsLockIndicator 
+                  password={newPassword}
+                  style={{ marginTop: 4 }}
+                />
               </View>
 
               {/* Confirm Password */}
@@ -370,7 +416,8 @@ export function ChangePasswordScreen() {
                     placeholderTextColor={Colors.text.tertiary}
                     value={confirmPassword}
                     onChangeText={value => {
-                      setConfirmPassword(value);
+                      const sanitized = sanitizePassword(value);
+                      setConfirmPassword(sanitized);
                       if (confirmPasswordError) {
                         setConfirmPasswordError(null);
                       }
@@ -425,6 +472,24 @@ export function ChangePasswordScreen() {
                 </View>
                 <View style={styles.requirementRow}>
                   <Icon
+                    name={/\d/.test(newPassword) ? 'check-circle' : 'x-circle'}
+                    size="sm"
+                    color={
+                      /\d/.test(newPassword)
+                        ? Colors.status.success
+                        : Colors.text.tertiary
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.requirementText,
+                      /\d/.test(newPassword) && styles.requirementMet,
+                    ]}>
+                    Contenir au moins un chiffre
+                  </Text>
+                </View>
+                <View style={styles.requirementRow}>
+                  <Icon
                     name={
                       newPassword !== currentPassword && newPassword.length > 0
                         ? 'check-circle'
@@ -474,25 +539,24 @@ export function ChangePasswordScreen() {
               </View>
 
               {/* Submit Button */}
-              <TouchableOpacity
-                style={[styles.primaryButton, loading && styles.buttonDisabled]}
+              <Button
+                title="Changer le mot de passe"
                 onPress={handleChangePassword}
-                disabled={loading}
-                activeOpacity={0.8}>
-                {loading ? (
-                  <View style={styles.loadingContent}>
-                    <ActivityIndicator color={Colors.white} size="small" />
-                    <Text style={styles.loadingText}>Modification...</Text>
-                  </View>
-                ) : (
-                  <View style={styles.buttonInner}>
-                    <Text style={styles.buttonText}>
-                      Changer le mot de passe
-                    </Text>
-                    <Icon name="check" size="md" color={Colors.white} />
-                  </View>
-                )}
-              </TouchableOpacity>
+                variant="primary"
+                size="lg"
+                loading={loading}
+                disabled={loading || !isFormValid()}
+                icon={<Icon name="check" size="sm" color={Colors.white} />}
+                style={{marginTop: Spacing.lg}}
+              />
+
+              {/* Footer */}
+              <View style={styles.guestFooter}>
+                <Text style={styles.footerText}>
+                  Changement de mot de passe{' '}
+                  <Text style={styles.footerHighlight}>sécurisé et rapide</Text>
+                </Text>
+              </View>
             </Animated.View>
           </Animated.View>
         </ScrollView>
@@ -693,6 +757,22 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     fontWeight: Typography.fontWeight.semiBold,
     marginLeft: Spacing.sm,
+  },
+
+  // Guest Footer
+  guestFooter: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+    marginTop: Spacing.base,
+  },
+  footerText: {
+    fontSize: Typography.fontSize.sm,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+  },
+  footerHighlight: {
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.primary,
   },
 });
 

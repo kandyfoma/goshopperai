@@ -380,8 +380,7 @@ class AuthService {
       // Attempt login with permissions using web-based login
       // This forces the use of CustomTabs/WebView instead of Facebook App
       const result = await LoginManager.logInWithPermissions(
-        ['public_profile', 'email'],
-        'web_only'
+        ['public_profile', 'email']
       );
 
       if (result.isCancelled) {
@@ -722,6 +721,59 @@ class AuthService {
     } catch (error) {
       console.error('Password verification failed:', error);
       return false;
+    }
+  }
+
+  /**
+   * Create user with phone number registration data
+   */
+  async createUserWithPhone(registrationData: {
+    phoneNumber: string;
+    password: string;
+    city: string;
+    countryCode: string;
+  }): Promise<User> {
+    try {
+      const {phoneNumber, password, city, countryCode} = registrationData;
+      
+      // Create a user document with phone number as the primary identifier
+      const userId = firestore().collection('users').doc().id; // Generate unique ID
+      
+      const userData = {
+        phoneNumber,
+        city,
+        countryCode,
+        passwordHash: password, // In production, hash this properly
+        createdAt: firestore.FieldValue.serverTimestamp(),
+        lastLoginAt: firestore.FieldValue.serverTimestamp(),
+        profile: {
+          displayName: phoneNumber,
+          city,
+          countryCode,
+        },
+        isAnonymous: false,
+      };
+      
+      // Create user document
+      await firestore().collection(COLLECTIONS.users(userId)).doc(userId).set(userData);
+      
+      // Create a mock Firebase user for consistency
+      const user: User = {
+        id: userId,
+        uid: userId,
+        phoneNumber,
+        displayName: phoneNumber,
+        isAnonymous: false,
+        createdAt: new Date(),
+        lastLoginAt: new Date(),
+      };
+      
+      console.log('✅ User created successfully:', user.id);
+      return user;
+      
+    } catch (error: any) {
+      console.error('❌ Create user with phone failed:', error);
+      throw new Error(error.message || 'Failed to create account');
     }
   }
 

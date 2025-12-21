@@ -3,17 +3,17 @@
  * Import and export all Lottie JSON files for easy access
  */
 
-export const sparklesAnimation = require('./sparkles.json');
-export const scanAnimation = require('./scan.json');
-export const brainAnimation = require('./brain.json');
-export const trendingAnimation = require('./trending.json');
+export const sparkles = require('./sparkles.json');
+export const scan = require('./scan.json');
+export const brain = require('./brain.json');
+export const trending = require('./trending.json');
 
 // Export as a collection for easy iteration
 export const animations = {
-  sparkles: sparklesAnimation,
-  scan: scanAnimation,
-  brain: brainAnimation,
-  trending: trendingAnimation,
+  sparkles,
+  scan, 
+  brain,
+  trending,
 };
 
 export default animations;

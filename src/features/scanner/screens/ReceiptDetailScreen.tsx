@@ -1,5 +1,5 @@
 // Receipt Detail Screen - Urbanist Design System
-// GoShopperAI - Warm color palette with category colors
+// GoShopper - Warm color palette with category colors
 import React, {useState, useEffect} from 'react';
 import {
   View,
