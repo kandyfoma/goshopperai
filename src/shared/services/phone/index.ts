@@ -38,9 +38,9 @@ export class PhoneService {
     try {
       console.log('🔍 Checking if phone exists:', phoneNumber);
       
-      // Query users collection for existing phone number
-      const usersRef = firestore().collection('users');
-      const snapshot = await usersRef.where('phoneNumber', '==', phoneNumber).get();
+      // Query userProfiles collection for existing phone number
+      const profilesRef = firestore().collection('userProfiles');
+      const snapshot = await profilesRef.where('phoneNumber', '==', phoneNumber).limit(1).get();
       
       const exists = !snapshot.empty;
       console.log(`📱 Phone ${phoneNumber} exists:`, exists);

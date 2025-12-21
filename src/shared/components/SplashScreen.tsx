@@ -4,11 +4,10 @@ import {
   Text,
   StyleSheet,
   Animated,
-  Easing,
   StatusBar,
-  ActivityIndicator,
 } from 'react-native';
 import {Colors} from '@/shared/theme/theme';
+import Logo from './Logo';
 
 interface SplashScreenProps {
   onAnimationComplete?: () => void;
@@ -16,13 +15,23 @@ interface SplashScreenProps {
 
 const SplashScreen: React.FC<SplashScreenProps> = ({onAnimationComplete}) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
+    // Fade in and scale up animation
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
     // Callback after animation
     const timer = setTimeout(() => {
@@ -30,22 +39,21 @@ const SplashScreen: React.FC<SplashScreenProps> = ({onAnimationComplete}) => {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [fadeAnim, onAnimationComplete]);
+  }, [fadeAnim, scaleAnim, onAnimationComplete]);
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.background.primary} />
 
-      <Animated.View style={[styles.content, {opacity: fadeAnim}]}>
+      <Animated.View style={[styles.content, {opacity: fadeAnim, transform: [{scale: scaleAnim}]}]}>
+        {/* Logo */}
+        <Logo size={120} variant="icon" pulseOnLoad />
+        
         {/* App name */}
         <Text style={styles.appName}>GoShopper</Text>
         
-        {/* Spinner */}
-        <ActivityIndicator 
-          size="large" 
-          color={Colors.primary} 
-          style={styles.spinner}
-        />
+        {/* Tagline */}
+        <Text style={styles.tagline}>Smart Shopping Made Easy</Text>
       </Animated.View>
     </View>
   );
@@ -66,10 +74,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.primary,
     letterSpacing: 0.5,
-    marginBottom: 24,
+    marginTop: 20,
+    marginBottom: 8,
   },
-  spinner: {
-    marginTop: 8,
+  tagline: {
+    fontSize: 16,
+    fontWeight: '400',
+    color: Colors.text.secondary,
+    letterSpacing: 0.3,
   },
 });
 

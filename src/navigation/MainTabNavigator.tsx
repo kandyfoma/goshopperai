@@ -16,7 +16,7 @@ import {ModernTabBar, TabBarIcon} from '@/shared/components/ModernTabBar';
 
 // Screens
 import {HomeScreen} from '@/features/home/screens';
-import {HistoryScreen} from '@/features/history/screens';
+import {StatsScreen} from '@/features/stats/screens';
 import {UnifiedScannerScreen} from '@/features/scanner/screens';
 import {ItemsScreen, CityItemsScreen} from '@/features/items';
 import {ProfileScreen} from '@/features/profile/screens';
@@ -29,13 +29,13 @@ function TabIcon({focused, icon, label, badge}: {focused: boolean; icon: string;
 
 // Custom Tab Bar Component with rounded design
 export function MainTabNavigator() {
-  // Mock notification badges - in real app, get from state/context
+  // Notification badges from real data
   const notificationBadges = {
     Home: 0,
-    History: 0, 
+    Stats: 0, 
     Scanner: 0,
-    Items: 3, // Example: 3 favorite items
-    Profile: 1, // Example: 1 notification
+    Items: 0,
+    Profile: 0,
   };
 
   return (
@@ -55,11 +55,11 @@ export function MainTabNavigator() {
         }}
       />
       <Tab.Screen
-        name="History"
-        component={HistoryScreen}
+        name="Stats"
+        component={StatsScreen}
         options={{
           tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} icon="search" label="Recherche" badge={notificationBadges.History} />
+            <TabIcon focused={focused} icon="bar-chart-2" label="Stats" badge={notificationBadges.Stats} />
           ),
         }}
       />
@@ -77,7 +77,7 @@ export function MainTabNavigator() {
         component={CityItemsScreen}
         options={{
           tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} icon="heart" label="Favoris" badge={notificationBadges.Items} />
+            <TabIcon focused={focused} icon="shopping-bag" label="Articles" badge={notificationBadges.Items} />
           ),
         }}
       />

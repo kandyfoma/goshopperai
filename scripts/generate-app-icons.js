@@ -1,11 +1,10 @@
 /**
  * Generate App Icons Script
- * Converts SVG logo to PNG icons for Android and iOS
+ * Converts PNG logo to icons for Android and iOS
  * 
  * Requirements:
  * - Node.js
  * - sharp (npm install sharp)
- * - @resvg/resvg-js (npm install @resvg/resvg-js)
  * 
  * Usage:
  * node scripts/generate-app-icons.js
@@ -14,26 +13,9 @@
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
-const {Resvg} = require('@resvg/resvg-js');
 
-// SVG Logo from assets/logo-icon.ts
-const logoSvg = `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="bgGochujang" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#C1121F"/>
-      <stop offset="100%" style="stop-color:#780000"/>
-    </linearGradient>
-  </defs>
-  
-  <!-- Background with warm red gradient -->
-  <rect width="100" height="100" rx="22" fill="url(#bgGochujang)"/>
-  
-  <!-- Letter G - Scaled down and centered for app icon -->
-  <g transform="translate(25, 22) scale(0.78)">
-    <path d="M32 0C14.3 0 0 14.3 0 32C0 49.7 14.3 64 32 64C38.5 64 44.5 62.2 49.5 59V36H28V46H39.5V51.5C37.2 52.5 34.7 53 32 53C18.7 53 10 43.5 10 32C10 18.7 20.5 10 32 10C41.5 10 49.5 15.5 53 23.5L62 17.5C56 6.8 45 0 32 0Z" 
-          fill="#FDF0D5"/>
-  </g>
-</svg>`;
+// Source logo PNG
+const LOGO_PATH = path.join(__dirname, '..', 'assets', 'logo.png');
 
 // Android icon sizes (mipmap)
 const ANDROID_SIZES = [
@@ -68,34 +50,22 @@ const IOS_SIZES = [
 
 const PROJECT_ROOT = path.join(__dirname, '..');
 const ANDROID_RES_PATH = path.join(PROJECT_ROOT, 'android/app/src/main/res');
-const IOS_IMAGES_PATH = path.join(PROJECT_ROOT, 'ios/goshopperai/Images.xcassets/AppIcon.appiconset');
+const IOS_IMAGES_PATH = path.join(PROJECT_ROOT, 'ios/goshopper/Images.xcassets/AppIcon.appiconset');
 
 /**
- * Convert SVG to PNG buffer at specified size
+ * Resize PNG to specified size
  */
-async function svgToPng(svgString, size) {
+async function resizePng(size) {
   try {
-    // Render SVG to PNG using resvg
-    const resvg = new Resvg(svgString, {
-      fitTo: {
-        mode: 'width',
-        value: size,
-      },
-    });
-    
-    const pngData = resvg.render();
-    const pngBuffer = pngData.asPng();
-    
-    // Use sharp to ensure exact size and optimize
-    return await sharp(pngBuffer)
+    return await sharp(LOGO_PATH)
       .resize(size, size, {
         fit: 'contain',
-        background: { r: 0, g: 0, b: 0, alpha: 0 }
+        background: { r: 255, g: 255, b: 255, alpha: 0 }
       })
       .png({ quality: 100, compressionLevel: 9 })
       .toBuffer();
   } catch (error) {
-    console.error(`Error converting SVG to PNG (size: ${size}):`, error.message);
+    console.error(`Error resizing PNG (size: ${size}):`, error.message);
     throw error;
   }
 }
@@ -118,7 +88,7 @@ async function generateAndroidIcons() {
     const roundIconPath = path.join(folderPath, 'ic_launcher_round.png');
     
     try {
-      const pngBuffer = await svgToPng(logoSvg, size);
+      const pngBuffer = await resizePng(size);
       
       // Save standard icon
       fs.writeFileSync(iconPath, pngBuffer);
@@ -156,7 +126,7 @@ async function generateIOSIcons() {
     const iconPath = path.join(IOS_IMAGES_PATH, name);
     
     try {
-      const pngBuffer = await svgToPng(logoSvg, size);
+      const pngBuffer = await resizePng(size);
       fs.writeFileSync(iconPath, pngBuffer);
       console.log(`✅ Generated ${idiom} ${size}x${size} @${scale}x: ${name}`);
       
@@ -244,6 +214,55 @@ async function generateAndroidAdaptiveIcons() {
 }
 
 /**
+ * Generate notification icon for Android
+ */
+async function generateNotificationIcon() {
+  console.log('\n🔔 Generating Notification Icon...\n');
+  
+  const drawablePath = path.join(ANDROID_RES_PATH, 'drawable');
+  if (!fs.existsSync(drawablePath)) {
+    fs.mkdirSync(drawablePath, { recursive: true });
+  }
+  
+  // Notification icons should be 24dp (96px at xxxhdpi)
+  // Standard sizes: 24x24 (mdpi), 36x36 (hdpi), 48x48 (xhdpi), 72x72 (xxhdpi), 96x96 (xxxhdpi)
+  const notificationSizes = [
+    { size: 24, folder: 'drawable-mdpi' },
+    { size: 36, folder: 'drawable-hdpi' },
+    { size: 48, folder: 'drawable-xhdpi' },
+    { size: 72, folder: 'drawable-xxhdpi' },
+    { size: 96, folder: 'drawable-xxxhdpi' },
+  ];
+  
+  for (const { size, folder } of notificationSizes) {
+    const folderPath = path.join(ANDROID_RES_PATH, folder);
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath, { recursive: true });
+    }
+    
+    const iconPath = path.join(folderPath, 'notification_icon.png');
+    
+    try {
+      const pngBuffer = await resizePng(size);
+      fs.writeFileSync(iconPath, pngBuffer);
+      console.log(`✅ Generated notification icon (${size}x${size}): ${folder}/notification_icon.png`);
+    } catch (error) {
+      console.error(`❌ Failed to generate notification icon ${size}:`, error.message);
+    }
+  }
+  
+  // Also copy to main drawable folder
+  const mainNotificationPath = path.join(drawablePath, 'notification_icon.png');
+  try {
+    const pngBuffer = await resizePng(96);
+    fs.writeFileSync(mainNotificationPath, pngBuffer);
+    console.log(`✅ Generated main notification icon: drawable/notification_icon.png`);
+  } catch (error) {
+    console.error(`❌ Failed to generate main notification icon:`, error.message);
+  }
+}
+
+/**
  * Main function
  */
 async function main() {
@@ -251,20 +270,27 @@ async function main() {
   console.log('='.repeat(50));
   
   try {
-    // Check if sharp and resvg are installed
+    // Check if sharp is installed
     try {
       require.resolve('sharp');
-      require.resolve('@resvg/resvg-js');
     } catch (error) {
       console.error('\n❌ Missing dependencies!');
       console.error('Please install required packages:');
-      console.error('npm install sharp @resvg/resvg-js\n');
+      console.error('npm install sharp\n');
+      process.exit(1);
+    }
+    
+    // Check if logo.png exists
+    if (!fs.existsSync(LOGO_PATH)) {
+      console.error('\n❌ Logo file not found!');
+      console.error(`Please make sure ${LOGO_PATH} exists\n`);
       process.exit(1);
     }
     
     // Generate all icons
     await generateAndroidIcons();
     await generateAndroidAdaptiveIcons();
+    await generateNotificationIcon();
     await generateIOSIcons();
     
     console.log('\n' + '='.repeat(50));
@@ -285,4 +311,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { svgToPng, generateAndroidIcons, generateIOSIcons };
+module.exports = { resizePng, generateAndroidIcons, generateIOSIcons };

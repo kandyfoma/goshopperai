@@ -1,4 +1,4 @@
-// Modern Welcome Screen with SVG Animations and Transaction Flow
+// Modern Welcome Screen with Clean Design and Brand Colors
 import React, {useState, useRef, useCallback, useEffect} from 'react';
 import {
   View,
@@ -8,15 +8,13 @@ import {
   Dimensions,
   Animated,
   StatusBar,
-  ScrollView,
   Platform,
+  Image,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import LinearGradient from 'react-native-linear-gradient';
-import LottieView from 'lottie-react-native';
 import Svg, {
   Path,
   Circle,
@@ -25,8 +23,6 @@ import Svg, {
   LinearGradient as SvgGradient,
   Stop,
   G,
-  ClipPath,
-  Text as SvgText,
 } from 'react-native-svg';
 import {RootStackParamList} from '@/shared/types';
 import {
@@ -50,383 +46,371 @@ interface OnboardingSlide {
   title: string;
   subtitle: string;
   description: string;
-  gradientColors: string[];
   SvgIllustration: React.ComponentType<any>;
-  accentColor: string;
 }
 
-// SVG Illustrations
-const ScanReceiptIllustration: React.FC<{animate?: boolean}> = ({
-  animate = false,
-}) => {
-  const animValue = useRef(new Animated.Value(0)).current;
-  const scaleValue = useRef(new Animated.Value(1)).current;
-  const glowValue = useRef(new Animated.Value(0)).current;
+// Clean hand-drawn style illustration for scanning
+const ScanReceiptIllustration: React.FC<{animate?: boolean}> = ({animate = false}) => {
+  const scanLineY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (animate) {
-      // Phone scanning animation
       Animated.loop(
         Animated.sequence([
-          Animated.timing(animValue, {
+          Animated.timing(scanLineY, {
             toValue: 1,
-            duration: 2000,
+            duration: 1500,
             useNativeDriver: true,
           }),
-          Animated.timing(animValue, {
+          Animated.timing(scanLineY, {
             toValue: 0,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    }
+  }, [animate, scanLineY]);
+
+  const translateY = scanLineY.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 100],
+  });
+
+  return (
+    <View style={illustrationStyles.container}>
+      <Svg width={260} height={200} viewBox="0 0 260 200">
+        <Defs>
+          <SvgGradient id="scanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor={Colors.primary} />
+            <Stop offset="100%" stopColor={Colors.primaryDark} />
+          </SvgGradient>
+        </Defs>
+
+        {/* Phone outline - hand drawn style */}
+        <Rect 
+          x="70" y="20" width="120" height="160" rx="16" 
+          fill={Colors.background.secondary}
+          stroke={Colors.accent}
+          strokeWidth="3"
+        />
+        
+        {/* Screen */}
+        <Rect 
+          x="80" y="35" width="100" height="125" rx="8" 
+          fill={Colors.white}
+          stroke={Colors.border.light}
+          strokeWidth="1"
+        />
+        
+        {/* Receipt lines on screen */}
+        <G opacity="0.8">
+          <Rect x="90" y="50" width="60" height="6" rx="3" fill={Colors.text.tertiary} />
+          <Rect x="90" y="65" width="45" height="4" rx="2" fill={Colors.text.tertiary} />
+          <Rect x="90" y="78" width="70" height="4" rx="2" fill={Colors.text.tertiary} />
+          <Rect x="90" y="91" width="55" height="4" rx="2" fill={Colors.text.tertiary} />
+          <Rect x="90" y="104" width="65" height="4" rx="2" fill={Colors.text.tertiary} />
+          <Rect x="90" y="120" width="40" height="6" rx="3" fill={Colors.primary} />
+        </G>
+
+        {/* Camera icon */}
+        <Circle cx="130" cy="170" r="6" fill={Colors.accent} />
+
+        {/* Sparkles */}
+        <Circle cx="50" cy="50" r="4" fill={Colors.primary} opacity="0.6" />
+        <Circle cx="210" cy="80" r="3" fill={Colors.accent} opacity="0.5" />
+        <Circle cx="220" cy="150" r="5" fill={Colors.primary} opacity="0.4" />
+        <Circle cx="40" cy="130" r="3" fill={Colors.accent} opacity="0.6" />
+      </Svg>
+      
+      {/* Animated scan line */}
+      <Animated.View 
+        style={[
+          illustrationStyles.scanLine, 
+          {transform: [{translateY}]}
+        ]} 
+      />
+    </View>
+  );
+};
+
+// Clean AI analysis illustration
+const AIAnalysisIllustration: React.FC<{animate?: boolean}> = ({animate = false}) => {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (animate) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
             duration: 1000,
             useNativeDriver: true,
           }),
         ])
       ).start();
-
-      // Pulse animation
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(scaleValue, {
-            toValue: 1.1,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scaleValue, {
-            toValue: 1,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-
-      // Glow effect
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(glowValue, {
-            toValue: 1,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(glowValue, {
-            toValue: 0,
-            duration: 2000,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
     }
-  }, [animate]);
-
-  const scanOpacity = animValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1],
-  });
-
-  const scanTranslateY = animValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [50, -50],
-  });
+  }, [animate, pulseAnim]);
 
   return (
-    <Animated.View style={{transform: [{scale: scaleValue}]}}>
-      <Svg width={280} height={200} viewBox="0 0 280 200">
-        <Defs>
-          <SvgGradient id="phoneGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={Colors.primary} />
-            <Stop offset="100%" stopColor={Colors.primaryDark} />
-          </SvgGradient>
-          <SvgGradient id="receiptGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={Colors.white} />
-            <Stop offset="100%" stopColor={Colors.secondary} />
-          </SvgGradient>
-          <SvgGradient id="scanGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={Colors.accentLight} />
-            <Stop offset="100%" stopColor={Colors.accent} />
-          </SvgGradient>
-        </Defs>
+    <View style={illustrationStyles.container}>
+      <Animated.View style={{transform: [{scale: pulseAnim}]}}>
+        <Svg width={260} height={200} viewBox="0 0 260 200">
+          <Defs>
+            <SvgGradient id="aiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor={Colors.accent} />
+              <Stop offset="100%" stopColor={Colors.accentLight} />
+            </SvgGradient>
+          </Defs>
 
-        {/* Hand-drawn style phone */}
-        <Path
-          d="M40 50 Q45 45 50 50 L50 200 Q45 205 40 200 L130 200 Q135 205 130 200 L130 50 Q135 45 130 50 Z"
-          fill="url(#phoneGradient)"
-          stroke={Colors.white}
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        
-        {/* Phone screen with slight curve */}
-        <Path
-          d="M50 60 Q55 55 60 60 L110 60 Q115 55 120 60 L120 170 Q115 175 110 170 L60 170 Q55 175 50 170 Z"
-          fill={Colors.accent}
-        />
-
-        {/* Receipt with wavy edges */}
-        <Path
-          d="M150 60 Q155 55 160 60 L225 60 Q230 55 235 60 L235 175 Q230 180 225 175 L160 175 Q155 180 150 175 Z"
-          fill="url(#receiptGradient)"
-          stroke={Colors.text.secondary}
-          strokeWidth="1"
-          strokeDasharray="3,1"
-        />
-
-        {/* Hand-drawn receipt lines */}
-        {[0, 1, 2, 3, 4, 5].map(i => (
+          {/* Central brain/chip */}
+          <Circle cx="130" cy="100" r="45" fill="url(#aiGrad)" opacity="0.15" />
+          <Circle cx="130" cy="100" r="30" fill="url(#aiGrad)" opacity="0.3" />
+          <Circle cx="130" cy="100" r="18" fill={Colors.accent} />
+          
+          {/* AI symbol in center */}
           <Path
-            key={i}
-            d={`M160 ${85 + i * 15} Q190 ${83 + i * 15} 220 ${85 + i * 15}`}
-            stroke="rgba(120,0,0,0.6)"
-            strokeWidth="1.5"
-            fill="none"
+            d="M122,95 L130,105 L138,95 M130,90 L130,110"
+            stroke={Colors.white}
+            strokeWidth="3"
             strokeLinecap="round"
+            fill="none"
           />
-        ))}
 
-        {/* Animated scan line */}
-        <Animated.View
-          style={{
-            position: 'absolute',
-            opacity: scanOpacity,
-            transform: [{translateY: scanTranslateY}],
-          }}>
-          <Rect
-            x="45"
-            y="100"
-            width="80"
-            height="3"
-            fill="url(#scanGradient)"
-            opacity="0.8"
-          />
-        </Animated.View>
-
-        {/* Success checkmark */}
-        <Circle cx="190" cy="50" r="15" fill="#4ade80" stroke="#fff" strokeWidth="2" />
-        <Path d="M185,50 L188,53 L195,46" stroke="#fff" strokeWidth="3" fill="none" strokeLinecap="round" />
-      </Svg>
-    </Animated.View>
-  );
-};
-
-const AIAnalysisIllustration: React.FC<{animate?: boolean}> = ({
-  animate = false,
-}) => {
-  const brainAnim = useRef(new Animated.Value(0)).current;
-  const dataAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (animate) {
-      Animated.loop(
-        Animated.timing(brainAnim, {
-          toValue: 1,
-          duration: 3000,
-          useNativeDriver: true,
-        })
-      ).start();
-
-      Animated.loop(
-        Animated.stagger(200, [
-          Animated.timing(dataAnim, {
-            toValue: 1,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(dataAnim, {
-            toValue: 0,
-            duration: 1500,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    }
-  }, [animate]);
-
-  return (
-    <Animated.View>
-      <Svg width={280} height={200} viewBox="0 0 280 200">
-        <Defs>
-          <SvgGradient id="brainGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={Colors.accent} />
-            <Stop offset="100%" stopColor={Colors.accentLight} />
-          </SvgGradient>
-          <SvgGradient id="dataGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={Colors.primary} />
-            <Stop offset="100%" stopColor={Colors.primaryLight} />
-          </SvgGradient>
-        </Defs>
-
-        {/* AI Brain */}
-        <Circle cx="140" cy="100" r="50" fill="url(#brainGradient)" opacity="0.9" />
-        
-        {/* Neural connections */}
-        {[0, 1, 2, 3, 4].map(i => (
-          <G key={i}>
-            <Circle 
-              cx={120 + Math.cos(i * 1.2) * 40} 
-              cy={100 + Math.sin(i * 1.2) * 40} 
-              r="4" 
-              fill={Colors.primary} 
-            />
-            <Path
-              d={`M140,100 L${120 + Math.cos(i * 1.2) * 40},${100 + Math.sin(i * 1.2) * 40}`}
-              stroke={Colors.primary}
-              strokeWidth="2"
-              opacity="0.6"
-            />
+          {/* Connection lines */}
+          <G opacity="0.6">
+            <Path d="M130,55 L130,70" stroke={Colors.accent} strokeWidth="2" strokeLinecap="round" />
+            <Path d="M130,130 L130,145" stroke={Colors.accent} strokeWidth="2" strokeLinecap="round" />
+            <Path d="M85,100 L100,100" stroke={Colors.accent} strokeWidth="2" strokeLinecap="round" />
+            <Path d="M160,100 L175,100" stroke={Colors.accent} strokeWidth="2" strokeLinecap="round" />
           </G>
-        ))}
 
-        {/* Data flows */}
-        <Animated.View style={{opacity: dataAnim}}>
-          {[0, 1, 2].map(i => (
-            <Circle
-              key={i}
-              cx={60 + i * 40}
-              cy="160"
-              r="8"
-              fill="url(#dataGradient)"
-            />
-          ))}
-        </Animated.View>
+          {/* Data nodes */}
+          <Circle cx="130" cy="45" r="8" fill={Colors.primary} />
+          <Circle cx="130" cy="155" r="8" fill={Colors.primary} />
+          <Circle cx="75" cy="100" r="8" fill={Colors.primary} />
+          <Circle cx="185" cy="100" r="8" fill={Colors.primary} />
 
-        {/* Analysis results */}
-        <Rect x="200" y="80" width="60" height="40" rx="8" fill={Colors.primary} opacity="0.9" />
-        <SvgText x="230" y="105" textAnchor="middle" fill="#fff" fontSize="12">
-          AI Analysis
-        </SvgText>
-      </Svg>
-    </Animated.View>
+          {/* Diagonal connections */}
+          <G opacity="0.4">
+            <Path d="M98,68 L115,85" stroke={Colors.primary} strokeWidth="2" />
+            <Path d="M162,68 L145,85" stroke={Colors.primary} strokeWidth="2" />
+            <Path d="M98,132 L115,115" stroke={Colors.primary} strokeWidth="2" />
+            <Path d="M162,132 L145,115" stroke={Colors.primary} strokeWidth="2" />
+          </G>
+
+          {/* Corner nodes */}
+          <Circle cx="90" cy="60" r="6" fill={Colors.accent} opacity="0.7" />
+          <Circle cx="170" cy="60" r="6" fill={Colors.accent} opacity="0.7" />
+          <Circle cx="90" cy="140" r="6" fill={Colors.accent} opacity="0.7" />
+          <Circle cx="170" cy="140" r="6" fill={Colors.accent} opacity="0.7" />
+        </Svg>
+      </Animated.View>
+    </View>
   );
 };
 
+// Clean savings/growth illustration
 const SavingsIllustration: React.FC<{animate?: boolean}> = ({animate = false}) => {
   const coinAnim = useRef(new Animated.Value(0)).current;
-  const chartAnim = useRef(new Animated.Value(0)).current;
+  const chartHeights = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current;
 
   useEffect(() => {
     if (animate) {
-      // Coins falling animation
+      // Coin drop animation
       Animated.loop(
         Animated.sequence([
           Animated.timing(coinAnim, {
             toValue: 1,
-            duration: 2000,
+            duration: 1500,
             useNativeDriver: true,
           }),
-          Animated.delay(500),
+          Animated.delay(1000),
           Animated.timing(coinAnim, {
             toValue: 0,
-            duration: 100,
+            duration: 300,
             useNativeDriver: true,
           }),
         ])
       ).start();
 
       // Chart growth animation
-      Animated.timing(chartAnim, {
-        toValue: 1,
-        duration: 2500,
-        useNativeDriver: false,
-      }).start();
+      Animated.stagger(150, 
+        chartHeights.map((anim, i) =>
+          Animated.spring(anim, {
+            toValue: 1,
+            tension: 40,
+            friction: 8,
+            useNativeDriver: true,
+          })
+        )
+      ).start();
     }
-  }, [animate]);
+  }, [animate, coinAnim, chartHeights]);
+
+  const coinOpacity = coinAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0, 1, 1],
+  });
+
+  const coinTranslateY = coinAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-30, 0],
+  });
 
   return (
-    <Animated.View>
-      <Svg width={280} height={200} viewBox="0 0 280 200">
+    <View style={illustrationStyles.container}>
+      <Svg width={260} height={200} viewBox="0 0 260 200">
         <Defs>
-          <SvgGradient id="coinGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor={Colors.primaryLight} />
-            <Stop offset="100%" stopColor={Colors.primary} />
+          <SvgGradient id="chartGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+            <Stop offset="0%" stopColor={Colors.primary} />
+            <Stop offset="100%" stopColor={Colors.primaryDark} />
           </SvgGradient>
-          <SvgGradient id="chartGradient" x1="0%" y1="100%" x2="0%" y2="0%">
-            <Stop offset="0%" stopColor={Colors.accent} />
-            <Stop offset="100%" stopColor={Colors.accentLight} />
+          <SvgGradient id="coinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor="#FFD700" />
+            <Stop offset="100%" stopColor="#FFA500" />
           </SvgGradient>
         </Defs>
 
-        {/* Piggy bank */}
-        <Circle cx="140" cy="120" r="40" fill="url(#coinGradient)" />
-        <Circle cx="130" cy="110" r="3" fill={Colors.primaryDark} />
-        <Circle cx="150" cy="110" r="3" fill={Colors.primaryDark} />
-        
-        {/* Coin slot */}
-        <Rect x="135" y="80" width="10" height="3" rx="1.5" fill={Colors.primaryDark} />
+        {/* Piggy bank body */}
+        <G transform="translate(140, 90)">
+          <Circle cx="0" cy="30" r="40" fill={Colors.primary} opacity="0.2" />
+          <Circle cx="0" cy="30" r="32" fill={Colors.primary} opacity="0.4" />
+          <Circle cx="0" cy="30" r="24" fill={Colors.primary} />
+          
+          {/* Coin slot */}
+          <Rect x="-8" y="2" width="16" height="4" rx="2" fill={Colors.primaryDark} />
+          
+          {/* Eyes */}
+          <Circle cx="-8" cy="25" r="3" fill={Colors.white} />
+          <Circle cx="8" cy="25" r="3" fill={Colors.white} />
+          <Circle cx="-7" cy="25" r="1.5" fill={Colors.primaryDark} />
+          <Circle cx="9" cy="25" r="1.5" fill={Colors.primaryDark} />
+          
+          {/* Snout */}
+          <Circle cx="0" cy="38" r="8" fill={Colors.primaryDark} opacity="0.3" />
+          <Circle cx="-3" cy="38" r="2" fill={Colors.primaryDark} />
+          <Circle cx="3" cy="38" r="2" fill={Colors.primaryDark} />
+        </G>
 
-        {/* Animated coins */}
-        {[0, 1, 2].map(i => (
-          <Animated.View
-            key={i}
+        {/* Growth chart bars */}
+        {[0, 1, 2, 3].map((i) => (
+          <Animated.View 
+            key={i} 
             style={{
-              opacity: coinAnim,
-              transform: [
-                {
-                  translateY: coinAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 60 + i * 10],
-                  }),
-                },
-              ],
-            }}>
-            <Circle
-              cx={120 + i * 15}
-              cy="40"
-              r="8"
-              fill={Colors.primary}
-              stroke={Colors.primaryDark}
-              strokeWidth="2"
-            />
+              position: 'absolute',
+              left: 35 + i * 22,
+              bottom: 30,
+              transform: [{scaleY: chartHeights[i]}],
+            }}
+          >
+            <View style={{
+              width: 16,
+              height: [40, 60, 55, 80][i],
+              backgroundColor: i === 3 ? Colors.accent : Colors.primary,
+              borderRadius: 4,
+              opacity: i === 3 ? 1 : 0.6 + i * 0.1,
+            }} />
           </Animated.View>
         ))}
 
-        {/* Savings chart */}
-        <G transform="translate(200, 60)">
-          {[0, 1, 2, 3, 4].map(i => (
-            <Animated.View key={i} style={{opacity: chartAnim}}>
-              <Rect
-                x={i * 12}
-                y={100 - i * 15}
-                width="8"
-                height={i * 15}
-                fill="url(#chartGradient)"
-                rx="2"
-              />
-            </Animated.View>
-          ))}
-        </G>
+        {/* Trend line */}
+        <Path
+          d="M43,150 Q65,135 87,145 Q109,110 130,100"
+          stroke={Colors.accent}
+          strokeWidth="3"
+          strokeLinecap="round"
+          fill="none"
+          opacity="0.8"
+        />
 
-        {/* Money symbols */}
-        <SvgText x="50" y="60" fontSize="24" fill={Colors.primary}>₡</SvgText>
-        <SvgText x="220" y="40" fontSize="20" fill={Colors.primary}>$</SvgText>
-        <SvgText x="30" y="160" fontSize="18" fill={Colors.primary}>€</SvgText>
+        {/* Arrow up */}
+        <G transform="translate(125, 85)">
+          <Path
+            d="M0,15 L0,0 L-6,6 M0,0 L6,6"
+            stroke={Colors.accent}
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            fill="none"
+          />
+        </G>
       </Svg>
-    </Animated.View>
+
+      {/* Animated falling coin */}
+      <Animated.View 
+        style={[
+          illustrationStyles.coin,
+          {
+            opacity: coinOpacity,
+            transform: [{translateY: coinTranslateY}],
+          }
+        ]}
+      >
+        <Svg width={24} height={24} viewBox="0 0 24 24">
+          <Circle cx="12" cy="12" r="11" fill="#FFD700" stroke="#FFA500" strokeWidth="1" />
+          <Circle cx="12" cy="12" r="8" fill="#FFA500" opacity="0.3" />
+          <Path d="M12,7 L12,17 M9,10 L15,10 M9,14 L15,14" stroke="#DAA520" strokeWidth="1.5" strokeLinecap="round" />
+        </Svg>
+      </Animated.View>
+    </View>
   );
 };
+
+const illustrationStyles = StyleSheet.create({
+  container: {
+    width: 260,
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanLine: {
+    position: 'absolute',
+    top: 55,
+    left: 85,
+    width: 90,
+    height: 3,
+    backgroundColor: Colors.primary,
+    borderRadius: 2,
+    opacity: 0.8,
+  },
+  coin: {
+    position: 'absolute',
+    top: 60,
+    right: 55,
+  },
+});
 
 const SLIDES: OnboardingSlide[] = [
   {
     id: '1',
-    title: 'Scanner Intelligent',
-    subtitle: 'IA Avancée',
-    description: 'Scannez vos reçus avec notre IA de pointe. Reconnaissance instantanée des produits et prix.',
-    gradientColors: [Colors.primaryLight, Colors.secondary],
+    title: 'Scan Intelligent',
+    subtitle: 'Simple & Rapide',
+    description: 'Photographiez vos reçus et laissez notre IA extraire automatiquement tous les détails.',
     SvgIllustration: ScanReceiptIllustration,
-    accentColor: Colors.primary,
   },
   {
     id: '2',
     title: 'Analyse IA',
-    subtitle: 'Intelligence Artificielle',
-    description: 'Notre IA analyse vos habitudes d\'achat et vous recommande les meilleures offres.',
-    gradientColors: [Colors.secondary, Colors.accentLight],
+    subtitle: 'Intelligence Avancée',
+    description: 'Notre technologie analyse vos achats pour vous donner des insights personnalisés.',
     SvgIllustration: AIAnalysisIllustration,
-    accentColor: Colors.accent,
   },
   {
     id: '3',
-    title: 'Économies Garanties',
-    subtitle: 'Maximisez vos économies',
-    description: 'Suivez vos dépenses en temps réel et découvrez où vous pouvez économiser le plus.',
-    gradientColors: [Colors.accentLight, Colors.primaryLight],
+    title: 'Économisez Plus',
+    subtitle: 'Optimisez vos Dépenses',
+    description: 'Suivez vos dépenses et découvrez comment maximiser vos économies au quotidien.',
     SvgIllustration: SavingsIllustration,
-    accentColor: Colors.primaryDark,
   },
 ];
 
@@ -436,19 +420,9 @@ export function WelcomeScreenModern() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   
-  const slideAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const progressAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    // Animate progress bar
-    Animated.timing(progressAnim, {
-      toValue: (currentSlide + 1) / SLIDES.length,
-      duration: 600,
-      useNativeDriver: false,
-    }).start();
-  }, [currentSlide]);
+  const slideAnim = useRef(new Animated.Value(0)).current;
 
   const nextSlide = useCallback(() => {
     if (isTransitioning) return;
@@ -457,30 +431,30 @@ export function WelcomeScreenModern() {
     setIsTransitioning(true);
 
     if (currentSlide < SLIDES.length - 1) {
-      // Slide transition animation
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 200,
+          duration: 150,
           useNativeDriver: true,
         }),
-        Animated.timing(scaleAnim, {
-          toValue: 0.9,
-          duration: 200,
+        Animated.timing(slideAnim, {
+          toValue: -50,
+          duration: 150,
           useNativeDriver: true,
         }),
       ]).start(() => {
         setCurrentSlide(prev => prev + 1);
+        slideAnim.setValue(50);
         
         Animated.parallel([
           Animated.timing(fadeAnim, {
             toValue: 1,
-            duration: 300,
+            duration: 200,
             useNativeDriver: true,
           }),
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 300,
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 200,
             useNativeDriver: true,
           }),
         ]).start(() => {
@@ -488,23 +462,22 @@ export function WelcomeScreenModern() {
         });
       });
     }
-  }, [currentSlide, isTransitioning]);
+  }, [currentSlide, isTransitioning, fadeAnim, slideAnim]);
 
   const handleGetStarted = useCallback(async () => {
     try {
       hapticService.medium();
       await AsyncStorage.setItem(ONBOARDING_KEY, 'completed');
       
-      // Exit animation
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 400,
+          duration: 300,
           useNativeDriver: true,
         }),
         Animated.timing(scaleAnim, {
-          toValue: 0.8,
-          duration: 400,
+          toValue: 0.9,
+          duration: 300,
           useNativeDriver: true,
         }),
       ]).start(() => {
@@ -514,209 +487,189 @@ export function WelcomeScreenModern() {
       console.error('Error saving onboarding status:', error);
       navigation.replace('SignIn');
     }
-  }, [navigation]);
+  }, [navigation, fadeAnim, scaleAnim]);
 
   const currentSlideData = SLIDES[currentSlide];
   const {SvgIllustration} = currentSlideData;
 
   return (
-    <LinearGradient
-      colors={currentSlideData.gradientColors}
-      style={[styles.container, {paddingTop: insets.top}]}
-      start={{x: 0, y: 0}}
-      end={{x: 1, y: 1}}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+    <View style={[styles.container, {paddingTop: insets.top}]}>
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.background.primary} />
       
-      {/* Progress Bar */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressTrack}>
-          <Animated.View
-            style={[
-              styles.progressBar,
-              {
-                width: progressAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['0%', '100%'],
-                }),
-                backgroundColor: currentSlideData.accentColor,
-              },
-            ]}
-          />
-        </View>
-        <Text style={styles.progressText}>
-          {currentSlide + 1} / {SLIDES.length}
-        </Text>
+      {/* Header with Logo */}
+      <View style={styles.header}>
+        <Image 
+          source={require('../../../../assets/logo.png')} 
+          style={{width: 48, height: 48}} 
+          resizeMode="contain"
+        />
+        <Text style={styles.brandName}>GoShopper</Text>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}>
-        
-        {/* Main Content */}
-        <Animated.View
-          style={[
-            styles.slideContent,
-            {
-              opacity: fadeAnim,
-              transform: [{scale: scaleAnim}],
-            },
-          ]}>
-          
-          {/* SVG Illustration */}
-          <View style={styles.illustrationContainer}>
-            <SvgIllustration animate={!isTransitioning} />
-          </View>
-
-          {/* Text Content */}
-          <View style={styles.textContent}>
-            <View style={styles.subtitleContainer}>
-              <View style={[styles.subtitleBadge, {backgroundColor: currentSlideData.accentColor + '20'}]}>
-                <Text style={[styles.subtitle, {color: currentSlideData.accentColor}]}>
-                  {currentSlideData.subtitle}
-                </Text>
-              </View>
-            </View>
-            
-            <Text style={styles.title}>{currentSlideData.title}</Text>
-            <Text style={styles.description}>{currentSlideData.description}</Text>
-          </View>
-        </Animated.View>
-
-        {/* Action Buttons */}
-        <View style={styles.actionContainer}>
-          {currentSlide < SLIDES.length - 1 ? (
-            <>
-              <TouchableOpacity style={styles.skipButton} onPress={handleGetStarted}>
-                <Text style={styles.skipText}>Ignorer</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.nextButton, {backgroundColor: currentSlideData.accentColor}]}
-                onPress={nextSlide}
-                disabled={isTransitioning}>
-                <Text style={styles.nextText}>Suivant</Text>
-                <Icon name="chevron-right" size="sm" color="#fff" />
-              </TouchableOpacity>
-            </>
-          ) : (
-            <TouchableOpacity
-              style={[styles.getStartedButton, {backgroundColor: currentSlideData.accentColor}]}
-              onPress={handleGetStarted}>
-              <Text style={styles.getStartedText}>Commencer</Text>
-              <Icon name="sparkles" size="sm" color="#fff" />
-            </TouchableOpacity>
-          )}
+      {/* Main Content */}
+      <Animated.View 
+        style={[
+          styles.content,
+          {
+            opacity: fadeAnim,
+            transform: [{translateX: slideAnim}, {scale: scaleAnim}],
+          }
+        ]}
+      >
+        {/* Illustration Card */}
+        <View style={styles.illustrationCard}>
+          <SvgIllustration animate={!isTransitioning} />
         </View>
-      </ScrollView>
 
-      {/* Decorative elements */}
-      <View style={styles.decorativeElements}>
-        {[...Array(6)].map((_, i) => (
-          <Animated.View
-            key={i}
+        {/* Text Content */}
+        <View style={styles.textContent}>
+          <View style={styles.subtitleBadge}>
+            <Text style={styles.subtitle}>{currentSlideData.subtitle}</Text>
+          </View>
+          <Text style={styles.title}>{currentSlideData.title}</Text>
+          <Text style={styles.description}>{currentSlideData.description}</Text>
+        </View>
+      </Animated.View>
+
+      {/* Pagination Dots */}
+      <View style={styles.pagination}>
+        {SLIDES.map((_, index) => (
+          <View
+            key={index}
             style={[
-              styles.floatingCircle,
-              {
-                left: `${20 + i * 15}%`,
-                top: `${10 + (i % 2) * 80}%`,
-                backgroundColor: currentSlideData.accentColor + '15',
-                transform: [
-                  {
-                    translateY: slideAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, Math.sin(i) * 20],
-                    }),
-                  },
-                ],
-              },
+              styles.dot,
+              index === currentSlide && styles.dotActive,
             ]}
           />
         ))}
       </View>
-    </LinearGradient>
+
+      {/* Action Buttons */}
+      <View style={[styles.footer, {paddingBottom: insets.bottom + Spacing.lg}]}>
+        {currentSlide < SLIDES.length - 1 ? (
+          <View style={styles.buttonRow}>
+            <TouchableOpacity 
+              style={styles.skipButton} 
+              onPress={handleGetStarted}
+            >
+              <Text style={styles.skipText}>Ignorer</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.nextButton}
+              onPress={nextSlide}
+              disabled={isTransitioning}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.nextText}>Suivant</Text>
+              <Icon name="chevron-right" size="sm" color={Colors.white} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.getStartedButton}
+            onPress={handleGetStarted}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.getStartedText}>Commencer</Text>
+            <Icon name="arrow-right" size="md" color={Colors.white} />
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.background.primary,
   },
-  progressContainer: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.lg,
   },
-  progressTrack: {
-    flex: 1,
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 2,
-    marginRight: Spacing.md,
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  progressText: {
-    fontSize: Typography.fontSize.sm,
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontWeight: Typography.fontWeight.medium,
+  brandName: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.primary,
+    marginLeft: Spacing.sm,
+    letterSpacing: 0.5,
   },
   content: {
-    flexGrow: 1,
-    paddingHorizontal: Spacing.xl,
-  },
-  slideContent: {
     flex: 1,
+    paddingHorizontal: Spacing.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  illustrationCard: {
+    width: SCREEN_WIDTH - Spacing.xl * 2,
+    height: 240,
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing['2xl'],
-  },
-  illustrationContainer: {
     marginBottom: Spacing['2xl'],
-    ...Shadows.lg,
+    ...Shadows.md,
   },
   textContent: {
     alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-  },
-  subtitleContainer: {
-    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.md,
   },
   subtitleBadge: {
+    backgroundColor: Colors.primary + '15',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.full,
+    marginBottom: Spacing.md,
   },
   subtitle: {
     fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.semiBold,
+    color: Colors.primary,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   title: {
-    fontSize: Typography.fontSize['3xl'],
+    fontSize: 28,
     fontWeight: Typography.fontWeight.bold,
-    color: Colors.white,
+    color: Colors.text.primary,
     textAlign: 'center',
-    marginBottom: Spacing.md,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: {width: 0, height: 2},
-    textShadowRadius: 4,
+    marginBottom: Spacing.sm,
   },
   description: {
-    fontSize: Typography.fontSize.lg,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: Typography.fontSize.md,
+    color: Colors.text.secondary,
     textAlign: 'center',
-    lineHeight: Typography.fontSize.lg * 1.5,
-    marginBottom: Spacing.xl,
+    lineHeight: 24,
+    maxWidth: 300,
   },
-  actionContainer: {
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.border.light,
+    marginHorizontal: 4,
+  },
+  dotActive: {
+    width: 24,
+    backgroundColor: Colors.primary,
+  },
+  footer: {
+    paddingHorizontal: Spacing.xl,
+  },
+  buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: Spacing.xl,
   },
   skipButton: {
     paddingVertical: Spacing.md,
@@ -724,12 +677,13 @@ const styles = StyleSheet.create({
   },
   skipText: {
     fontSize: Typography.fontSize.md,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: Colors.text.secondary,
     fontWeight: Typography.fontWeight.medium,
   },
   nextButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: Colors.primary,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.xl,
     borderRadius: BorderRadius.full,
@@ -744,10 +698,11 @@ const styles = StyleSheet.create({
   getStartedButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.primary,
     paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing['2xl'],
     borderRadius: BorderRadius.full,
-    alignSelf: 'center',
     ...Shadows.lg,
   },
   getStartedText: {
@@ -755,15 +710,5 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontWeight: Typography.fontWeight.bold,
     marginRight: Spacing.sm,
-  },
-  decorativeElements: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: -1,
-  },
-  floatingCircle: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
   },
 });

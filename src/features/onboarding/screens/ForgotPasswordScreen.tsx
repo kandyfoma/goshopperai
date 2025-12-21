@@ -9,6 +9,8 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Modal,
+  FlatList,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -22,22 +24,23 @@ import {
 } from '@/shared/theme/theme';
 import {TextInput, TouchableOpacity} from 'react-native-gesture-handler';
 import {smsService} from '@/shared/services/sms';
+import {PhoneService} from '@/shared/services/phone';
+import {countryCodeList} from '@/shared/constants/countries';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const ForgotPasswordScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+  const [selectedCountry, setSelectedCountry] = useState(countryCodeList[0]); // Default to RDC
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCountryModal, setShowCountryModal] = useState(false);
 
   const validatePhoneNumber = (phone: string): boolean => {
-    // Remove spaces and special characters
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-    
-    // Check if it starts with + and has 10-15 digits after
-    const phoneRegex = /^\+?[1-9]\d{8,14}$/;
-    return phoneRegex.test(cleanPhone);
+    if (!phone.trim()) return false;
+    const formatted = PhoneService.formatPhoneNumber(selectedCountry.code, phone);
+    return PhoneService.validatePhoneNumber(formatted);
   };
 
   const handleSendOTP = async () => {
@@ -55,15 +58,27 @@ const ForgotPasswordScreen: React.FC = () => {
     setError(null);
 
     try {
-      const result = await smsService.sendOTP(phoneNumber);
+      const formattedPhone = PhoneService.formatPhoneNumber(selectedCountry.code, phoneNumber);
+      
+      // Check if phone exists in database
+      const phoneExists = await PhoneService.checkPhoneExists(formattedPhone);
+      
+      if (!phoneExists) {
+        setError('Ce numéro n\'existe pas. Veuillez vous inscrire.');
+        setLoading(false);
+        return;
+      }
+      
+      const result = await smsService.sendOTP(formattedPhone);
       
       if (result.success) {
         // Navigate to OTP verification screen
-        navigation.navigate('VerifyOtp', { phoneNumber });
+        navigation.navigate('VerifyOtp', { phoneNumber: formattedPhone });
       } else {
         setError(result.error || 'Erreur lors de l\'envoi du code');
       }
     } catch (err) {
+      console.error('Error in forgot password:', err);
       setError('Erreur réseau. Veuillez réessayer.');
     } finally {
       setLoading(false);
@@ -71,7 +86,20 @@ const ForgotPasswordScreen: React.FC = () => {
   };
 
   const handlePhoneChange = (value: string) => {
-    setPhoneNumber(value);
+    // Clean the input and format it
+    let cleanText = value.replace(/[^0-9]/g, '');
+    
+    // Remove leading zero if present (handle 088 -> 88 case)
+    if (cleanText.startsWith('0')) {
+      cleanText = cleanText.substring(1);
+    }
+    
+    // Limit to 9 digits maximum
+    if (cleanText.length > 9) {
+      cleanText = cleanText.substring(0, 9);
+    }
+    
+    setPhoneNumber(cleanText);
     if (error) {
       setError(null);
     }
@@ -129,13 +157,13 @@ const ForgotPasswordScreen: React.FC = () => {
 
             {/* Send OTP Button */}
             <Button
-              variant="primary"
               title="Envoyer le code"
               onPress={handleSendOTP}
               disabled={loading || !phoneNumber.trim()}
               loading={loading}
-              icon={<Icon name="arrow-right" size="sm" color={Colors.white} />}
+              icon={<Icon name="arrow-right" size="md" color={Colors.white} />}
               iconPosition="right"
+              fullWidth
             />
 
             {/* Back to Login */}
@@ -172,11 +200,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
   },
   header: {
     paddingTop: Spacing.md,
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   backButton: {
     width: 44,
@@ -188,57 +216,70 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    paddingVertical: Spacing.xl,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing['2xl'],
   },
   iconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: BorderRadius['2xl'],
+    backgroundColor: Colors.card.blue,
     alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
     marginBottom: Spacing.xl,
   },
   title: {
     fontSize: Typography.fontSize['2xl'],
-    fontWeight: Typography.fontWeight.bold,
+    fontFamily: Typography.fontFamily.bold,
     color: Colors.text.primary,
     textAlign: 'center',
     marginBottom: Spacing.sm,
   },
   subtitle: {
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
     textAlign: 'center',
     marginBottom: Spacing['2xl'],
-    lineHeight: Typography.lineHeight.relaxed,
+    lineHeight: 22,
+    paddingHorizontal: Spacing.sm,
+    flexWrap: 'wrap',
   },
   inputContainer: {
     marginBottom: Spacing.xl,
   },
   inputLabel: {
     fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.medium,
+    fontFamily: Typography.fontFamily.semiBold,
     color: Colors.text.primary,
     marginBottom: Spacing.sm,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.background.secondary,
-    borderRadius: BorderRadius.base,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
     paddingHorizontal: Spacing.base,
     minHeight: 52,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
+    borderWidth: 1.5,
+    borderColor: '#FDB913',
+    gap: Spacing.md,
   },
   inputError: {
     borderColor: Colors.status.error,
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
   },
   input: {
     flex: 1,
     fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
-    marginLeft: Spacing.sm,
+    paddingVertical: Spacing.sm,
   },
   errorText: {
     fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.status.error,
     marginTop: Spacing.xs,
     marginLeft: Spacing.xs,
@@ -248,15 +289,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: Spacing.xl,
+    flexWrap: 'wrap',
+    paddingHorizontal: Spacing.md,
   },
   backToLoginText: {
-    fontSize: Typography.fontSize.md,
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
+    textAlign: 'center',
   },
   backToLoginLink: {
-    fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.semiBold,
-    color: Colors.accent,
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.primary,
   },
 
   // Guest Footer
@@ -264,14 +309,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.xl,
     marginTop: Spacing.base,
+    paddingHorizontal: Spacing.md,
   },
   footerText: {
     fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
     textAlign: 'center',
+    lineHeight: 20,
+    flexWrap: 'wrap',
   },
   footerHighlight: {
-    fontWeight: Typography.fontWeight.bold,
+    fontFamily: Typography.fontFamily.bold,
     color: Colors.primary,
   },
 });

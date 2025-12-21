@@ -1,10 +1,7 @@
 import React, {useEffect, useRef} from 'react';
-import {View, StyleSheet, Animated, Easing, ViewStyle, Image} from 'react-native';
+import {StyleSheet, Animated, Easing, ViewStyle, Image} from 'react-native';
 
-// PNG logo for Image component usage - using require for proper bundling
-const logoPng = require('../../../assets/logo.png');
-
-type LogoVariant = 'png';
+type LogoVariant = 'icon' | 'splash';
 
 interface LogoProps {
   size?: number;
@@ -17,7 +14,7 @@ interface LogoProps {
 const Logo: React.FC<LogoProps> = ({
   size = 100,
   style,
-  variant = 'png',
+  variant = 'icon',
   animated = false,
   pulseOnLoad = false,
 }) => {
@@ -72,11 +69,10 @@ const Logo: React.FC<LogoProps> = ({
     : {transform: [{scale: scaleAnim}]};
 
   return (
-    <Animated.View
-      style={[styles.container, style, animatedStyle]}>
+    <Animated.View style={[styles.container, style, animatedStyle]}>
       <Image
-        source={logoPng}
-        style={{width: size, height: size, borderRadius: size * 0.22}}
+        source={require('../../../assets/logo.png')}
+        style={{width: size, height: size}}
         resizeMode="contain"
       />
     </Animated.View>

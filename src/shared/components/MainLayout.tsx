@@ -243,7 +243,7 @@ const LayoutFooter: React.FC<{
     <View
       style={[
         styles.footer,
-        {paddingBottom: Math.max(insetBottom, Spacing.base)},
+        {paddingBottom: Math.max(insetBottom, Spacing.sm)},
         style,
       ]}>
       {children}
@@ -515,12 +515,11 @@ const styles = StyleSheet.create({
   // Footer styles
   footer: {
     width: '100%',
-    backgroundColor: Colors.background.primary,
-    borderTopWidth: 1,
+    backgroundColor: Colors.white,
+    borderTopWidth: 0.5,
     borderTopColor: Colors.border.light,
-    paddingHorizontal: Spacing.base,
-    paddingTop: Spacing.base,
-    ...Shadows.sm,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
   },
 });
 

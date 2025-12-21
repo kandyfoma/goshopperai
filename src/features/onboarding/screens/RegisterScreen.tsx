@@ -100,14 +100,27 @@ export function RegisterScreen() {
   };
 
   const handlePhoneChange = (text: string) => {
-    setPhoneNumber(text);
+    // Clean the input and format it
+    let cleanText = text.replace(/[^0-9]/g, '');
+    
+    // Remove leading zero if present (handle 088 -> 88 case)
+    if (cleanText.startsWith('0')) {
+      cleanText = cleanText.substring(1);
+    }
+    
+    // Limit to 9 digits maximum
+    if (cleanText.length > 9) {
+      cleanText = cleanText.substring(0, 9);
+    }
+    
+    setPhoneNumber(cleanText);
     setPhoneError('');
     setPhoneExists(false);
     
     // Debounce phone checking
     clearTimeout(phoneCheckTimeout);
     phoneCheckTimeout = setTimeout(() => {
-      checkPhoneExists(text);
+      checkPhoneExists(cleanText);
     }, 800);
   };
 
@@ -297,7 +310,8 @@ export function RegisterScreen() {
               {/* Country Code and Phone Number */}
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Numéro de téléphone *</Text>
-                <View style={styles.phoneContainer}>
+                <View style={styles.phoneRow}>
+                  {/* Country Selector */}
                   <TouchableOpacity 
                     style={styles.countrySelector} 
                     onPress={() => setShowCountryModal(true)}>
@@ -306,16 +320,19 @@ export function RegisterScreen() {
                     <Icon name="chevron-down" size="sm" color={Colors.text.secondary} />
                   </TouchableOpacity>
                   
-                  <TextInput
-                    style={[styles.phoneInput, phoneError ? styles.inputError : null]}
-                    placeholder="81 234 5678"
-                    placeholderTextColor={Colors.text.tertiary}
-                    value={phoneNumber}
-                    onChangeText={handlePhoneChange}
-                    keyboardType="phone-pad"
-                    autoCorrect={false}
-                    editable={!loading}
-                  />
+                  {/* Phone Input */}
+                  <View style={styles.phoneInputContainer}>
+                    <TextInput
+                      style={[styles.phoneInput, phoneError ? styles.inputError : null]}
+                      placeholder="81 234 5678"
+                      placeholderTextColor={Colors.text.tertiary}
+                      value={phoneNumber}
+                      onChangeText={handlePhoneChange}
+                      keyboardType="phone-pad"
+                      autoCorrect={false}
+                      editable={!loading}
+                    />
+                  </View>
                 </View>
                 {phoneError && <Text style={styles.errorText}>{phoneError}</Text>}
                 {checkingPhone && <Text style={styles.infoText}>Vérification du numéro...</Text>}
@@ -649,12 +666,12 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.background.secondary,
-    borderRadius: BorderRadius.base,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
     paddingHorizontal: Spacing.base,
     minHeight: 52,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
+    borderWidth: 1.5,
+    borderColor: '#FDB913',
   },
   inputPlaceholder: {
     borderColor: Colors.border.medium,
@@ -668,21 +685,21 @@ const styles = StyleSheet.create({
   placeholderText: {
     color: Colors.text.tertiary,
   },
-  phoneContainer: {
+  // Phone Row - country and phone on same line
+  phoneRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border.light,
-    borderRadius: BorderRadius.base,
-    backgroundColor: Colors.background.secondary,
+    gap: 12,
   },
+  // Country Selector
   countrySelector: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.base,
-    borderRightWidth: 1,
-    borderRightColor: Colors.border.light,
+    borderWidth: 1.5,
+    borderColor: '#FDB913',
   },
   countryFlag: {
     fontSize: Typography.fontSize.lg,
@@ -692,6 +709,14 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     color: Colors.text.primary,
     marginRight: Spacing.sm,
+  },
+  // Phone Input Container
+  phoneInputContainer: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1.5,
+    borderColor: '#FDB913',
   },
   phoneInput: {
     flex: 1,

@@ -792,8 +792,22 @@ export function SubscriptionScreen() {
                     placeholderTextColor={Colors.text.tertiary}
                     keyboardType="phone-pad"
                     value={phoneNumber}
-                    onChangeText={setPhoneNumber}
-                    maxLength={12}
+                    onChangeText={(text) => {
+                      // Clean the input and format it
+                      let cleanText = text.replace(/[^0-9]/g, '');
+                      
+                      // Remove leading zero if present (handle 088 -> 88 case)
+                      if (cleanText.startsWith('0')) {
+                        cleanText = cleanText.substring(1);
+                      }
+                      
+                      // Limit to 9 digits maximum
+                      if (cleanText.length > 9) {
+                        cleanText = cleanText.substring(0, 9);
+                      }
+                      
+                      setPhoneNumber(cleanText);
+                    }}
                   />
                 </View>
               </View>

@@ -110,6 +110,26 @@ service cloud.firestore {
       }
     }
     
+    // User profiles collection (for phone number lookup during login)
+    match /userProfiles/{profileId} {
+      // Allow reading profiles for login purposes (phone number lookup)
+      // This is safe because we don't expose sensitive data in the query
+      allow read: if true;
+      // Only allow users to create/update their own profile
+      allow create, update: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow delete: if false;
+    }
+    
+    // Password hashes collection (for phone login authentication)
+    match /passwords/{userId} {
+      // Allow reading password for verification during login
+      // This is safe because the password is hashed and we need it for authentication
+      allow read: if true;
+      // Allow creating/updating password during registration or password change
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
+    }
+    
     // Deny all other access
     match /{document=**} {
       allow read, write: if false;

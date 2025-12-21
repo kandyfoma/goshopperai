@@ -116,28 +116,28 @@ export function Toast({
           backgroundColor: URBANIST_COLORS.successBg,
           accentColor: URBANIST_COLORS.successAccent,
           iconColor: URBANIST_COLORS.success,
-          icon: 'checkbox-circle-fill',
+          icon: 'check-circle',
         };
       case 'error':
         return {
           backgroundColor: URBANIST_COLORS.errorBg,
           accentColor: URBANIST_COLORS.errorAccent,
           iconColor: URBANIST_COLORS.error,
-          icon: 'error-warning-fill',
+          icon: 'alert-circle',
         };
       case 'warning':
         return {
           backgroundColor: URBANIST_COLORS.warningBg,
           accentColor: URBANIST_COLORS.warningAccent,
           iconColor: URBANIST_COLORS.warning,
-          icon: 'alert-fill',
+          icon: 'alert-triangle',
         };
       default:
         return {
           backgroundColor: URBANIST_COLORS.infoBg,
           accentColor: URBANIST_COLORS.infoAccent,
           iconColor: URBANIST_COLORS.info,
-          icon: 'information-fill',
+          icon: 'info',
         };
     }
   };

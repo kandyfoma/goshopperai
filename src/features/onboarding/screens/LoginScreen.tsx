@@ -48,7 +48,7 @@ const GOCHUJANG = {
   primary: '#C1121F', // Crimson Blaze
   success: '#22C55E',
   error: '#C1121F', // Crimson Blaze
-  border: '#F5E6C3',
+  border: '#FDB913', // Yellow outline
   white: '#FFFFFF',
 };
 
@@ -157,7 +157,18 @@ export function LoginScreen() {
   // Handle phone number input
   const handlePhoneChange = async (text: string) => {
     // Clean the input and format it
-    const cleanText = text.replace(/[^0-9]/g, '');
+    let cleanText = text.replace(/[^0-9]/g, '');
+    
+    // Remove leading zero if present (handle 088 -> 88 case)
+    if (cleanText.startsWith('0')) {
+      cleanText = cleanText.substring(1);
+    }
+    
+    // Limit to 9 digits maximum
+    if (cleanText.length > 9) {
+      cleanText = cleanText.substring(0, 9);
+    }
+    
     setPhoneNumber(cleanText);
     
     // Clear error when user starts typing
@@ -245,7 +256,8 @@ export function LoginScreen() {
     const lockStatus = await loginSecurityService.isAccountLocked(formattedPhone);
     if (lockStatus.locked) {
       const timeRemaining = loginSecurityService.formatRemainingTime(lockStatus.remainingTime || 0);
-      setError(`Compte temporairement bloqué. Réessayez dans ${timeRemaining}.`);
+      const errorMsg = `Compte temporairement bloqué. Réessayez dans ${timeRemaining}.`;
+      showToast(errorMsg, 'error', 5000);
       triggerShake();
       return;
     }
@@ -253,10 +265,9 @@ export function LoginScreen() {
     // Check if we should delay login (rate limiting)
     const delayInfo = await loginSecurityService.shouldDelayLogin(formattedPhone);
     if (delayInfo.delay) {
-      setError(`Trop de tentatives. Patientez ${delayInfo.seconds} secondes.`);
+      const errorMsg = `Trop de tentatives. Patientez ${delayInfo.seconds} secondes.`;
+      showToast(errorMsg, 'warning', 5000);
       triggerShake();
-      // Optional: Add a countdown timer here
-      setTimeout(() => setError(null), delayInfo.seconds * 1000);
       return;
     }
 
@@ -266,13 +277,27 @@ export function LoginScreen() {
       
       // Record successful login
       await loginSecurityService.recordAttempt(formattedPhone, true);
-      setSuccessMessage('Connexion réussie!');
+      showToast('Connexion réussie!', 'success', 3000);
     } catch (err: any) {
       // Record failed login attempt
       await loginSecurityService.recordAttempt(formattedPhone, false);
       
-      const errorMessage = getErrorMessage(err.code || '');
-      setError(errorMessage);
+      // Handle specific error messages
+      let errorMessage = '';
+      
+      // Check if it's our custom error message
+      if (err.message) {
+        if (err.message.includes('Aucun compte trouvé')) {
+          errorMessage = 'Aucun compte trouvé avec ce numéro de téléphone';
+        } else if (err.message.includes('Mot de passe incorrect')) {
+          errorMessage = 'Mot de passe incorrect';
+        } else {
+          errorMessage = err.message;
+        }
+      } else {
+        errorMessage = getErrorMessage(err.code || '');
+      }
+      
       triggerShake();
 
       // Update security status after failed attempt
@@ -283,9 +308,12 @@ export function LoginScreen() {
         lockTimeRemaining: security.remainingLockTime || 0,
       });
 
-      // Show warning if close to lockout
+      // Combine error message with remaining attempts warning in single toast
       if (security.remainingAttempts <= 2 && security.remainingAttempts > 0) {
-        setError(`${errorMessage} Attention: ${security.remainingAttempts} tentatives restantes avant blocage.`);
+        const combinedMessage = `${errorMessage}. Attention: ${security.remainingAttempts} tentatives restantes avant blocage.`;
+        showToast(combinedMessage, 'error', 6000);
+      } else {
+        showToast(errorMessage, 'error', 5000);
       }
     } finally {
       setLoading(false);
@@ -444,37 +472,39 @@ export function LoginScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Numéro de téléphone</Text>
                 
-                {/* Country Code Selector */}
-                <TouchableOpacity
-                  style={[styles.countrySelector, isLoading && styles.inputDisabled]}
-                  onPress={() => !isLoading && setShowCountryModal(true)}
-                  disabled={isLoading}
-                >
-                  <Text style={styles.flagEmoji}>{selectedCountry.flag}</Text>
-                  <Text style={styles.countryCode}>{selectedCountry.code}</Text>
-                  <Icon name="chevron-down" size="xs" color={GOCHUJANG.textMuted} />
-                </TouchableOpacity>
+                <View style={styles.phoneRow}>
+                  {/* Country Code Selector */}
+                  <TouchableOpacity
+                    style={[styles.countrySelector, isLoading && styles.inputDisabled]}
+                    onPress={() => !isLoading && setShowCountryModal(true)}
+                    disabled={isLoading}
+                  >
+                    <Text style={styles.flagEmoji}>{selectedCountry.flag}</Text>
+                    <Text style={styles.countryCode}>{selectedCountry.code}</Text>
+                    <Icon name="chevron-down" size="xs" color={GOCHUJANG.textMuted} />
+                  </TouchableOpacity>
 
-                {/* Phone Input */}
-                <View
-                  style={[
-                    styles.phoneInputWrapper,
-                    !!phoneError && styles.inputError,
-                    isLoading && styles.inputDisabled,
-                  ]}>
-                  <TextInput
-                    style={styles.phoneInput}
-                    placeholder={selectedCountry.code === '+243' ? '123456789' : '123456789'}
-                    placeholderTextColor={GOCHUJANG.textMuted}
-                    value={phoneNumber}
-                    onChangeText={handlePhoneChange}
-                    keyboardType="phone-pad"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!isLoading}
-                    returnKeyType="next"
-                    onSubmitEditing={() => passwordInputRef.current?.focus()}
-                  />
+                  {/* Phone Input */}
+                  <View
+                    style={[
+                      styles.phoneInputWrapper,
+                      !!phoneError && styles.inputError,
+                      isLoading && styles.inputDisabled,
+                    ]}>
+                    <TextInput
+                      style={styles.phoneInput}
+                      placeholder={selectedCountry.code === '+243' ? '123456789' : '123456789'}
+                      placeholderTextColor={GOCHUJANG.textMuted}
+                      value={phoneNumber}
+                      onChangeText={handlePhoneChange}
+                      keyboardType="phone-pad"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      editable={!isLoading}
+                      returnKeyType="next"
+                      onSubmitEditing={() => passwordInputRef.current?.focus()}
+                    />
+                  </View>
                 </View>
                 {phoneError && (
                   <Text style={styles.fieldError}>{phoneError}</Text>
@@ -551,13 +581,13 @@ export function LoginScreen() {
 
               {/* Login Button */}
               <Button
-                variant="primary"
                 title="Se connecter"
                 onPress={handleLogin}
-                disabled={isLoading || !isFormValid()}
+                disabled={isLoading || !isFormValid() || securityStatus.locked}
                 loading={loading}
-                icon={<Icon name="arrow-right" size="sm" color="white" />}
+                icon={<Icon name="arrow-right" size="md" color="white" />}
                 iconPosition="right"
+                fullWidth
               />
 
               {/* Divider */}
@@ -785,16 +815,9 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   logoWrapper: {
-    width: 88,
-    height: 88,
-    borderRadius: 24,
-    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
   },
   appName: {
     fontSize: 32,
@@ -897,6 +920,12 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 
+  // Phone Row - country and phone on same line
+  phoneRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+
   // Country Selector
   countrySelector: {
     flexDirection: 'row',
@@ -905,10 +934,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: GOCHUJANG.border,
     borderRadius: 14,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 14,
-    marginBottom: 12,
-    gap: 8,
+    gap: 6,
   },
   flagEmoji: {
     fontSize: 20,
@@ -917,11 +945,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: GOCHUJANG.textPrimary,
     fontWeight: '500',
-    flex: 1,
   },
   
   // Phone Input
   phoneInputWrapper: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: GOCHUJANG.background,

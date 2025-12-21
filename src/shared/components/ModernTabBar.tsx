@@ -27,6 +27,13 @@ export function TabBarIcon({focused, icon, label, badge}: TabBarIconProps) {
   const opacityAnim = useRef(new Animated.Value(focused ? 1 : 0.8)).current;
   const badgeAnim = useRef(new Animated.Value(badge ? 1 : 0)).current;
 
+  // Ensure badge is a valid number
+  const validBadge = typeof badge === 'number' && badge > 0 ? badge : 0;
+  // Ensure label is a valid string
+  const validLabel = typeof label === 'string' ? label : '';
+  // Ensure icon is a valid string
+  const validIcon = typeof icon === 'string' ? icon : 'circle';
+
   useEffect(() => {
     Animated.parallel([
       Animated.spring(scaleAnim, {
@@ -45,12 +52,12 @@ export function TabBarIcon({focused, icon, label, badge}: TabBarIconProps) {
 
   useEffect(() => {
     Animated.spring(badgeAnim, {
-      toValue: badge ? 1 : 0,
+      toValue: validBadge ? 1 : 0,
       useNativeDriver: true,
       tension: 300,
       friction: 8,
     }).start();
-  }, [badge]);
+  }, [validBadge]);
 
   return (
     <View style={styles.tabIconContainer}>
@@ -68,13 +75,13 @@ export function TabBarIcon({focused, icon, label, badge}: TabBarIconProps) {
         
         {/* Icon */}
         <Icon
-          name={icon}
+          name={validIcon}
           size="md"
-          color={Colors.white}
+          color={focused ? '#780000' : '#669BBC'}
         />
 
         {/* Notification Badge */}
-        {badge && badge > 0 && (
+        {validBadge > 0 && (
           <Animated.View
             style={[
               styles.badge,
@@ -84,19 +91,13 @@ export function TabBarIcon({focused, icon, label, badge}: TabBarIconProps) {
               },
             ]}>
             <Text style={styles.badgeText}>
-              {badge > 99 ? '99+' : badge.toString()}
+              {validBadge > 99 ? '99+' : validBadge.toString()}
             </Text>
           </Animated.View>
         )}
       </Animated.View>
       
-      <Text
-        style={[
-          styles.tabLabel,
-          focused && styles.tabLabelFocused,
-        ]}>
-        {label}
-      </Text>
+      {/* Text labels removed - icons only */}
     </View>
   );
 }
@@ -112,7 +113,7 @@ export function ModernTabBar({state, descriptors, navigation, badges = {}}: Mode
   return (
     <View style={styles.tabBarContainer}>
       <LinearGradient
-        colors={[Colors.primary, Colors.primaryDark]}
+        colors={['#FDF0D5', '#F5E6C3']}
         start={{x: 0, y: 0}}
         end={{x: 1, y: 1}}
         style={styles.tabBarGradient}>
@@ -180,29 +181,29 @@ export function ModernTabBar({state, descriptors, navigation, badges = {}}: Mode
 const styles = StyleSheet.create({
   tabBarContainer: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 34 : 20,
-    left: 16,
-    right: 16,
-    ...Shadows.lg,
+    bottom: Platform.OS === 'ios' ? 16 : 8,
+    left: 24,
+    right: 24,
+    ...Shadows.sm,
   },
   tabBarGradient: {
-    borderRadius: 28,
-    paddingVertical: Platform.OS === 'ios' ? 16 : 14,
-    paddingHorizontal: 24,
+    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     shadowColor: Colors.black,
     shadowOffset: {
       width: 0,
-      height: 12,
+      height: 4,
     },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 16,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   tabBarContent: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    minHeight: 60,
+    minHeight: 44,
   },
   tabItem: {
     flex: 1,
@@ -211,38 +212,38 @@ const styles = StyleSheet.create({
   tabButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: 12,
   },
   tabButtonFocused: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'transparent',
   },
   tabIconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 56,
+    minWidth: 40,
   },
   iconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
     position: 'relative',
   },
   iconWrapperFocused: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'transparent',
   },
   activeIndicator: {
     position: 'absolute',
     top: -6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.white,
-    shadowColor: Colors.white,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#780000',
+    shadowColor: '#780000',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -280,10 +281,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   tabLabel: {
-    fontSize: Typography.fontSize.xs,
+    fontSize: 10,
     color: Colors.white,
     fontWeight: Typography.fontWeight.medium,
-    marginTop: 6,
+    marginTop: 4,
     opacity: 0.8,
     textAlign: 'center',
   },

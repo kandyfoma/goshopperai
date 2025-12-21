@@ -10,6 +10,8 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import Svg, {Circle, G, Path, Line, Text as SvgText} from 'react-native-svg';
 import firestore from '@react-native-firebase/firestore';
 import {
@@ -26,8 +28,11 @@ import {analyticsService} from '@/shared/services/analytics';
 import {globalSettingsService} from '@/shared/services/globalSettingsService';
 import {APP_ID} from '@/shared/services/firebase/config';
 import {getCurrentMonthBudget} from '@/shared/services/firebase/budgetService';
+import {RootStackParamList} from '@/shared/types';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 interface SpendingCategory {
   name: string;
@@ -43,8 +48,16 @@ interface MonthlySpending {
 }
 
 export function StatsScreen() {
-  const {user} = useAuth();
-  const {profile} = useUser();
+  const navigation = useNavigation<NavigationProp>();
+  const {user, isAuthenticated} = useAuth();
+  const {profile, isLoading: profileLoading} = useUser();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigation.navigate('Login');
+    }
+  }, [isAuthenticated, navigation]);
 
   const [totalSpending, setTotalSpending] = useState(0);
   const [monthlyBudget, setMonthlyBudget] = useState<number>(0); // Will be set from profile
@@ -370,6 +383,20 @@ export function StatsScreen() {
 
     return `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
   };
+
+  // Don't render content if not authenticated or profile is loading
+  if (!isAuthenticated || profileLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Text style={styles.loadingText}>
+            {profileLoading ? 'Chargement du profil...' : 'Chargement...'}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (isLoading) {
     return (
