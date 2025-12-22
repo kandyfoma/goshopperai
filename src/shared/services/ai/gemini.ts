@@ -4,7 +4,7 @@
 import functions from '@react-native-firebase/functions';
 import auth from '@react-native-firebase/auth';
 import {Receipt, ReceiptItem, ReceiptScanResult} from '@/shared/types';
-import {generateUUID} from '@/shared/utils/helpers';
+import {generateUUID, convertCurrency} from '@/shared/utils/helpers';
 import {ocrCorrectionService} from '../ocrCorrectionService';
 
 // Cloud Functions region - must match deployed functions
@@ -105,6 +105,7 @@ class GeminiService {
   async parseReceipt(
     imageBase64: string,
     userId: string,
+    userCity?: string,
   ): Promise<ReceiptScanResult> {
     // Check circuit breaker state
     this.checkCircuitState();
@@ -215,6 +216,7 @@ class GeminiService {
         receiptData,
         userId,
         result.receiptId,
+        userCity,
       );
 
       // Success - reset circuit breaker
@@ -288,6 +290,7 @@ class GeminiService {
     data: ParseReceiptResponse['data'],
     userId: string,
     firestoreReceiptId?: string,
+    userCity?: string,
   ): Receipt {
     if (!data) {
       throw new Error('No data to transform');
@@ -322,7 +325,7 @@ class GeminiService {
       userId,
       storeName: data.storeName || 'Magasin inconnu',
       storeNameNormalized: this.normalizeStoreName(data.storeName || 'magasin-inconnu'),
-      date: new Date(data.date),
+      date: data.date ? new Date(data.date) : now, // Use receipt date or fallback to now
       currency: data.currency || 'CDF',
       items,
       total: data.total || 0,
@@ -332,6 +335,15 @@ class GeminiService {
       scannedAt: now,
     };
 
+    // Add converted currency amounts for both USD and CDF
+    if (receipt.currency === 'USD') {
+      receipt.totalUSD = receipt.total;
+      receipt.totalCDF = convertCurrency(receipt.total, 'USD', 'CDF');
+    } else if (receipt.currency === 'CDF') {
+      receipt.totalCDF = receipt.total;
+      receipt.totalUSD = convertCurrency(receipt.total, 'CDF', 'USD');
+    }
+
     // Only add optional fields if they have values
     if (data.storeAddress) receipt.storeAddress = data.storeAddress;
     if (data.storePhone) receipt.storePhone = data.storePhone;
@@ -339,6 +351,13 @@ class GeminiService {
     if (data.subtotal !== undefined) receipt.subtotal = data.subtotal;
     if (data.tax !== undefined) receipt.tax = data.tax;
     if (data.rawText) receipt.rawText = data.rawText;
+    
+    // Add user's default city if not detected from receipt
+    if (!data.city && userCity) {
+      receipt.city = userCity;
+    } else if (data.city) {
+      receipt.city = data.city;
+    }
 
     return receipt as Receipt;
   }

@@ -29,6 +29,35 @@ export function formatCurrency(
 }
 
 /**
+ * Currency conversion rate (USD to CDF)
+ * Update this periodically based on current exchange rate
+ */
+export const USD_TO_CDF_RATE = 2200; // 1 USD = 2,200 CDF (Dec 2025)
+
+/**
+ * Convert between USD and CDF
+ */
+export function convertCurrency(
+  amount: number,
+  fromCurrency: 'USD' | 'CDF',
+  toCurrency: 'USD' | 'CDF',
+): number {
+  if (fromCurrency === toCurrency) {
+    return amount;
+  }
+  
+  if (fromCurrency === 'USD' && toCurrency === 'CDF') {
+    return Math.round(amount * USD_TO_CDF_RATE);
+  }
+  
+  if (fromCurrency === 'CDF' && toCurrency === 'USD') {
+    return Math.round((amount / USD_TO_CDF_RATE) * 100) / 100;
+  }
+  
+  return amount;
+}
+
+/**
  * Format date for display (French locale)
  */
 export function formatDate(
@@ -36,6 +65,16 @@ export function formatDate(
   format: 'short' | 'long' = 'short',
 ): string {
   const d = typeof date === 'string' ? new Date(date) : date;
+  
+  // Check if the date is invalid or epoch (1970)
+  if (!d || isNaN(d.getTime()) || d.getTime() === 0) {
+    const today = new Date();
+    return today.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }
 
   if (format === 'long') {
     return d.toLocaleDateString('fr-FR', {

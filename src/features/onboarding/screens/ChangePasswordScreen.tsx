@@ -682,7 +682,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    paddingVertical: Spacing.base,
+    paddingVertical: Spacing.sm,
     fontSize: Typography.fontSize.base,
     color: Colors.text.primary,
   },

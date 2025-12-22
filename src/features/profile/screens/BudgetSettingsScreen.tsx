@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card.cream,
     borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm,
     ...Shadows.sm,
   },
   currencyPrefix: {

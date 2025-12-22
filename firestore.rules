@@ -28,6 +28,15 @@ service cloud.firestore {
         allow create: if isOwner(userId);
         allow read, update, delete: if isOwner(userId);
         
+        // Shopping times and patterns tracking
+        match /shoppingTimes/{timeId} {
+          allow read, write: if isOwner(userId);
+        }
+        
+        match /shopFrequency/{shopId} {
+          allow read, write: if isOwner(userId);
+        }
+        
         // User profile (deprecated - now using users/{userId} directly)
         match /profile/{document=**} {
           allow read, write: if isOwner(userId);
@@ -40,9 +49,7 @@ service cloud.firestore {
         
         // User's shops (aggregated from receipts)
         match /shops/{shopId} {
-          allow read: if isOwner(userId);
-          // Only Cloud Functions can write shop data
-          allow write: if false;
+          allow read, write: if isOwner(userId);
         }
         
         // User's items (aggregated from receipts) - NEW
@@ -113,8 +120,106 @@ service cloud.firestore {
         allow read: if isAuthenticated();
         allow write: if false;
       }
+      
+      // Global app settings (exchange rates, etc.) - anyone authenticated can read
+      match /public/data/settings/{document=**} {
+        allow read: if isAuthenticated();
+        // Only admins can write (handled by Cloud Functions or Admin SDK)
+        allow write: if false;
+      }
     }
     
+    // Subscriptions collection - NEW PATH
+    match /artifacts/goshopper/subscriptions/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      // Allow creating initial subscription
+      allow create: if isAuthenticated() && request.auth.uid == userId && request.resource.data.status == 'trial';
+      // Only Cloud Functions can update subscription
+      allow update, delete: if false;
+    }
+    
+    // GoShopper user data (goshopper APP_ID)
+    match /artifacts/goshopper/users/{userId} {
+      // Allow user to create their own profile document on first signup
+      allow create: if isOwner(userId);
+      allow read, update, delete: if isOwner(userId);
+      
+      // Shopping times and patterns tracking
+      match /shoppingTimes/{timeId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      match /shopFrequency/{shopId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // User profile (deprecated - now using users/{userId} directly)
+      match /profile/{document=**} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // User's receipts - allow owner to read AND write
+      match /receipts/{receiptId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // User's shops (aggregated from receipts)
+      match /shops/{shopId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // User's items (aggregated from receipts)
+      match /items/{itemId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+      
+      // Subscription status
+      match /subscription/{document=**} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.status == 'trial';
+        allow update, delete: if false;
+      }
+      
+      // Payment records
+      match /payments/{paymentId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+      
+      // Shopping Lists
+      match /shoppingLists/{listId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // Price Alerts
+      match /priceAlerts/{alertId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // Notifications
+      match /notifications/{notificationId} {
+        allow read: if isOwner(userId);
+        allow write: if false;
+      }
+      
+      // Monthly Budgets
+      match /budgets/{monthKey} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      // User Recommendations (ML/AI recommendations)
+      match /recommendations/{recommendationId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+    
+    // GoShopper public data
+    match /artifacts/goshopper/public/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
     // User profiles collection (for phone number lookup during login)
     match /userProfiles/{profileId} {
       // Allow reading profiles for login purposes (phone number lookup)

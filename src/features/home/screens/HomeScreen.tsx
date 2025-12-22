@@ -298,17 +298,42 @@ export function HomeScreen() {
   // Determine display currency: use preferred currency if budget is set, otherwise USD
   const displayCurrency = userProfile?.preferredCurrency || 'USD';
 
+  // Debug logging for all dashboard values
+  useEffect(() => {
+    console.log('📊 Dashboard Stats:', {
+      trialScansUsed,
+      scansRemaining,
+      monthlySpending,
+      itemsCount,
+      currentBudget,
+      isLoadingStats,
+      displayCurrency,
+      userId: userProfile?.userId,
+      subscription: subscription ? {
+        status: subscription.status,
+        trialScansUsed: subscription.trialScansUsed,
+        isTrialActive,
+      } : 'null',
+    });
+  }, [trialScansUsed, scansRemaining, subscription, isTrialActive, monthlySpending, itemsCount, currentBudget, isLoadingStats, displayCurrency, userProfile?.userId]);
+
   // Load current month budget
   useEffect(() => {
     const loadBudget = async () => {
       if (!userProfile?.userId) return;
 
       try {
+        console.log('💰 Loading budget for user:', userProfile.userId);
+        console.log('💰 Default budget:', userProfile.defaultMonthlyBudget);
+        console.log('💰 Legacy budget:', userProfile.monthlyBudget);
+        console.log('💰 Currency:', userProfile.preferredCurrency);
+        
         const budget = await getCurrentMonthBudget(
           userProfile.userId,
           userProfile.defaultMonthlyBudget || userProfile.monthlyBudget,
           userProfile.preferredCurrency || 'USD',
         );
+        console.log('💰 Loaded budget:', budget);
         setCurrentBudget(budget.amount);
       } catch (error) {
         console.error('Error loading budget:', error);
@@ -348,27 +373,98 @@ export function HomeScreen() {
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-        const receiptsSnapshot = await firestore()
-          .collection('artifacts')
-          .doc(APP_ID)
-          .collection('users')
-          .doc(userProfile.userId)
-          .collection('receipts')
-          .where('scannedAt', '>=', startOfMonth)
-          .get();
+        console.log('📊 Fetching monthly spending for userId:', userProfile.userId);
+        console.log('📊 Start of month:', startOfMonth);
+
+        // First try with scannedAt, then fallback to getting all receipts
+        let receiptsSnapshot;
+        try {
+          receiptsSnapshot = await firestore()
+            .collection('artifacts')
+            .doc(APP_ID)
+            .collection('users')
+            .doc(userProfile.userId)
+            .collection('receipts')
+            .where('scannedAt', '>=', firestore.Timestamp.fromDate(startOfMonth))
+            .get();
+        } catch (indexError) {
+          console.log('📊 Index error, fetching all receipts and filtering client-side');
+          // Fallback: get all receipts and filter client-side
+          receiptsSnapshot = await firestore()
+            .collection('artifacts')
+            .doc(APP_ID)
+            .collection('users')
+            .doc(userProfile.userId)
+            .collection('receipts')
+            .get();
+        }
+
+        console.log('📊 Found receipts:', receiptsSnapshot.size);
 
         let total = 0;
+        let receiptCount = 0;
         receiptsSnapshot.docs.forEach(doc => {
           const data = doc.data();
-          // Use the currency that matches the display currency (budget currency or USD default)
-          if (displayCurrency === 'CDF') {
-            total += data.totalCDF || data.total || 0;
-          } else {
-            total += data.totalUSD || data.total || 0;
+          
+          // Check if receipt is from this month
+          let receiptDate = null;
+          if (data.scannedAt?.toDate) {
+            receiptDate = data.scannedAt.toDate();
+          } else if (data.date?.toDate) {
+            receiptDate = data.date.toDate();
+          } else if (data.createdAt?.toDate) {
+            receiptDate = data.createdAt.toDate();
+          }
+          
+          // Only count if receipt is from this month
+          if (receiptDate && receiptDate >= startOfMonth) {
+            receiptCount++;
+            console.log('📊 Receipt:', doc.id, 'date:', receiptDate, 'total:', data.total, 'totalUSD:', data.totalUSD, 'totalCDF:', data.totalCDF, 'currency:', data.currency);
+            
+            // Calculate total based on currency
+            let receiptTotal = 0;
+            if (displayCurrency === 'CDF') {
+              // For CDF display: use totalCDF if available, otherwise convert from USD or use total
+              if (data.totalCDF != null) {
+                receiptTotal = Number(data.totalCDF) || 0;
+              } else if (data.currency === 'CDF' && data.total != null) {
+                receiptTotal = Number(data.total) || 0;
+              } else if (data.currency === 'USD' && data.total != null) {
+                // Convert USD to CDF
+                receiptTotal = (Number(data.total) || 0) * 2200;
+              }
+            } else {
+              // For USD display: use totalUSD if available, otherwise use total if currency is USD
+              if (data.totalUSD != null) {
+                receiptTotal = Number(data.totalUSD) || 0;
+              } else if (data.currency === 'USD' && data.total != null) {
+                receiptTotal = Number(data.total) || 0;
+              } else if (data.currency === 'CDF' && data.total != null) {
+                // Convert CDF to USD
+                receiptTotal = (Number(data.total) || 0) / 2200;
+              }
+            }
+            
+            // If still no total, sum up items
+            if (receiptTotal === 0 && data.items?.length > 0) {
+              data.items.forEach((item: any) => {
+                const itemPrice = Number(item.unitPrice || item.price || 0);
+                const itemQty = Number(item.quantity || 1);
+                receiptTotal += itemPrice * itemQty;
+              });
+              console.log('📊 Calculated total from items:', receiptTotal);
+            }
+            
+            console.log('📊 Receipt total for this receipt:', receiptTotal);
+            total += receiptTotal;
           }
         });
 
-        if (isMounted) setMonthlySpending(total);
+        console.log('📊 Total receipts this month:', receiptCount);
+        console.log('📊 Total spending:', total, displayCurrency);
+        // Ensure total is a valid number
+        const validTotal = Number.isFinite(total) ? total : 0;
+        if (isMounted) setMonthlySpending(validTotal);
       } catch (error) {
         console.error('Error fetching monthly spending:', error);
         if (isMounted) setMonthlySpending(0);
@@ -631,22 +727,20 @@ export function HomeScreen() {
         <View style={styles.statsGrid}>
           <View style={styles.statsRow}>
             <StatCard
-              title=""
+              title="Scans"
               value={trialScansUsed || 0}
               subtitle={
                 scansRemaining === -1
                   ? 'illimités'
-                  : `${scansRemaining} scans restants`
+                  : `${scansRemaining} restants`
               }
               color="blue"
               icon="camera"
-              onPress={() =>
-                navigation.navigate('Main', {screen: 'History'} as any)
-              }
+              onPress={() => navigation.navigate('SubscriptionDetails')}
             />
             <StatCard
-              title=""
-              value={itemsCount}
+              title="Articles"
+              value={itemsCount || 0}
               subtitle="mes articles"
               color="cosmos"
               icon="cart"
@@ -655,28 +749,28 @@ export function HomeScreen() {
           </View>
           <View style={styles.statsRow}>
             <StatCard
-              title=""
+              title="Budget"
               value={
                 currentBudget > 0
-                  ? `${currentBudget} ${displayCurrency}`
+                  ? `${currentBudget.toLocaleString()} ${displayCurrency}`
                   : `0 ${displayCurrency}`
               }
-              subtitle="Budget Mensuel"
+              subtitle="mensuel"
               color="yellow"
               icon="wallet"
-              onPress={() => navigation.push('Stats')}
+              onPress={() => navigation.push('BudgetSettings')}
             />
             <StatCard
-              title=""
+              title="Dépenses"
               value={
                 isLoadingStats
                   ? '—'
-                  : `${monthlySpending.toFixed(0)} ${displayCurrency}`
+                  : `${(Number.isFinite(monthlySpending) ? monthlySpending : 0).toLocaleString(undefined, {maximumFractionDigits: 0})} ${displayCurrency}`
               }
-              subtitle="Dépenses Totales"
+              subtitle="ce mois"
               color="yellow"
               icon="credit-card"
-              onPress={() => navigation.push('Stats')}
+              onPress={() => navigation.push('History')}
             />
           </View>
         </View>

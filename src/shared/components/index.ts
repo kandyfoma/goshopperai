@@ -26,6 +26,7 @@ export {useNetwork, NetworkBanner} from './NetworkBanner';
 export {SocialSignInButtons} from './SocialSignInButtons';
 export {PasswordStrengthIndicator} from './PasswordStrengthIndicator';
 export {CapsLockIndicator} from './CapsLockIndicator';
+export {ScanProgressIndicator} from './ScanProgressIndicator';
 
 // Animations
 export {

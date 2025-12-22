@@ -592,6 +592,7 @@ const styles = StyleSheet.create({
   listContainer: {
     padding: Spacing.lg,
     paddingTop: Spacing.sm,
+    paddingBottom: 100,
   },
 
   // Item Card Styles

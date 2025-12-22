@@ -906,7 +906,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 8,
     fontSize: 16,
     color: GOCHUJANG.textPrimary,
   },
@@ -935,7 +935,7 @@ const styles = StyleSheet.create({
     borderColor: GOCHUJANG.border,
     borderRadius: 14,
     paddingHorizontal: 12,
-    paddingVertical: 14,
+    paddingVertical: 8,
     gap: 6,
   },
   flagEmoji: {
@@ -960,7 +960,7 @@ const styles = StyleSheet.create({
   },
   phoneInput: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 8,
     fontSize: 16,
     color: GOCHUJANG.textPrimary,
   },

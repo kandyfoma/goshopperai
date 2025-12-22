@@ -1,11 +1,11 @@
 /**
  * Widget Data Service
  * 
- * Manages data for widgets using AsyncStorage.
+ * Manages data for widgets using CacheManager for better performance.
  * Native widget communication can be added later via native modules.
  */
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {cacheManager, CacheTTL, CachePriority} from './caching';
 
 // Types for widget data
 export interface WidgetSpendingData {
@@ -33,19 +33,12 @@ export interface WidgetShoppingList {
   checkedItems: number;
 }
 
-// Widget data keys
-const WIDGET_KEYS = {
-  SPENDING: '@widget_spending_data',
-  QUICK_STATS: '@widget_quick_stats',
-  SHOPPING_LIST: '@widget_shopping_list',
-};
-
 class WidgetDataService {
   /**
    * Initialize the widget data service
    */
   async initialize(): Promise<void> {
-    // No initialization needed for AsyncStorage
+    // No initialization needed
   }
 
   /**
@@ -56,48 +49,31 @@ class WidgetDataService {
   }
 
   /**
-   * Save data to storage
-   */
-  private async saveData(key: string, data: any): Promise<void> {
-    try {
-      const jsonData = JSON.stringify(data);
-      await AsyncStorage.setItem(key, jsonData);
-    } catch (error) {
-      // Silently fail - widget data is not critical
-    }
-  }
-
-  /**
-   * Read data from storage
-   */
-  private async getData<T>(key: string): Promise<T | null> {
-    try {
-      const jsonData = await AsyncStorage.getItem(key);
-      if (jsonData) {
-        return JSON.parse(jsonData) as T;
-      }
-    } catch (error) {
-      // Silently fail
-    }
-    return null;
-  }
-
-  /**
    * Update spending widget data
    */
   async updateSpendingWidget(data: WidgetSpendingData): Promise<void> {
-    await this.saveData(WIDGET_KEYS.SPENDING, {
-      ...data,
-      lastUpdated: new Date().toISOString(),
-    });
+    await cacheManager.set(
+      'spending',
+      {
+        ...data,
+        lastUpdated: new Date().toISOString(),
+      },
+      {
+        namespace: 'widgets',
+        ttl: CacheTTL.DAY,
+        priority: CachePriority.HIGH,
+      }
+    );
   }
 
   /**
    * Update quick stats widget data
    */
   async updateQuickStatsWidget(data: WidgetQuickStats): Promise<void> {
-    await this.saveData(WIDGET_KEYS.QUICK_STATS, {
-      ...data,
+    await cacheManager.set(
+      'quick-stats',
+      {
+        ...data,
       lastUpdated: new Date().toISOString(),
     });
   }
@@ -106,28 +82,36 @@ class WidgetDataService {
    * Update shopping list widget data
    */
   async updateShoppingListWidget(data: WidgetShoppingList): Promise<void> {
-    await this.saveData(WIDGET_KEYS.SHOPPING_LIST, data);
+    await cacheManager.set(
+      'shopping-list',
+      data,
+      {
+        namespace: 'widgets',
+        ttl: CacheTTL.DAY,
+        priority: CachePriority.NORMAL,
+      }
+    );
   }
 
   /**
    * Get spending widget data
    */
   async getSpendingWidgetData(): Promise<WidgetSpendingData | null> {
-    return this.getData<WidgetSpendingData>(WIDGET_KEYS.SPENDING);
+    return cacheManager.get<WidgetSpendingData>('spending', 'widgets');
   }
 
   /**
    * Get quick stats widget data
    */
   async getQuickStatsWidgetData(): Promise<WidgetQuickStats | null> {
-    return this.getData<WidgetQuickStats>(WIDGET_KEYS.QUICK_STATS);
+    return cacheManager.get<WidgetQuickStats>('quick-stats', 'widgets');
   }
 
   /**
    * Get shopping list widget data
    */
   async getShoppingListWidgetData(): Promise<WidgetShoppingList | null> {
-    return this.getData<WidgetShoppingList>(WIDGET_KEYS.SHOPPING_LIST);
+    return cacheManager.get<WidgetShoppingList>('shopping-list', 'widgets');
   }
 
   /**
@@ -138,16 +122,34 @@ class WidgetDataService {
     quickStats?: WidgetQuickStats;
     shoppingList?: WidgetShoppingList;
   }): Promise<void> {
-    const promises: Promise<void>[] = [];
+    const promises: Promise<boolean>[] = [];
     
     if (data.spending) {
-      promises.push(this.saveData(WIDGET_KEYS.SPENDING, data.spending));
+      promises.push(
+        cacheManager.set('spending', data.spending, {
+          namespace: 'widgets',
+          ttl: CacheTTL.DAY,
+          priority: CachePriority.HIGH,
+        })
+      );
     }
     if (data.quickStats) {
-      promises.push(this.saveData(WIDGET_KEYS.QUICK_STATS, data.quickStats));
+      promises.push(
+        cacheManager.set('quick-stats', data.quickStats, {
+          namespace: 'widgets',
+          ttl: CacheTTL.DAY,
+          priority: CachePriority.HIGH,
+        })
+      );
     }
     if (data.shoppingList) {
-      promises.push(this.saveData(WIDGET_KEYS.SHOPPING_LIST, data.shoppingList));
+      promises.push(
+        cacheManager.set('shopping-list', data.shoppingList, {
+          namespace: 'widgets',
+          ttl: CacheTTL.DAY,
+          priority: CachePriority.NORMAL,
+        })
+      );
     }
     
     await Promise.all(promises);
@@ -157,12 +159,7 @@ class WidgetDataService {
    * Clear all widget data
    */
   async clearAllWidgetData(): Promise<void> {
-    try {
-      const keys = Object.values(WIDGET_KEYS);
-      await AsyncStorage.multiRemove(keys);
-    } catch (error) {
-      // Silently fail
-    }
+    await cacheManager.clearNamespace('widgets');
   }
 }
 

@@ -21,7 +21,7 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon, EmptyState} from '@/shared/components';
-import {formatCurrency, formatDate, safeToDate} from '@/shared/utils/helpers';
+import {formatCurrency, formatDate, safeToDate, convertCurrency} from '@/shared/utils/helpers';
 import {useAuth} from '@/shared/contexts';
 import {APP_ID} from '@/shared/services/firebase/config';
 
@@ -136,15 +136,30 @@ export function ShopDetailScreen() {
         </View>
 
         <View style={styles.receiptRight}>
-          <Text style={styles.totalAmount}>
-            {item.totalUSD !== undefined && item.totalCDF !== undefined
-              ? formatCurrency(item.totalUSD)
-              : formatCurrency(item.total || 0, item.currency)}
-          </Text>
-          {item.totalUSD !== undefined && item.totalCDF !== undefined && (
-            <Text style={styles.totalAmountSecondary}>
-              {formatCurrency(item.totalCDF, 'CDF')}
-            </Text>
+          {item.currency === 'USD' ? (
+            <>
+              <Text style={styles.totalAmount}>
+                {formatCurrency(item.total || 0, 'USD')}
+              </Text>
+              <Text style={styles.totalAmountSecondary}>
+                {item.totalCDF
+                  ? formatCurrency(item.totalCDF, 'CDF')
+                  : `≈ ${formatCurrency(convertCurrency(item.total || 0, 'USD', 'CDF'), 'CDF')}`
+                }
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.totalAmount}>
+                {formatCurrency(item.total || 0, 'CDF')}
+              </Text>
+              <Text style={styles.totalAmountSecondary}>
+                {item.totalUSD
+                  ? formatCurrency(item.totalUSD, 'USD')
+                  : `≈ ${formatCurrency(convertCurrency(item.total || 0, 'CDF', 'USD'), 'USD')}`
+                }
+              </Text>
+            </>
           )}
         </View>
 

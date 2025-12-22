@@ -62,6 +62,7 @@ class HybridReceiptProcessor {
   async processReceipt(
     imageBase64: string,
     userId: string,
+    userCity?: string,
   ): Promise<ReceiptScanResult> {
     const startTime = Date.now();
 
@@ -71,7 +72,7 @@ class HybridReceiptProcessor {
       // Check if local OCR is available
       if (!localOcrService.isAvailable()) {
         console.log('Local OCR not available - using Gemini directly');
-        return await geminiService.parseReceipt(imageBase64, userId);
+        return await geminiService.parseReceipt(imageBase64, userId, userCity);
       }
 
       // Phase 1: Attempt local processing first
@@ -81,7 +82,7 @@ class HybridReceiptProcessor {
       // If local processing failed, go directly to Gemini
       if (!localResult.success) {
         console.log('Local OCR failed - using Gemini');
-        return await geminiService.parseReceipt(imageBase64, userId);
+        return await geminiService.parseReceipt(imageBase64, userId, userCity);
       }
 
       // Phase 2: VALIDATE local results thoroughly
@@ -111,7 +112,8 @@ class HybridReceiptProcessor {
         const receipt = this.createReceiptFromLocalResult(
           localResult,
           userId,
-          'local'
+          'local',
+          userCity
         );
 
         return {
@@ -125,7 +127,7 @@ class HybridReceiptProcessor {
       console.log(`⚠️  Local OCR validation failed: ${reasons}`);
       console.log(`   Falling back to Gemini for accuracy...`);
 
-      const geminiResult = await geminiService.parseReceipt(imageBase64, userId);
+      const geminiResult = await geminiService.parseReceipt(imageBase64, userId, userCity);
 
       if (geminiResult.success && geminiResult.receipt) {
         // Gemini successful - learn from this correction
@@ -146,7 +148,7 @@ class HybridReceiptProcessor {
 
       // Ultimate fallback: pure Gemini processing
       console.log('Hybrid processing failed, using pure Gemini fallback...');
-      return await geminiService.parseReceipt(imageBase64, userId);
+      return await geminiService.parseReceipt(imageBase64, userId, userCity);
     }
   }
 
@@ -389,7 +391,8 @@ class HybridReceiptProcessor {
   private createReceiptFromLocalResult(
     localResult: LocalProcessingResult,
     userId: string,
-    method: string
+    method: string,
+    userCity?: string
   ): Receipt {
     const now = new Date();
     const receiptId = generateUUID();
@@ -405,7 +408,7 @@ class HybridReceiptProcessor {
       confidence: localResult.confidence,
     }));
 
-    return {
+    const receipt: any = {
       id: receiptId,
       userId,
       storeName: localResult.merchant || 'Unknown Store',
@@ -419,6 +422,13 @@ class HybridReceiptProcessor {
       updatedAt: now,
       scannedAt: now,
     };
+
+    // Add user's city if available
+    if (userCity) {
+      receipt.city = userCity;
+    }
+
+    return receipt as Receipt;
   }
 
   /**

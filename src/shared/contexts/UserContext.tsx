@@ -71,7 +71,7 @@ export function UserProvider({children}: UserProviderProps) {
     setIsLoading(true);
 
     // Real-time listener for profile changes
-    // Path: artifacts/goshopperai/users/{userId}
+    // Path: artifacts/goshopper/users/{userId}
     const unsubscribe = firestore()
       .doc(COLLECTIONS.userProfile(user.uid))
       .onSnapshot(

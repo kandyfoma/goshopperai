@@ -332,9 +332,21 @@ function calculateItemSimilarity(items1, items2) {
 // Prompt for receipt parsing - optimized for DRC market
 const PARSING_PROMPT = `You are an expert receipt/invoice OCR and data extraction system. Your task is to CAREFULLY READ and extract ALL visible text and data from the receipt image provided.
 
-⚠️ CRITICAL: You MUST extract the ACTUAL text visible in the image. DO NOT use placeholder text like "Test Store", "Item 1", "Item 2", etc.
+⚠️ CRITICAL RULES:
+1. ONLY read MACHINE-PRINTED text (typed/printed by machine)
+2. COMPLETELY IGNORE handwritten text (written by pen/marker)
+3. SKIP any handwritten numbers, prices, or totals
+4. Focus ONLY on printed receipts from cash registers or printers
+5. If you see both printed and handwritten totals, USE ONLY THE PRINTED ONE
 
-READ THE IMAGE CAREFULLY and extract EXACTLY what you see:
+⚠️ HANDLING INVISIBLE/FADED ITEMS:
+6. If item name is invisible/faded BUT price is visible → Use "Unavailable name" as item name
+7. If BOTH item name AND price are invisible/faded → SKIP that item entirely
+8. Always ensure the total amount matches the receipt, even if some items are skipped
+
+You MUST extract the ACTUAL machine-printed text visible in the image. DO NOT use placeholder text like "Test Store", "Item 1", "Item 2", etc.
+
+READ THE IMAGE CAREFULLY and extract EXACTLY what you see in PRINTED text:
 
 REQUIRED JSON RESPONSE FORMAT:
 Return ONLY a valid JSON object with double quotes around all property names and string values. No markdown, no explanations, no additional text.
@@ -373,9 +385,9 @@ EXTRACTION RULES:
 7. If both USD and CDF totals visible, extract both
 8. Categories: Alimentation (food/groceries), Boissons (beverages), Hygiène (personal care), Ménage (household items), Bébé (baby products), Autres (other)
 9. Common DRC stores: Shoprite, Carrefour, Peloustore, Hasson & Frères, City Market, Kin Marché
-10. For handwritten receipts, do your best to interpret the text
+10. ⚠️ IGNORE HANDWRITTEN TEXT - Only read printed/typed text from machines
 
-⚠️ IMPORTANT: Return ONLY the JSON object with ACTUAL data from the receipt image. Use double quotes for all strings. No markdown formatting, no explanations, no placeholder data.`;
+⚠️ IMPORTANT: Return ONLY the JSON object with ACTUAL data from the MACHINE-PRINTED receipt text. Use double quotes for all strings. No markdown formatting, no explanations, no placeholder data.`;
 /**
  * Generate unique ID for items
  */

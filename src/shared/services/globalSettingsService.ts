@@ -17,7 +17,7 @@ export interface GlobalSettings {
 }
 
 // Default settings
-const DEFAULT_EXCHANGE_RATE = 2220; // 1 USD = 2,220 CDF (as requested)
+const DEFAULT_EXCHANGE_RATE = 2200; // 1 USD = 2,200 CDF (Dec 2025)
 
 const DEFAULT_SETTINGS: GlobalSettings = {
   exchangeRates: {

@@ -10,6 +10,7 @@ import {
   StatusBar,
   Platform,
   Image,
+  PanResponder,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
@@ -23,6 +24,8 @@ import Svg, {
   LinearGradient as SvgGradient,
   Stop,
   G,
+  Ellipse,
+  Text as SvgText,
 } from 'react-native-svg';
 import {RootStackParamList} from '@/shared/types';
 import {
@@ -215,64 +218,77 @@ const AIAnalysisIllustration: React.FC<{animate?: boolean}> = ({animate = false}
   );
 };
 
-// Clean savings/growth illustration
+// Modern savings/money management illustration
 const SavingsIllustration: React.FC<{animate?: boolean}> = ({animate = false}) => {
-  const coinAnim = useRef(new Animated.Value(0)).current;
-  const chartHeights = useRef([
-    new Animated.Value(0),
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const coinsAnim = useRef([
     new Animated.Value(0),
     new Animated.Value(0),
     new Animated.Value(0),
   ]).current;
+  const arrowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (animate) {
-      // Coin drop animation
+      // Wallet pulse animation
       Animated.loop(
         Animated.sequence([
-          Animated.timing(coinAnim, {
+          Animated.timing(pulseAnim, {
+            toValue: 1.05,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      // Coins floating animation
+      coinsAnim.forEach((anim, i) => {
+        Animated.loop(
+          Animated.sequence([
+            Animated.delay(i * 300),
+            Animated.timing(anim, {
+              toValue: 1,
+              duration: 2000,
+              useNativeDriver: true,
+            }),
+            Animated.timing(anim, {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+          ])
+        ).start();
+      });
+
+      // Arrow growth animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(arrowAnim, {
             toValue: 1,
             duration: 1500,
             useNativeDriver: true,
           }),
-          Animated.delay(1000),
-          Animated.timing(coinAnim, {
+          Animated.delay(500),
+          Animated.timing(arrowAnim, {
             toValue: 0,
             duration: 300,
             useNativeDriver: true,
           }),
         ])
       ).start();
-
-      // Chart growth animation
-      Animated.stagger(150, 
-        chartHeights.map((anim, i) =>
-          Animated.spring(anim, {
-            toValue: 1,
-            tension: 40,
-            friction: 8,
-            useNativeDriver: true,
-          })
-        )
-      ).start();
     }
-  }, [animate, coinAnim, chartHeights]);
-
-  const coinOpacity = coinAnim.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0, 1, 1],
-  });
-
-  const coinTranslateY = coinAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-30, 0],
-  });
+  }, [animate, pulseAnim, coinsAnim, arrowAnim]);
 
   return (
     <View style={illustrationStyles.container}>
       <Svg width={260} height={200} viewBox="0 0 260 200">
         <Defs>
-          <SvgGradient id="chartGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+          <SvgGradient id="walletGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <Stop offset="0%" stopColor={Colors.primary} />
             <Stop offset="100%" stopColor={Colors.primaryDark} />
           </SvgGradient>
@@ -280,115 +296,148 @@ const SavingsIllustration: React.FC<{animate?: boolean}> = ({animate = false}) =
             <Stop offset="0%" stopColor="#FFD700" />
             <Stop offset="100%" stopColor="#FFA500" />
           </SvgGradient>
+          <SvgGradient id="accentGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <Stop offset="0%" stopColor={Colors.accent} />
+            <Stop offset="100%" stopColor={Colors.accentLight} />
+          </SvgGradient>
         </Defs>
 
-        {/* Piggy bank body */}
-        <G transform="translate(140, 90)">
-          <Circle cx="0" cy="30" r="40" fill={Colors.primary} opacity="0.2" />
-          <Circle cx="0" cy="30" r="32" fill={Colors.primary} opacity="0.4" />
-          <Circle cx="0" cy="30" r="24" fill={Colors.primary} />
+        {/* Background circles */}
+        <Circle cx="130" cy="100" r="90" fill={Colors.primary} opacity="0.08" />
+        <Circle cx="130" cy="100" r="70" fill={Colors.primary} opacity="0.12" />
+
+        {/* Modern Wallet - Main Focus */}
+        <G transform="translate(130, 100)">
+          {/* Wallet body */}
+          <Rect
+            x="-45"
+            y="-25"
+            width="90"
+            height="50"
+            rx="8"
+            fill="url(#walletGrad)"
+          />
           
-          {/* Coin slot */}
-          <Rect x="-8" y="2" width="16" height="4" rx="2" fill={Colors.primaryDark} />
+          {/* Wallet flap */}
+          <Path
+            d="M-45,-25 L-45,-15 Q-45,-10 -40,-10 L40,-10 Q45,-10 45,-15 L45,-25"
+            fill={Colors.primaryDark}
+          />
           
-          {/* Eyes */}
-          <Circle cx="-8" cy="25" r="3" fill={Colors.white} />
-          <Circle cx="8" cy="25" r="3" fill={Colors.white} />
-          <Circle cx="-7" cy="25" r="1.5" fill={Colors.primaryDark} />
-          <Circle cx="9" cy="25" r="1.5" fill={Colors.primaryDark} />
+          {/* Wallet detail line */}
+          <Rect x="-45" y="-5" width="90" height="2" fill={Colors.primaryDark} opacity="0.3" />
           
-          {/* Snout */}
-          <Circle cx="0" cy="38" r="8" fill={Colors.primaryDark} opacity="0.3" />
-          <Circle cx="-3" cy="38" r="2" fill={Colors.primaryDark} />
-          <Circle cx="3" cy="38" r="2" fill={Colors.primaryDark} />
+          {/* Card slot */}
+          <Rect x="-30" y="0" width="25" height="15" rx="2" fill={Colors.white} opacity="0.3" />
+          
+          {/* Wallet shine */}
+          <Circle cx="-25" cy="-15" r="6" fill={Colors.white} opacity="0.2" />
         </G>
 
-        {/* Growth chart bars */}
-        {[0, 1, 2, 3].map((i) => (
-          <Animated.View 
-            key={i} 
-            style={{
-              position: 'absolute',
-              left: 35 + i * 22,
-              bottom: 30,
-              transform: [{scaleY: chartHeights[i]}],
-            }}
-          >
-            <View style={{
-              width: 16,
-              height: [40, 60, 55, 80][i],
-              backgroundColor: i === 3 ? Colors.accent : Colors.primary,
-              borderRadius: 4,
-              opacity: i === 3 ? 1 : 0.6 + i * 0.1,
-            }} />
-          </Animated.View>
-        ))}
+        {/* Money coming out - Right side */}
+        <G transform="translate(190, 85)">
+          {/* Bill 1 */}
+          <Rect x="0" y="0" width="35" height="20" rx="3" fill={Colors.accent} opacity="0.9" />
+          <Rect x="3" y="3" width="29" height="14" rx="2" fill={Colors.white} opacity="0.2" />
+          <Circle cx="17.5" cy="10" r="5" fill={Colors.white} opacity="0.3" />
+          
+          {/* Bill 2 */}
+          <Rect x="5" y="25" width="35" height="20" rx="3" fill={Colors.accent} opacity="0.7" />
+          <Rect x="8" y="28" width="29" height="14" rx="2" fill={Colors.white} opacity="0.2" />
+          <Circle cx="22.5" cy="35" r="5" fill={Colors.white} opacity="0.3" />
+        </G>
 
-        {/* Trend line */}
-        <Path
-          d="M43,150 Q65,135 87,145 Q109,110 130,100"
-          stroke={Colors.accent}
-          strokeWidth="3"
-          strokeLinecap="round"
-          fill="none"
-          opacity="0.8"
-        />
+        {/* Stacked coins - Left side */}
+        <G transform="translate(60, 120)">
+          {/* Coin stack */}
+          <Ellipse cx="0" cy="0" rx="15" ry="4" fill="#FFA500" />
+          <Rect x="-15" y="-12" width="30" height="12" fill="url(#coinGrad)" />
+          <Ellipse cx="0" cy="-12" rx="15" ry="4" fill="#FFD700" />
+          
+          {/* Coin detail */}
+          <Circle cx="0" cy="-12" r="8" fill={Colors.white} opacity="0.2" />
+          <SvgText x="0" y="-8" textAnchor="middle" fill={Colors.white} fontSize="12" fontWeight="bold">$</SvgText>
+        </G>
 
-        {/* Arrow up */}
-        <G transform="translate(125, 85)">
+        {/* Upward growth arrow */}
+        <G transform="translate(130, 165)">
           <Path
-            d="M0,15 L0,0 L-6,6 M0,0 L6,6"
+            d="M-25,10 L-15,-5 L0,8 L15,-10 L25,0"
             stroke={Colors.accent}
-            strokeWidth="2.5"
+            strokeWidth="3"
             strokeLinecap="round"
+            strokeLinejoin="round"
             fill="none"
           />
+          
+          {/* Arrow head */}
+          <Path
+            d="M25,0 L25,-8 L20,-3 M25,-8 L30,-3"
+            stroke={Colors.accent}
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+          
+          {/* Percentage increase indicator */}
+          <Circle cx="0" cy="-5" r="12" fill={Colors.accent} opacity="0.2" />
+          <SvgText x="0" y="0" textAnchor="middle" fill={Colors.accent} fontSize="14" fontWeight="bold">+%</SvgText>
         </G>
+
+        {/* Sparkles / money particles */}
+        <Circle cx="70" cy="60" r="3" fill="#FFD700" opacity="0.7" />
+        <Circle cx="200" cy="70" r="4" fill="#FFD700" opacity="0.6" />
+        <Circle cx="85" cy="150" r="2.5" fill={Colors.accent} opacity="0.5" />
+        <Circle cx="210" cy="130" r="3.5" fill={Colors.accent} opacity="0.6" />
+        <Circle cx="50" cy="95" r="2" fill={Colors.primary} opacity="0.4" />
+        <Circle cx="215" cy="155" r="2.5" fill={Colors.primary} opacity="0.5" />
       </Svg>
 
-      {/* Animated falling coin */}
-      <Animated.View 
-        style={[
-          illustrationStyles.coin,
-          {
-            opacity: coinOpacity,
-            transform: [{translateY: coinTranslateY}],
-          }
-        ]}
-      >
-        <Svg width={24} height={24} viewBox="0 0 24 24">
-          <Circle cx="12" cy="12" r="11" fill="#FFD700" stroke="#FFA500" strokeWidth="1" />
-          <Circle cx="12" cy="12" r="8" fill="#FFA500" opacity="0.3" />
-          <Path d="M12,7 L12,17 M9,10 L15,10 M9,14 L15,14" stroke="#DAA520" strokeWidth="1.5" strokeLinecap="round" />
-        </Svg>
-      </Animated.View>
+      {/* Animated floating coins */}
+      {[0, 1, 2].map((i) => {
+        const coinOpacity = coinsAnim[i].interpolate({
+          inputRange: [0, 0.3, 1],
+          outputRange: [0, 1, 0],
+        });
+
+        const coinTranslateY = coinsAnim[i].interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -40],
+        });
+
+        const positions = [
+          { left: 100, top: 100 },
+          { left: 140, top: 110 },
+          { left: 120, top: 105 },
+        ];
+
+        return (
+          <Animated.View
+            key={i}
+            style={[
+              {
+                position: 'absolute',
+                left: positions[i].left,
+                top: positions[i].top,
+              },
+              {
+                opacity: coinOpacity,
+                transform: [{ translateY: coinTranslateY }],
+              },
+            ]}
+          >
+            <Svg width={16} height={16} viewBox="0 0 16 16">
+              <Circle cx="8" cy="8" r="7" fill="#FFD700" stroke="#FFA500" strokeWidth="1" />
+              <Circle cx="8" cy="8" r="5" fill="#FFA500" opacity="0.3" />
+              <SvgText x="8" y="11" textAnchor="middle" fill="#DAA520" fontSize="10" fontWeight="bold">$</SvgText>
+            </Svg>
+          </Animated.View>
+        );
+      })}
     </View>
   );
 };
-
-const illustrationStyles = StyleSheet.create({
-  container: {
-    width: 260,
-    height: 200,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scanLine: {
-    position: 'absolute',
-    top: 55,
-    left: 85,
-    width: 90,
-    height: 3,
-    backgroundColor: Colors.primary,
-    borderRadius: 2,
-    opacity: 0.8,
-  },
-  coin: {
-    position: 'absolute',
-    top: 60,
-    right: 55,
-  },
-});
 
 const SLIDES: OnboardingSlide[] = [
   {
@@ -414,6 +463,25 @@ const SLIDES: OnboardingSlide[] = [
   },
 ];
 
+const illustrationStyles = StyleSheet.create({
+  container: {
+    width: 260,
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanLine: {
+    position: 'absolute',
+    top: 55,
+    left: 85,
+    width: 90,
+    height: 3,
+    backgroundColor: Colors.primary,
+    borderRadius: 2,
+    opacity: 0.8,
+  },
+});
+
 export function WelcomeScreenModern() {
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
@@ -426,43 +494,104 @@ export function WelcomeScreenModern() {
 
   const nextSlide = useCallback(() => {
     if (isTransitioning) return;
+    if (currentSlide >= SLIDES.length - 1) return; // Already at last slide
     
     hapticService.light();
     setIsTransitioning(true);
 
-    if (currentSlide < SLIDES.length - 1) {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: -50,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setCurrentSlide(prev => prev + 1);
+      slideAnim.setValue(50);
+      
       Animated.parallel([
         Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 150,
+          toValue: 1,
+          duration: 200,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
-          toValue: -50,
-          duration: 150,
+          toValue: 0,
+          duration: 200,
           useNativeDriver: true,
         }),
       ]).start(() => {
-        setCurrentSlide(prev => prev + 1);
-        slideAnim.setValue(50);
-        
-        Animated.parallel([
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(slideAnim, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]).start(() => {
-          setIsTransitioning(false);
-        });
+        setIsTransitioning(false);
       });
-    }
+    });
   }, [currentSlide, isTransitioning, fadeAnim, slideAnim]);
+
+  const previousSlide = useCallback(() => {
+    if (isTransitioning) return;
+    if (currentSlide <= 0) return; // Already at first slide
+    
+    hapticService.light();
+    setIsTransitioning(true);
+
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 50,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setCurrentSlide(prev => prev - 1);
+      slideAnim.setValue(-50);
+      
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setIsTransitioning(false);
+      });
+    });
+  }, [currentSlide, isTransitioning, fadeAnim, slideAnim]);
+
+  // Pan responder for swipe gestures
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only start responding if horizontal swipe is detected
+        return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 10;
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        const swipeThreshold = 50;
+        
+        // Swipe left (next slide)
+        if (gestureState.dx < -swipeThreshold) {
+          nextSlide();
+        }
+        // Swipe right (previous slide)
+        else if (gestureState.dx > swipeThreshold) {
+          previousSlide();
+        }
+      },
+    })
+  ).current;
 
   const handleGetStarted = useCallback(async () => {
     try {
@@ -489,11 +618,12 @@ export function WelcomeScreenModern() {
     }
   }, [navigation, fadeAnim, scaleAnim]);
 
-  const currentSlideData = SLIDES[currentSlide];
+  // Safety check to prevent crash
+  const currentSlideData = SLIDES[currentSlide] || SLIDES[0];
   const {SvgIllustration} = currentSlideData;
 
   return (
-    <View style={[styles.container, {paddingTop: insets.top}]}>
+    <View style={[styles.container, {paddingTop: insets.top}]} {...panResponder.panHandlers}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.background.primary} />
       
       {/* Header with Logo */}
@@ -683,10 +813,10 @@ const styles = StyleSheet.create({
   nextButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary,
+    backgroundColor: '#C1121F', // Brand primary red
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.xl,
-    borderRadius: BorderRadius.full,
+    borderRadius: BorderRadius.lg, // 16px - matches app buttons
     ...Shadows.md,
   },
   nextText: {
@@ -699,10 +829,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.primary,
+    backgroundColor: '#C1121F', // Brand primary red
     paddingVertical: Spacing.lg,
     paddingHorizontal: Spacing['2xl'],
-    borderRadius: BorderRadius.full,
+    borderRadius: BorderRadius.lg, // 16px - matches app buttons
     ...Shadows.lg,
   },
   getStartedText: {

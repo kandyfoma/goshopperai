@@ -147,6 +147,37 @@ class SubscriptionService {
   }
 
   /**
+   * Check if monthly billing period has ended and reset if needed
+   */
+  private async checkAndResetMonthlyUsage(subscription: Subscription, userId: string): Promise<void> {
+    const now = new Date();
+    const needsReset = subscription.currentBillingPeriodEnd 
+      ? new Date(subscription.currentBillingPeriodEnd) < now
+      : !subscription.currentBillingPeriodStart; // First time setup
+
+    if (needsReset) {
+      const newBillingStart = now;
+      const newBillingEnd = new Date(now);
+      newBillingEnd.setMonth(newBillingEnd.getMonth() + 1);
+
+      console.log('📅 Resetting monthly usage - new billing period:', {
+        start: newBillingStart.toISOString(),
+        end: newBillingEnd.toISOString(),
+      });
+
+      await firestore()
+        .doc(COLLECTIONS.subscription(userId))
+        .update({
+          trialScansUsed: 0, // Reset for trials
+          monthlyScansUsed: 0, // Reset for paid users
+          currentBillingPeriodStart: newBillingStart,
+          currentBillingPeriodEnd: newBillingEnd,
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
+    }
+  }
+
+  /**
    * Record a scan usage
    */
   async recordScanUsage(): Promise<void> {
@@ -155,17 +186,59 @@ class SubscriptionService {
       throw new Error('Not authenticated');
     }
 
-    const subscription = await this.getStatus();
+    let subscription = await this.getStatus();
+    
+    // Check if subscription exists and is not inactive
+    if (!subscription || subscription.status === 'inactive') {
+      throw new Error('Abonnement non trouvé. Veuillez compléter votre profil ou contacter le support.');
+    }
 
-    // Trial users don't consume monthly scans
+    console.log('📸 Recording scan usage for user:', user.uid);
+    console.log('📸 Current subscription before check:', {
+      isTrialActive: this.isTrialActive(subscription),
+      trialScansUsed: subscription.trialScansUsed,
+      monthlyScansUsed: subscription.monthlyScansUsed,
+      planId: subscription.planId,
+      status: subscription.status,
+      billingPeriodEnd: subscription.currentBillingPeriodEnd,
+    });
+
+    // Check and reset monthly usage if needed (for both trial and paid)
+    await this.checkAndResetMonthlyUsage(subscription, user.uid);
+    
+    // Reload subscription after potential reset
+    subscription = await this.getStatus();
+
+    console.log('📸 Current subscription after check:', {
+      isTrialActive: this.isTrialActive(subscription),
+      trialScansUsed: subscription.trialScansUsed,
+      monthlyScansUsed: subscription.monthlyScansUsed,
+      planId: subscription.planId,
+      status: subscription.status,
+      billingPeriodEnd: subscription.currentBillingPeriodEnd,
+    });
+
+    // Trial users have monthly scan limit
     if (this.isTrialActive(subscription)) {
-      // Just increment trial usage counter for analytics
+      const trialLimit = TRIAL_SCAN_LIMIT;
+      const currentUsage = subscription.trialScansUsed || 0;
+
+      console.log('📸 Trial user - current usage:', currentUsage, '/', trialLimit);
+
+      if (currentUsage >= trialLimit) {
+        throw new Error(
+          `Limite de scans mensuelle atteinte (${trialLimit} scans/mois). Attendez le début du mois prochain ou passez à Premium.`,
+        );
+      }
+
+      console.log('📸 Incrementing trial scan count for user:', user.uid);
       await firestore()
         .doc(COLLECTIONS.subscription(user.uid))
         .update({
           trialScansUsed: firestore.FieldValue.increment(1),
           updatedAt: firestore.FieldValue.serverTimestamp(),
         });
+      console.log('📸 Trial scan recorded successfully, new count:', currentUsage + 1, '/', trialLimit);
       return;
     }
 
@@ -263,11 +336,14 @@ class SubscriptionService {
           if (doc.exists) {
             callback(this.mapSubscription(doc.data()!));
           } else {
+            console.warn('⚠️ Subscription document does not exist for user:', user.uid);
+            console.warn('⚠️ User should complete onboarding or subscription needs to be created');
+            // Return default subscription (which will have status 'inactive')
             callback(this.getDefaultSubscription(user.uid));
           }
         },
         error => {
-          console.error('Subscription snapshot error:', error);
+          console.error('❌ Subscription snapshot error:', error);
         },
       );
   }
@@ -296,6 +372,11 @@ class SubscriptionService {
     // Calculate trial end date (2 months from now) using date-fns
     const trialStartDate = new Date();
     const trialEndDate = addDays(trialStartDate, TRIAL_DURATION_DAYS);
+    
+    // Set initial billing period (monthly reset)
+    const billingPeriodStart = new Date();
+    const billingPeriodEnd = new Date();
+    billingPeriodEnd.setMonth(billingPeriodEnd.getMonth() + 1);
 
     await firestore()
       .doc(COLLECTIONS.subscription(userId))
@@ -305,6 +386,8 @@ class SubscriptionService {
         trialEndDate: trialEndDate,
         trialExtended: false,
         monthlyScansUsed: 0,
+        currentBillingPeriodStart: billingPeriodStart,
+        currentBillingPeriodEnd: billingPeriodEnd,
         createdAt: firestore.FieldValue.serverTimestamp(),
         updatedAt: firestore.FieldValue.serverTimestamp(),
       });
@@ -316,15 +399,20 @@ class SubscriptionService {
   private getDefaultSubscription(userId: string): Subscription {
     const trialStartDate = new Date();
     const trialEndDate = addDays(trialStartDate, TRIAL_DURATION_DAYS);
+    const billingPeriodStart = new Date();
+    const billingPeriodEnd = new Date();
+    billingPeriodEnd.setMonth(billingPeriodEnd.getMonth() + 1);
 
     return {
       userId,
       trialScansUsed: 0,
-      trialScansLimit: TRIAL_SCAN_LIMIT, // -1 for unlimited during trial
+      trialScansLimit: TRIAL_SCAN_LIMIT,
       trialStartDate: trialStartDate,
       trialEndDate: trialEndDate,
       trialExtended: false,
       monthlyScansUsed: 0,
+      currentBillingPeriodStart: billingPeriodStart,
+      currentBillingPeriodEnd: billingPeriodEnd,
       isSubscribed: false,
       status: 'trial',
       autoRenew: false,

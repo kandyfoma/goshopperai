@@ -41,31 +41,40 @@ class PushNotificationService {
    * Initialize push notifications
    */
   async init(): Promise<void> {
-    // Create notification channels on Android
-    if (Platform.OS === 'android' && NotificationChannelModule) {
-      try {
-        await NotificationChannelModule.createNotificationChannels();
-        console.log('[PushNotifications] Channels created');
-      } catch (error) {
-        console.error('[PushNotifications] Channel creation error:', error);
+    try {
+      // Create notification channels on Android
+      if (Platform.OS === 'android' && NotificationChannelModule) {
+        try {
+          await NotificationChannelModule.createNotificationChannels();
+          console.log('[PushNotifications] Channels created');
+        } catch (error) {
+          console.error('[PushNotifications] Channel creation error:', error);
+        }
       }
+
+      // Delay permission request slightly to ensure Activity is attached
+      if (Platform.OS === 'android') {
+        await new Promise<void>(resolve => setTimeout(resolve, 500));
+      }
+
+      // Request permission
+      const hasPermission = await this.requestPermission();
+
+      if (!hasPermission) {
+        console.log('[PushNotifications] Permission not granted');
+        return;
+      }
+
+      // Get and save FCM token
+      await this.registerToken();
+
+      // Set up message handlers
+      this.setupMessageHandlers();
+
+      console.log('[PushNotifications] Initialized');
+    } catch (error) {
+      console.error('[PushNotifications] Initialization error:', error);
     }
-
-    // Request permission
-    const hasPermission = await this.requestPermission();
-
-    if (!hasPermission) {
-      console.log('[PushNotifications] Permission not granted');
-      return;
-    }
-
-    // Get and save FCM token
-    await this.registerToken();
-
-    // Set up message handlers
-    this.setupMessageHandlers();
-
-    console.log('[PushNotifications] Initialized');
   }
 
   /**

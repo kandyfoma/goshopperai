@@ -49,7 +49,7 @@ export const getFunctionsInstance = () => {
 };
 
 // App ID for artifact paths
-export const APP_ID = 'goshopperai';
+export const APP_ID = 'goshopper';
 
 // Collection paths
 export const COLLECTIONS = {
@@ -57,9 +57,9 @@ export const COLLECTIONS = {
   userProfile: (userId: string) => `artifacts/${APP_ID}/users/${userId}`,
   receipts: (userId: string) => `artifacts/${APP_ID}/users/${userId}/receipts`,
   subscription: (userId: string) =>
-    `artifacts/${APP_ID}/users/${userId}/subscription/status`,
+    `artifacts/${APP_ID}/subscriptions/${userId}`,
   subscriptionStatus: (userId: string) =>
-    `artifacts/${APP_ID}/users/${userId}/subscription/status`,
+    `artifacts/${APP_ID}/subscriptions/${userId}`,
   prices: `artifacts/${APP_ID}/prices`,
   stores: `artifacts/${APP_ID}/stores`,
 } as const;

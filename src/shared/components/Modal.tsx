@@ -263,8 +263,6 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-    paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.lg,
   },
 });
 

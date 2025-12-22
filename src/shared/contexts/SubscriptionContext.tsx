@@ -44,7 +44,23 @@ export function SubscriptionProvider({children}: SubscriptionProviderProps) {
 
   // Helper to calculate subscription state
   const calculateState = useCallback(
-    (subscription: Subscription): SubscriptionState => {
+    (subscription: Subscription | null): SubscriptionState => {
+      // If no subscription or inactive status, user cannot scan
+      if (!subscription || subscription.status === 'inactive') {
+        console.warn('⚠️ No active subscription found - user cannot scan');
+        return {
+          subscription: subscription || null,
+          isLoading: false,
+          canScan: false,
+          scansRemaining: 0,
+          isTrialActive: false,
+          trialDaysRemaining: 0,
+          isExpiringSoon: false,
+          daysUntilExpiration: 0,
+          error: subscription ? null : 'Abonnement non trouvé. Veuillez compléter votre profil.',
+        };
+      }
+
       const isTrialActive = subscriptionService.isTrialActive(subscription);
       const trialDaysRemaining =
         subscriptionService.getTrialDaysRemaining(subscription);
@@ -151,10 +167,14 @@ export function SubscriptionProvider({children}: SubscriptionProviderProps) {
 
   const recordScan = useCallback(async (): Promise<boolean> => {
     try {
+      console.log('📸 SubscriptionContext: Calling recordScanUsage...');
       await subscriptionService.recordScanUsage();
+      console.log('📸 SubscriptionContext: Refreshing subscription...');
       await refreshSubscription();
+      console.log('📸 SubscriptionContext: Scan recorded successfully');
       return true;
     } catch (error: any) {
+      console.error('❌ SubscriptionContext: Error recording scan:', error);
       setState(prev => ({...prev, error: error.message}));
       return false;
     }

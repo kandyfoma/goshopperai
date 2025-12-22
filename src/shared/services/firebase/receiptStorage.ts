@@ -124,7 +124,7 @@ class ReceiptStorageService {
       // Update shop in background (non-blocking, non-critical)
       // If this fails, receipt is still saved
       this.updateShopFromReceipt(receipt, userId, null).catch(error => {
-        console.error('Failed to update shop stats (non-critical):', error);
+        console.warn('Failed to update shop stats (non-critical):', error.message || error);
         // Don't throw - shop update is not critical
       });
 

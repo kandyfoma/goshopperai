@@ -16,7 +16,6 @@ import {ModernTabBar, TabBarIcon} from '@/shared/components/ModernTabBar';
 
 // Screens
 import {HomeScreen} from '@/features/home/screens';
-import {HistoryScreen} from '@/features/history/screens';
 import {UnifiedScannerScreen} from '@/features/scanner/screens';
 import {ItemsScreen, CityItemsScreen} from '@/features/items';
 import {ProfileScreen} from '@/features/profile/screens';
@@ -32,7 +31,6 @@ export function MainTabNavigator() {
   // Notification badges from real data
   const notificationBadges = {
     Home: 0,
-    History: 0, 
     Scanner: 0,
     Items: 0,
     Profile: 0,
@@ -51,15 +49,6 @@ export function MainTabNavigator() {
         options={{
           tabBarIcon: ({focused}) => (
             <TabIcon focused={focused} icon="home" label="Accueil" badge={notificationBadges.Home} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="History"
-        component={HistoryScreen}
-        options={{
-          tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} icon="clock" label="Historique" badge={notificationBadges.History} />
           ),
         }}
       />

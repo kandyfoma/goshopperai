@@ -5,12 +5,13 @@
  * Features:
  * - Queue actions while offline
  * - Sync when connection restored
- * - Cache recent data locally
+ * - Cache recent data locally (using CacheManager)
  * - Track pending operations
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo, {NetInfoState} from '@react-native-community/netinfo';
+import {cacheManager, CacheTTL, CachePriority} from './caching';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -212,15 +213,19 @@ class OfflineService {
   public onActionExecute?: (action: OfflineAction) => Promise<void>;
 
   /**
-   * Cache receipts locally
+   * Cache receipts locally using CacheManager
    */
   async cacheReceipts(receipts: CachedReceipt[]): Promise<void> {
     try {
-      const data = {
+      await cacheManager.set(
+        'receipts',
         receipts,
-        cachedAt: Date.now(),
-      };
-      await AsyncStorage.setItem(STORAGE_KEYS.CACHED_RECEIPTS, JSON.stringify(data));
+        {
+          namespace: 'receipts',
+          ttl: CacheTTL.MONTH, // Cache for 30 days
+          priority: CachePriority.HIGH,
+        }
+      );
       console.log('Offline Service: Cached', receipts.length, 'receipts');
     } catch (error) {
       console.error('Offline Service: Failed to cache receipts:', error);
@@ -228,15 +233,12 @@ class OfflineService {
   }
 
   /**
-   * Get cached receipts
+   * Get cached receipts from CacheManager
    */
   async getCachedReceipts(): Promise<CachedReceipt[]> {
     try {
-      const data = await AsyncStorage.getItem(STORAGE_KEYS.CACHED_RECEIPTS);
-      if (data) {
-        const parsed = JSON.parse(data);
-        return parsed.receipts || [];
-      }
+      const receipts = await cacheManager.get<CachedReceipt[]>('receipts', 'receipts');
+      return receipts || [];
     } catch (error) {
       console.error('Offline Service: Failed to get cached receipts:', error);
     }
@@ -244,25 +246,31 @@ class OfflineService {
   }
 
   /**
-   * Cache shopping list locally
+   * Cache shopping list locally using CacheManager
    */
   async cacheShoppingList(items: any[]): Promise<void> {
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.CACHED_SHOPPING_LIST, JSON.stringify(items));
+      await cacheManager.set(
+        'items',
+        items,
+        {
+          namespace: 'shopping-list',
+          ttl: CacheTTL.WEEK,
+          priority: CachePriority.NORMAL,
+        }
+      );
     } catch (error) {
       console.error('Offline Service: Failed to cache shopping list:', error);
     }
   }
 
   /**
-   * Get cached shopping list
+   * Get cached shopping list from CacheManager
    */
   async getCachedShoppingList(): Promise<any[]> {
     try {
-      const data = await AsyncStorage.getItem(STORAGE_KEYS.CACHED_SHOPPING_LIST);
-      if (data) {
-        return JSON.parse(data);
-      }
+      const items = await cacheManager.get<any[]>('items', 'shopping-list');
+      return items || [];
     } catch (error) {
       console.error('Offline Service: Failed to get cached shopping list:', error);
     }

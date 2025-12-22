@@ -32,8 +32,8 @@ type VerifyOtpRouteProp = NavigationRouteProp<RootStackParamList, 'VerifyOtp'>;
 const VerifyOtpScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<VerifyOtpRouteProp>();
-  const {} = useAuth();
-  const {phoneNumber, isRegistration = false, registrationData} = route.params;
+  const {user} = useAuth();
+  const {phoneNumber, isRegistration = false, registrationData, isPhoneVerification = false} = route.params;
   
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
@@ -43,6 +43,23 @@ const VerifyOtpScreen: React.FC = () => {
   const [canResend, setCanResend] = useState(false);
   
   const inputRefs = useRef<Array<TextInput | null>>([]);
+
+  // Send OTP when screen loads for phone verification
+  useEffect(() => {
+    if (isPhoneVerification) {
+      const sendInitialOTP = async () => {
+        try {
+          const result = await smsService.sendOTP(phoneNumber);
+          if (!result.success) {
+            setError(result.error || 'Erreur lors de l\'envoi du code');
+          }
+        } catch (err) {
+          setError('Erreur réseau. Veuillez réessayer.');
+        }
+      };
+      sendInitialOTP();
+    }
+  }, [isPhoneVerification, phoneNumber]);
 
   useEffect(() => {
     // Start countdown timer
@@ -100,7 +117,25 @@ const VerifyOtpScreen: React.FC = () => {
       const result = await smsService.verifyOTP(phoneNumber, code);
       
       if (result.success) {
-        if (isRegistration && registrationData) {
+        if (isPhoneVerification && user?.uid) {
+          // Verify phone for existing user
+          try {
+            await authService.verifyUserPhone(user.uid, phoneNumber);
+            
+            Alert.alert(
+              'Numéro vérifié!',
+              'Votre numéro de téléphone a été vérifié avec succès.',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => navigation.goBack()
+                }
+              ]
+            );
+          } catch (verifyError: any) {
+            setError(verifyError.message || 'Erreur lors de la vérification');
+          }
+        } else if (isRegistration && registrationData) {
           // Complete registration with verification
           try {
             // First create the user account

@@ -65,7 +65,7 @@ export function StatsScreen() {
   const [monthlyData, setMonthlyData] = useState<MonthlySpending[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [primaryCurrency, setPrimaryCurrency] = useState<'USD' | 'CDF'>('USD');
-  const [exchangeRate, setExchangeRate] = useState(2220); // Default rate
+  const [exchangeRate, setExchangeRate] = useState(2200); // Default rate
 
   useEffect(() => {
     // Track screen view
@@ -118,14 +118,27 @@ export function StatsScreen() {
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const receiptsSnapshot = await firestore()
-        .collection('artifacts')
-        .doc(APP_ID)
-        .collection('users')
-        .doc(user.uid)
-        .collection('receipts')
-        .orderBy('scannedAt', 'desc')
-        .get();
+      let receiptsSnapshot;
+      try {
+        receiptsSnapshot = await firestore()
+          .collection('artifacts')
+          .doc(APP_ID)
+          .collection('users')
+          .doc(user.uid)
+          .collection('receipts')
+          .orderBy('scannedAt', 'desc')
+          .get();
+      } catch (indexError) {
+        // Fallback: get all without ordering
+        console.log('Index not ready, fetching all receipts');
+        receiptsSnapshot = await firestore()
+          .collection('artifacts')
+          .doc(APP_ID)
+          .collection('users')
+          .doc(user.uid)
+          .collection('receipts')
+          .get();
+      }
 
       // Filter for current month receipts in memory
       const currentMonthReceipts = receiptsSnapshot.docs.filter(doc => {
@@ -155,12 +168,28 @@ export function StatsScreen() {
 
       currentMonthReceipts.forEach(doc => {
         const data = doc.data();
-        // Use the user's preferred currency for totals
+        // Calculate total based on currency
+        let receiptTotal = 0;
         if (userPreferredCurrency === 'CDF') {
-          totalSpent += data.totalCDF || data.total || 0;
+          // For CDF: use totalCDF if available, otherwise convert from USD or use total
+          if (data.totalCDF != null) {
+            receiptTotal = Number(data.totalCDF) || 0;
+          } else if (data.currency === 'CDF' && data.total != null) {
+            receiptTotal = Number(data.total) || 0;
+          } else if (data.currency === 'USD' && data.total != null) {
+            receiptTotal = (Number(data.total) || 0) * exchangeRate;
+          }
         } else {
-          totalSpent += data.totalUSD || data.total || 0;
+          // For USD: use totalUSD if available, otherwise use total if currency is USD
+          if (data.totalUSD != null) {
+            receiptTotal = Number(data.totalUSD) || 0;
+          } else if (data.currency === 'USD' && data.total != null) {
+            receiptTotal = Number(data.total) || 0;
+          } else if (data.currency === 'CDF' && data.total != null) {
+            receiptTotal = (Number(data.total) || 0) / exchangeRate;
+          }
         }
+        totalSpent += receiptTotal;
 
         // Calculate real savings from receipt data
         // Note: Savings calculation removed as it's not displayed in UI
@@ -280,14 +309,27 @@ export function StatsScreen() {
 
       // Get receipts for last 3 months (load all and filter in memory)
       const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
-      const allReceiptsSnapshot = await firestore()
-        .collection('artifacts')
-        .doc(APP_ID)
-        .collection('users')
-        .doc(user.uid)
-        .collection('receipts')
-        .orderBy('scannedAt', 'desc')
-        .get();
+      let allReceiptsSnapshot;
+      try {
+        allReceiptsSnapshot = await firestore()
+          .collection('artifacts')
+          .doc(APP_ID)
+          .collection('users')
+          .doc(user.uid)
+          .collection('receipts')
+          .orderBy('scannedAt', 'desc')
+          .get();
+      } catch (indexError) {
+        // Fallback: get all without ordering
+        console.log('Index not ready, fetching all receipts for trends');
+        allReceiptsSnapshot = await firestore()
+          .collection('artifacts')
+          .doc(APP_ID)
+          .collection('users')
+          .doc(user.uid)
+          .collection('receipts')
+          .get();
+      }
 
       // Filter for last 3 months in memory
       const lastThreeMonthsReceipts = allReceiptsSnapshot.docs.filter(doc => {
@@ -301,11 +343,26 @@ export function StatsScreen() {
         const date = safeToDate(data.scannedAt);
         const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
         if (monthlyTotals[monthKey] !== undefined) {
-          // Use the user's preferred currency for monthly totals
+          // Calculate amount based on currency
+          let amount = 0;
           if (userPreferredCurrency === 'CDF') {
-            monthlyTotals[monthKey] += data.totalCDF || 0;
+            if (data.totalCDF != null) {
+              amount = Number(data.totalCDF) || 0;
+            } else if (data.currency === 'CDF' && data.total != null) {
+              amount = Number(data.total) || 0;
+            } else if (data.currency === 'USD' && data.total != null) {
+              amount = (Number(data.total) || 0) * exchangeRate;
+            }
           } else {
-            monthlyTotals[monthKey] += data.totalUSD || 0;
+            if (data.totalUSD != null) {
+              amount = Number(data.totalUSD) || 0;
+            } else if (data.currency === 'USD' && data.total != null) {
+              amount = Number(data.total) || 0;
+            } else if (data.currency === 'CDF' && data.total != null) {
+              amount = (Number(data.total) || 0) / exchangeRate;
+            }
+          }
+          monthlyTotals[monthKey] += amount;
           }
         }
       });
@@ -315,7 +372,7 @@ export function StatsScreen() {
           const [, month] = key.split('-');
           return {
             month: monthNames[parseInt(month, 10)],
-            amount,
+            amount: amount || 0, // Ensure amount is never undefined
           };
         },
       );
@@ -557,8 +614,8 @@ export function StatsScreen() {
                           textAnchor="middle"
                           fontWeight="600">
                           {primaryCurrency === 'CDF'
-                            ? `${(data.amount / 1000).toFixed(0)}k`
-                            : `$${data.amount.toFixed(0)}`}
+                            ? `${(Number(data.amount || 0) / 1000).toFixed(0)}k`
+                            : `$${Number(data.amount || 0).toFixed(0)}`}
                         </SvgText>
                       </G>
                     );

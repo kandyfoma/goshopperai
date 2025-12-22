@@ -418,7 +418,6 @@ export function ShoppingListsScreen() {
           </TouchableOpacity>
         </View>
       </Modal>
-      <ModernTabBar />
     </SafeAreaView>
   );
 }

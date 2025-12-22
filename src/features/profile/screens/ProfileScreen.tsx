@@ -11,6 +11,7 @@ import {
   Dimensions,
   StatusBar,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -81,6 +82,7 @@ const MenuItem = ({
   showChevron = true,
   rightElement,
   iconColor = 'blue',
+  disabled = false,
 }: {
   icon: string;
   title: string;
@@ -89,6 +91,7 @@ const MenuItem = ({
   showChevron?: boolean;
   rightElement?: React.ReactNode;
   iconColor?: 'red' | 'crimson' | 'blue' | 'cosmos' | 'cream' | 'yellow' | 'white';
+  disabled?: boolean;
 }) => {
   const cardColors = {
     red: Colors.card.red,
@@ -106,9 +109,10 @@ const MenuItem = ({
 
   return (
     <TouchableOpacity
-      style={styles.menuItem}
+      style={[styles.menuItem, disabled && {opacity: 0.5}]}
       onPress={onPress}
-      activeOpacity={0.7}>
+      activeOpacity={0.7}
+      disabled={disabled}>
       <View
         style={[
           styles.menuIconContainer,
@@ -134,6 +138,7 @@ export function ProfileScreen() {
   const {subscription, trialScansUsed} = useSubscription();
   const {profile, isLoading: profileLoading} = useUser();
   const [currentBudget, setCurrentBudget] = useState(0);
+  const [rebuildingItems, setRebuildingItems] = useState(false);
 
   const [userStats, setUserStats] = useState({
     totalReceipts: 0,
@@ -148,6 +153,18 @@ export function ProfileScreen() {
 
   const trialRemaining = Math.max(0, TRIAL_SCAN_LIMIT - trialScansUsed);
   const isPremium = subscription?.isSubscribed;
+
+  // Debug logging for scan count
+  useEffect(() => {
+    console.log('📊 Profile - Scan count:', {
+      trialScansUsed,
+      userStatsTotalReceipts: userStats.totalReceipts,
+      subscription: subscription ? {
+        status: subscription.status,
+        trialScansUsed: subscription.trialScansUsed,
+      } : null,
+    });
+  }, [trialScansUsed, userStats.totalReceipts, subscription]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -255,6 +272,37 @@ export function ProfileScreen() {
     }
   };
 
+  const handleRebuildItems = async () => {
+    try {
+      setRebuildingItems(true);
+      console.log('🔄 Starting items aggregation rebuild...');
+      
+      const functionsInstance = firebase.app().functions('europe-west1');
+      const rebuildCallable = functionsInstance.httpsCallable('rebuildItemsAggregation');
+      
+      const result = await rebuildCallable();
+      const data = result.data as {
+        success: boolean;
+        itemsProcessed: number;
+        receiptsProcessed: number;
+      };
+      
+      console.log('✅ Items rebuilt:', data);
+      Alert.alert(
+        'Succès',
+        `Articles reconstruits avec succès!\n${data.itemsProcessed} articles de ${data.receiptsProcessed} reçus`
+      );
+    } catch (error: any) {
+      console.error('❌ Error rebuilding items:', error);
+      Alert.alert(
+        'Erreur',
+        error.message || 'Impossible de reconstruire les articles'
+      );
+    } finally {
+      setRebuildingItems(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar
@@ -294,7 +342,7 @@ export function ProfileScreen() {
         <View style={styles.statsRow}>
           <StatCard
             icon="receipt"
-            value={userStats.loading ? '—' : userStats.totalReceipts}
+            value={userStats.loading ? '—' : trialScansUsed}
             label="Scans"
             color="blue"
           />
@@ -359,6 +407,22 @@ export function ProfileScreen() {
                 navigation.push('UpdateProfile');
               }}
             />
+            {!profile?.phoneVerified && profile?.phoneNumber && (
+              <MenuItem
+                icon="phone"
+                title="Vérifier votre numéro"
+                subtitle="Non vérifié"
+                iconColor="yellow"
+                onPress={() => {
+                  analyticsService.logCustomEvent('phone_verification_started');
+                  navigation.push('VerifyOtp', {
+                    phoneNumber: profile.phoneNumber!,
+                    isRegistration: false,
+                    isPhoneVerification: true,
+                  });
+                }}
+              />
+            )}
             <MenuItem
               icon="map-pin"
               title="Ville par défaut"
@@ -417,6 +481,21 @@ export function ProfileScreen() {
                 analyticsService.logCustomEvent('terms_opened');
                 navigation.push('Terms');
               }}
+            />
+          </View>
+        </View>
+
+        {/* Developer Tools */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Outils de développement</Text>
+          <View style={styles.menuGroup}>
+            <MenuItem
+              icon="refresh-cw"
+              title="Reconstruire les articles"
+              subtitle={rebuildingItems ? "En cours..." : "Réagrége tous les articles des reçus"}
+              iconColor="blue"
+              onPress={handleRebuildItems}
+              disabled={rebuildingItems}
             />
           </View>
         </View>

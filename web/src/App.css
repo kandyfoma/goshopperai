@@ -2127,3 +2127,218 @@ body {
   transform: none;
   box-shadow: var(--shadow-lg);
 }
+
+/* ==================== Admin Panel Styles ==================== */
+.admin-section {
+  min-height: calc(100vh - 80px);
+  padding: var(--space-2xl) var(--space-lg);
+  background: var(--gray-50);
+}
+
+.admin-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.admin-login-card {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2xl);
+  box-shadow: var(--shadow-xl);
+  max-width: 400px;
+  margin: 80px auto;
+  text-align: center;
+}
+
+.admin-login-card h1 {
+  font-size: 1.8rem;
+  color: var(--gray-900);
+  margin-bottom: var(--space-sm);
+}
+
+.admin-login-card > p {
+  color: var(--gray-600);
+  margin-bottom: var(--space-xl);
+}
+
+.login-form .form-group {
+  text-align: left;
+  margin-bottom: var(--space-md);
+}
+
+.login-form label {
+  display: block;
+  font-weight: 500;
+  color: var(--gray-700);
+  margin-bottom: var(--space-xs);
+}
+
+.login-form input {
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.login-form input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.login-form .btn {
+  width: 100%;
+  margin-top: var(--space-md);
+}
+
+.error-message {
+  background: #FEE2E2;
+  color: #DC2626;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-md);
+  font-size: 0.9rem;
+}
+
+.success-message {
+  background: #D1FAE5;
+  color: #059669;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-md);
+  font-size: 0.9rem;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-xl);
+  padding-bottom: var(--space-md);
+  border-bottom: 2px solid var(--gray-200);
+}
+
+.admin-header h1 {
+  font-size: 1.8rem;
+  color: var(--gray-900);
+}
+
+.admin-cards {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.admin-card {
+  background: var(--white);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.admin-card h2 {
+  font-size: 1.4rem;
+  color: var(--gray-900);
+  margin-bottom: var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.current-rate {
+  background: var(--gradient-accent);
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+}
+
+.rate-label {
+  color: var(--gray-800);
+  font-weight: 500;
+}
+
+.rate-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+
+.last-updated {
+  color: var(--gray-500);
+  font-size: 0.85rem;
+  margin-bottom: var(--space-lg);
+}
+
+.update-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.update-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.update-form label {
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.update-form input {
+  padding: var(--space-sm) var(--space-md);
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.update-form input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.info-card {
+  background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
+  border: 1px solid #93C5FD;
+}
+
+.info-card ul {
+  margin: var(--space-md) 0;
+  padding-left: var(--space-lg);
+}
+
+.info-card li {
+  color: var(--gray-700);
+  margin-bottom: var(--space-xs);
+}
+
+.info-card p {
+  color: var(--gray-700);
+  line-height: 1.6;
+}
+
+.loading-spinner {
+  text-align: center;
+  padding: var(--space-2xl);
+  color: var(--gray-500);
+  font-size: 1.2rem;
+}
+
+@media (max-width: 600px) {
+  .admin-header {
+    flex-direction: column;
+    gap: var(--space-md);
+    text-align: center;
+  }
+  
+  .current-rate {
+    flex-direction: column;
+    text-align: center;
+    gap: var(--space-sm);
+  }
+}

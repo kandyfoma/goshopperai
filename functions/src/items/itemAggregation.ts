@@ -135,6 +135,16 @@ export const aggregateItemsOnReceipt = functions
           continue;
         }
 
+        // Skip items with placeholder names - they can't be reused in community DB
+        const isPlaceholderName = item.name.toLowerCase().includes('unavailable name') || 
+                                   item.name.toLowerCase() === 'unavailable' ||
+                                   item.name.toLowerCase() === 'unavailable name';
+        
+        if (isPlaceholderName) {
+          console.log(`Skipping placeholder item from aggregation: ${item.name}`);
+          continue;
+        }
+
         const itemNameNormalized = getCanonicalName(item.name);
         const itemRef = db.collection(itemsCollectionPath).doc(itemNameNormalized);
         const itemDoc = await itemRef.get();
@@ -368,6 +378,16 @@ export const rebuildItemsAggregation = functions
 
         for (const item of receiptData.items) {
           if (!item.name || !item.unitPrice || item.unitPrice <= 0) {
+            continue;
+          }
+
+          // Skip items with placeholder names - they can't be reused in community DB
+          const isPlaceholderName = item.name.toLowerCase().includes('unavailable name') || 
+                                     item.name.toLowerCase() === 'unavailable' ||
+                                     item.name.toLowerCase() === 'unavailable name';
+          
+          if (isPlaceholderName) {
+            console.log(`Skipping placeholder item from rebuild: ${item.name}`);
             continue;
           }
 

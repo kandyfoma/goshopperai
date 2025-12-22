@@ -5,6 +5,8 @@
  * Allows users to find their receipts directly from the device search.
  */
 
+import {Platform} from 'react-native';
+
 export interface SearchableReceipt {
   id: string;
   shopName: string;
@@ -49,22 +51,29 @@ const loadSearchApi = async (): Promise<boolean> => {
     return SearchApi !== false;
   }
 
+  // Only iOS supports Spotlight Search
+  if (Platform.OS !== 'ios') {
+    SearchApi = false;
+    return false;
+  }
+
   try {
     // Dynamic import to avoid bundling issues
     const module = await import('react-native-search-api');
     SearchApi = module.default;
     // Verify the API has the required methods
     if (SearchApi && typeof SearchApi.indexSpotlightItem === 'function') {
+      console.log('✅ Spotlight Search: Available and initialized');
       return true;
     } else {
-      console.log(
-        'Spotlight Search: react-native-search-api loaded but missing required methods',
+      console.warn(
+        '⚠️ Spotlight Search: react-native-search-api loaded but missing required methods',
       );
       SearchApi = false;
       return false;
     }
   } catch (error) {
-    console.log('Spotlight Search: react-native-search-api not available');
+    console.log('ℹ️ Spotlight Search: Not available (iOS only feature, requires native linking)');
     SearchApi = false;
     return false;
   }
@@ -72,12 +81,13 @@ const loadSearchApi = async (): Promise<boolean> => {
 
 class SpotlightSearchService {
   private isAvailable: boolean = false;
+  private initPromise: Promise<void> | null = null;
   private indexedReceiptIds: Set<string> = new Set();
   private indexedItemIds: Set<string> = new Set();
   private indexedShopIds: Set<string> = new Set();
 
   constructor() {
-    this.initialize();
+    this.initPromise = this.initialize();
   }
 
   /**
@@ -92,11 +102,24 @@ class SpotlightSearchService {
         SearchApi.addOnSpotlightItemPressedListener(
           this.handleSearchItemPressed,
         );
-        console.log('Spotlight Search: Initialized successfully');
+        console.log('✅ Spotlight Search: Listener registered successfully');
       } else {
-        console.log('Spotlight Search: API loaded but listener not available');
+        console.log('⚠️ Spotlight Search: API loaded but listener not available');
       }
+    } else if (Platform.OS === 'ios') {
+      console.log('ℹ️ Spotlight Search: Not available on this iOS device (may require rebuild)');
     }
+  }
+
+  /**
+   * Ensure initialization is complete before proceeding
+   */
+  private async ensureInitialized(): Promise<boolean> {
+    if (this.initPromise) {
+      await this.initPromise;
+      this.initPromise = null;
+    }
+    return this.isAvailable && SearchApi !== null && SearchApi !== false;
   }
 
   /**
@@ -122,11 +145,8 @@ class SpotlightSearchService {
    * Index a receipt for search
    */
   async indexReceipt(receipt: SearchableReceipt): Promise<void> {
-    if (
-      !this.isAvailable ||
-      !SearchApi ||
-      typeof SearchApi.indexSpotlightItem !== 'function'
-    ) {
+    const isReady = await this.ensureInitialized();
+    if (!isReady || typeof SearchApi.indexSpotlightItem !== 'function') {
       return;
     }
     if (this.indexedReceiptIds.has(receipt.id)) {
@@ -158,7 +178,7 @@ class SpotlightSearchService {
       this.indexedReceiptIds.add(receipt.id);
       console.log('Spotlight Search: Indexed receipt -', receipt.shopName);
     } catch (error) {
-      console.error('Spotlight Search: Failed to index receipt', error);
+      console.warn('Spotlight Search: Failed to index receipt', error);
     }
   }
 
@@ -166,7 +186,8 @@ class SpotlightSearchService {
    * Index multiple receipts
    */
   async indexReceipts(receipts: SearchableReceipt[]): Promise<void> {
-    if (!this.isAvailable) {
+    const isReady = await this.ensureInitialized();
+    if (!isReady) {
       return;
     }
 
@@ -179,11 +200,8 @@ class SpotlightSearchService {
    * Index an item for search
    */
   async indexItem(item: SearchableItem): Promise<void> {
-    if (
-      !this.isAvailable ||
-      !SearchApi ||
-      typeof SearchApi.indexSpotlightItem !== 'function'
-    ) {
+    const isReady = await this.ensureInitialized();
+    if (!isReady || typeof SearchApi.indexSpotlightItem !== 'function') {
       return;
     }
     if (this.indexedItemIds.has(item.id)) {
@@ -210,7 +228,7 @@ class SpotlightSearchService {
       await SearchApi.indexSpotlightItem(searchItem);
       this.indexedItemIds.add(item.id);
     } catch (error) {
-      console.error('Spotlight Search: Failed to index item', error);
+      console.warn('Spotlight Search: Failed to index item', error);
     }
   }
 
@@ -218,11 +236,8 @@ class SpotlightSearchService {
    * Index a shop for search
    */
   async indexShop(shop: SearchableShop): Promise<void> {
-    if (
-      !this.isAvailable ||
-      !SearchApi ||
-      typeof SearchApi.indexSpotlightItem !== 'function'
-    ) {
+    const isReady = await this.ensureInitialized();
+    if (!isReady || typeof SearchApi.indexSpotlightItem !== 'function') {
       return;
     }
     if (this.indexedShopIds.has(shop.id)) {
@@ -243,7 +258,7 @@ class SpotlightSearchService {
       await SearchApi.indexSpotlightItem(searchItem);
       this.indexedShopIds.add(shop.id);
     } catch (error) {
-      console.error('Spotlight Search: Failed to index shop', error);
+      console.warn('Spotlight Search: Failed to index shop', error);
     }
   }
 
@@ -251,11 +266,8 @@ class SpotlightSearchService {
    * Remove a receipt from search index
    */
   async removeReceipt(receiptId: string): Promise<void> {
-    if (
-      !this.isAvailable ||
-      !SearchApi ||
-      typeof SearchApi.deleteSpotlightItem !== 'function'
-    ) {
+    const isReady = await this.ensureInitialized();
+    if (!isReady || typeof SearchApi.deleteSpotlightItem !== 'function') {
       return;
     }
 
@@ -263,7 +275,7 @@ class SpotlightSearchService {
       await SearchApi.deleteSpotlightItem(`receipt:${receiptId}`);
       this.indexedReceiptIds.delete(receiptId);
     } catch (error) {
-      console.error('Spotlight Search: Failed to remove receipt', error);
+      console.warn('Spotlight Search: Failed to remove receipt', error);
     }
   }
 
@@ -271,11 +283,8 @@ class SpotlightSearchService {
    * Remove an item from search index
    */
   async removeItem(itemId: string): Promise<void> {
-    if (
-      !this.isAvailable ||
-      !SearchApi ||
-      typeof SearchApi.deleteSpotlightItem !== 'function'
-    ) {
+    const isReady = await this.ensureInitialized();
+    if (!isReady || typeof SearchApi.deleteSpotlightItem !== 'function') {
       return;
     }
 
@@ -283,7 +292,7 @@ class SpotlightSearchService {
       await SearchApi.deleteSpotlightItem(`item:${itemId}`);
       this.indexedItemIds.delete(itemId);
     } catch (error) {
-      console.error('Spotlight Search: Failed to remove item', error);
+      console.warn('Spotlight Search: Failed to remove item', error);
     }
   }
 
@@ -291,11 +300,8 @@ class SpotlightSearchService {
    * Remove a shop from search index
    */
   async removeShop(shopId: string): Promise<void> {
-    if (
-      !this.isAvailable ||
-      !SearchApi ||
-      typeof SearchApi.deleteSpotlightItem !== 'function'
-    ) {
+    const isReady = await this.ensureInitialized();
+    if (!isReady || typeof SearchApi.deleteSpotlightItem !== 'function') {
       return;
     }
 
@@ -303,7 +309,7 @@ class SpotlightSearchService {
       await SearchApi.deleteSpotlightItem(`shop:${shopId}`);
       this.indexedShopIds.delete(shopId);
     } catch (error) {
-      console.error('Spotlight Search: Failed to remove shop', error);
+      console.warn('Spotlight Search: Failed to remove shop', error);
     }
   }
 
@@ -311,11 +317,8 @@ class SpotlightSearchService {
    * Clear all indexed items by domain
    */
   async clearAllReceipts(): Promise<void> {
-    if (
-      !this.isAvailable ||
-      !SearchApi ||
-      typeof SearchApi.deleteAllSpotlightItems !== 'function'
-    ) {
+    const isReady = await this.ensureInitialized();
+    if (!isReady || typeof SearchApi.deleteAllSpotlightItems !== 'function') {
       return;
     }
 
@@ -326,7 +329,7 @@ class SpotlightSearchService {
       this.indexedShopIds.clear();
       console.log('Spotlight Search: Cleared all indexed items');
     } catch (error) {
-      console.error('Spotlight Search: Failed to clear index', error);
+      console.warn('Spotlight Search: Failed to clear index', error);
     }
   }
 

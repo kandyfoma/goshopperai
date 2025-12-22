@@ -26,7 +26,7 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon, FadeIn, SlideIn, EmptyState, SwipeToDelete} from '@/shared/components';
-import {formatCurrency, formatDate, safeToDate} from '@/shared/utils/helpers';
+import {formatCurrency, formatDate, safeToDate, convertCurrency} from '@/shared/utils/helpers';
 import {useAuth} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
 import {spotlightSearchService, offlineService} from '@/shared/services';
@@ -70,14 +70,28 @@ export function HistoryScreen() {
     try {
       setIsLoading(true);
 
-      const receiptsSnapshot = await firestore()
-        .collection('artifacts')
-        .doc(APP_ID)
-        .collection('users')
-        .doc(user.uid)
-        .collection('receipts')
-        .orderBy('scannedAt', 'desc')
-        .get();
+      let receiptsSnapshot;
+      try {
+        // Try with orderBy first (requires index)
+        receiptsSnapshot = await firestore()
+          .collection('artifacts')
+          .doc(APP_ID)
+          .collection('users')
+          .doc(user.uid)
+          .collection('receipts')
+          .orderBy('scannedAt', 'desc')
+          .get();
+      } catch (indexError) {
+        // Fallback: get all and sort client-side
+        console.log('Index not ready, fetching all receipts and sorting client-side');
+        receiptsSnapshot = await firestore()
+          .collection('artifacts')
+          .doc(APP_ID)
+          .collection('users')
+          .doc(user.uid)
+          .collection('receipts')
+          .get();
+      }
 
       const receiptsData: Receipt[] = receiptsSnapshot.docs.map(doc => {
         const data = doc.data();
@@ -121,6 +135,9 @@ export function HistoryScreen() {
           scannedAt: safeToDate(data.scannedAt) || new Date(),
         };
       });
+
+      // Sort by scannedAt descending (in case we used client-side fallback)
+      receiptsData.sort((a, b) => b.scannedAt.getTime() - a.scannedAt.getTime());
 
       setReceipts(receiptsData);
       setFilteredReceipts(receiptsData);
@@ -295,22 +312,30 @@ export function HistoryScreen() {
 
             <View style={styles.receiptRight}>
               <View style={styles.totalContainer}>
-                {item.totalUSD !== undefined && item.totalCDF !== undefined ? (
+                {item.currency === 'USD' ? (
                   <>
                     <Text style={styles.totalAmount}>
-                      {formatCurrency(item.totalUSD)}
+                      {formatCurrency(item.total, 'USD')}
                     </Text>
                     <Text style={styles.totalAmountSecondary}>
-                      {formatCurrency(item.totalCDF, 'CDF')}
+                      {item.totalCDF
+                        ? formatCurrency(item.totalCDF, 'CDF')
+                        : `≈ ${formatCurrency(convertCurrency(item.total, 'USD', 'CDF'), 'CDF')}`
+                      }
                     </Text>
                   </>
                 ) : (
-                  <Text style={styles.totalAmount}>
-                    {formatCurrency(
-                      item.totalAmount || item.total,
-                      item.currency,
-                    )}
-                  </Text>
+                  <>
+                    <Text style={styles.totalAmount}>
+                      {formatCurrency(item.total, 'CDF')}
+                    </Text>
+                    <Text style={styles.totalAmountSecondary}>
+                      {item.totalUSD
+                        ? formatCurrency(item.totalUSD, 'USD')
+                        : `≈ ${formatCurrency(convertCurrency(item.total, 'CDF', 'USD'), 'USD')}`
+                      }
+                    </Text>
+                  </>
                 )}
               </View>
               <View
@@ -407,14 +432,17 @@ export function HistoryScreen() {
               <Text style={styles.statValue}>
                 {formatCurrency(
                   filteredReceipts.reduce((sum, r) => {
-                    if (r.totalUSD !== undefined) {
-                      return sum + r.totalUSD;
-                    }
+                    // If currency is USD, use total directly
                     if (r.currency === 'USD') {
-                      return sum + (r.totalAmount || r.total);
+                      return sum + (r.total || 0);
+                    }
+                    // If currency is CDF, convert to USD
+                    if (r.currency === 'CDF') {
+                      return sum + convertCurrency(r.total || 0, 'CDF', 'USD');
                     }
                     return sum;
                   }, 0),
+                  'USD',
                 )}
               </Text>
               <Text style={styles.statLabel}>Total USD</Text>
@@ -424,18 +452,20 @@ export function HistoryScreen() {
               <Text style={styles.statValue}>
                 {formatCurrency(
                   filteredReceipts.reduce((sum, r) => {
-                    if (r.totalCDF !== undefined) {
-                      return sum + r.totalCDF;
-                    }
+                    // If currency is CDF, use total directly
                     if (r.currency === 'CDF') {
-                      return sum + (r.totalAmount || r.total);
+                      return sum + (r.total || 0);
+                    }
+                    // If currency is USD, convert to CDF
+                    if (r.currency === 'USD') {
+                      return sum + convertCurrency(r.total || 0, 'USD', 'CDF');
                     }
                     return sum;
                   }, 0),
                   'CDF',
                 )}
               </Text>
-              <Text style={styles.statLabel}>Total CDF</Text>
+              <Text style={styles.statLabel}>Total FC</Text>
             </View>
           </View>
         </SlideIn>
@@ -536,6 +566,7 @@ const styles = StyleSheet.create({
   listContent: {
     padding: Spacing.lg,
     paddingTop: Spacing.sm,
+    paddingBottom: 100,
   },
   listContentEmpty: {
     flex: 1,

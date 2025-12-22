@@ -819,6 +819,35 @@ class AuthService {
   }
 
   /**
+   * Verify phone number for existing user
+   */
+  async verifyUserPhone(userId: string, phoneNumber: string): Promise<void> {
+    try {
+      // Update user profile with verified phone status
+      const profileRef = firestore()
+        .collection('artifacts')
+        .doc(APP_ID)
+        .collection('users')
+        .doc(userId);
+      
+      await profileRef.set(
+        {
+          phoneVerified: true,
+          verifiedAt: firestore.FieldValue.serverTimestamp(),
+          phoneNumber,
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        },
+        {merge: true}
+      );
+      
+      console.log('✅ User phone verified:', userId);
+    } catch (error: any) {
+      console.error('❌ Phone verification failed:', error);
+      throw new Error(error.message || 'Failed to verify phone number');
+    }
+  }
+
+  /**
    * Map Firebase user to our User type
    */
   private mapFirebaseUser(firebaseUser: FirebaseAuthTypes.User): User {

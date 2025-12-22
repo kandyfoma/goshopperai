@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import firestore from '@react-native-firebase/firestore';
+import {firebase} from '@react-native-firebase/functions';
 import {
   Colors,
   Typography,
@@ -102,16 +103,108 @@ export function ItemsScreen() {
     }
 
     try {
+      console.log('📦 Loading items for user:', user.uid);
+      
       // Fetch user's aggregated items from backend (Tier 2: User Aggregated Items)
       // This collection is automatically maintained by Cloud Functions when receipts are created/updated
-      const itemsSnapshot = await firestore()
-        .collection('artifacts')
-        .doc(APP_ID)
-        .collection('users')
-        .doc(user.uid)
-        .collection('items')
-        .orderBy('lastPurchaseDate', 'desc')
-        .get();
+      let itemsSnapshot;
+      try {
+        itemsSnapshot = await firestore()
+          .collection('artifacts')
+          .doc(APP_ID)
+          .collection('users')
+          .doc(user.uid)
+          .collection('items')
+          .orderBy('lastPurchaseDate', 'desc')
+          .get();
+      } catch (orderError: any) {
+        // Fallback without orderBy if index doesn't exist
+        console.log('⚠️ OrderBy failed, fetching without ordering:', orderError.code);
+        itemsSnapshot = await firestore()
+          .collection('artifacts')
+          .doc(APP_ID)
+          .collection('users')
+          .doc(user.uid)
+          .collection('items')
+          .get();
+      }
+
+      console.log('📦 Items found:', itemsSnapshot.size);
+
+      // If no items found, check if user has receipts and trigger rebuild
+      if (itemsSnapshot.empty) {
+        console.log('📦 No items found, checking for receipts...');
+        const receiptsSnapshot = await firestore()
+          .collection('artifacts')
+          .doc(APP_ID)
+          .collection('users')
+          .doc(user.uid)
+          .collection('receipts')
+          .limit(1)
+          .get();
+
+        if (!receiptsSnapshot.empty) {
+          console.log('📦 Receipts found but no items - triggering rebuild...');
+          try {
+            const functionsInstance = firebase.app().functions('europe-west1');
+            const rebuildCallable = functionsInstance.httpsCallable('rebuildItemsAggregation');
+            await rebuildCallable();
+            console.log('✅ Items aggregation rebuilt, reloading...');
+            
+            // Reload items after rebuild
+            let reloadedItemsSnapshot;
+            try {
+              reloadedItemsSnapshot = await firestore()
+                .collection('artifacts')
+                .doc(APP_ID)
+                .collection('users')
+                .doc(user.uid)
+                .collection('items')
+                .orderBy('lastPurchaseDate', 'desc')
+                .get();
+            } catch (orderError: any) {
+              // Fallback without orderBy
+              console.log('⚠️ OrderBy failed on reload, fetching without ordering');
+              reloadedItemsSnapshot = await firestore()
+                .collection('artifacts')
+                .doc(APP_ID)
+                .collection('users')
+                .doc(user.uid)
+                .collection('items')
+                .get();
+            }
+
+            const itemsArray: ItemData[] = reloadedItemsSnapshot.docs.map(doc => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                name: data.name || doc.id,
+                nameNormalized: data.nameNormalized || doc.id,
+                prices: (data.prices || []).map((p: any) => ({
+                  storeName: p.storeName || 'Inconnu',
+                  price: p.price || 0,
+                  currency: p.currency || 'USD',
+                  date: safeToDate(p.date),
+                  receiptId: p.receiptId || '',
+                })),
+                minPrice: data.minPrice || 0,
+                maxPrice: data.maxPrice || 0,
+                avgPrice: data.avgPrice || 0,
+                storeCount: data.storeCount || 0,
+                currency: data.currency || 'USD',
+              };
+            });
+
+            setItems(itemsArray);
+            return;
+          } catch (rebuildError) {
+            console.error('❌ Error rebuilding items:', rebuildError);
+            // Continue with empty items
+          }
+        } else {
+          console.log('📦 No receipts found - user has no data yet');
+        }
+      }
 
       const itemsArray: ItemData[] = itemsSnapshot.docs.map(doc => {
         const data = doc.data();

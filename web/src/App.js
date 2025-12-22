@@ -3,6 +3,17 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate 
 import emailjs from '@emailjs/browser';
 import './App.css';
 
+// Firebase configuration for admin
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAQBCR-KLZLPZNNPdv3XxRwMvE-Bsxaxt4",
+  authDomain: "goshopper-ai.firebaseapp.com",
+  projectId: "goshopper-ai",
+  storageBucket: "goshopper-ai.appspot.com",
+  appId: "1:857623707975:web:ab5e3b35c2a42b3f0f5d30"
+};
+
+const APP_ID = 'goshopper';
+
 // Component to handle internal page scrolling
 function ScrollLink({ to, children, className, onClick }) {
   
@@ -89,6 +100,7 @@ function App() {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsConditions />} />
             <Route path="/support" element={<Support />} />
+            <Route path="/admin" element={<AdminPanel />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
@@ -1312,6 +1324,280 @@ function Support() {
                 <p>Disponible 24/7</p>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Admin Panel for managing settings like exchange rate
+function AdminPanel() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [exchangeRate, setExchangeRate] = useState(2200);
+  const [newRate, setNewRate] = useState('');
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [updateMessage, setUpdateMessage] = useState('');
+  const [firebaseLoaded, setFirebaseLoaded] = useState(false);
+
+  // Dynamically load Firebase
+  useEffect(() => {
+    const loadFirebase = async () => {
+      try {
+        // Check if Firebase is already loaded
+        if (window.firebase) {
+          setFirebaseLoaded(true);
+          return;
+        }
+
+        // Load Firebase scripts dynamically
+        const loadScript = (src) => {
+          return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        };
+
+        await loadScript('https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js');
+        await loadScript('https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js');
+        await loadScript('https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js');
+
+        // Initialize Firebase
+        if (!window.firebase.apps.length) {
+          window.firebase.initializeApp(FIREBASE_CONFIG);
+        }
+
+        setFirebaseLoaded(true);
+      } catch (error) {
+        console.error('Error loading Firebase:', error);
+        setLoginError('Erreur de chargement Firebase');
+      }
+    };
+
+    loadFirebase();
+  }, []);
+
+  // Check auth state and load settings
+  useEffect(() => {
+    if (!firebaseLoaded) return;
+
+    const unsubscribe = window.firebase.auth().onAuthStateChanged(async (user) => {
+      if (user) {
+        // Check if user is admin (you can customize this check)
+        const adminEmails = ['yannickmwamba3@gmail.com', 'admin@goshopper.app'];
+        if (adminEmails.includes(user.email)) {
+          setIsAuthenticated(true);
+          loadSettings();
+        } else {
+          setLoginError('Accès non autorisé');
+          await window.firebase.auth().signOut();
+        }
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [firebaseLoaded]);
+
+  const loadSettings = async () => {
+    try {
+      const doc = await window.firebase.firestore()
+        .collection('artifacts')
+        .doc(APP_ID)
+        .collection('public')
+        .doc('data')
+        .collection('settings')
+        .doc('global')
+        .get();
+
+      if (doc.exists) {
+        const data = doc.data();
+        setExchangeRate(data.exchangeRates?.usdToCdf || 2200);
+        setNewRate(String(data.exchangeRates?.usdToCdf || 2200));
+        if (data.exchangeRates?.lastUpdated) {
+          const date = data.exchangeRates.lastUpdated.toDate();
+          setLastUpdated(date.toLocaleDateString('fr-FR') + ' à ' + date.toLocaleTimeString('fr-FR'));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    setIsLoading(true);
+
+    try {
+      await window.firebase.auth().signInWithEmailAndPassword(email, password);
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError('Email ou mot de passe incorrect');
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await window.firebase.auth().signOut();
+    setIsAuthenticated(false);
+  };
+
+  const handleUpdateRate = async (e) => {
+    e.preventDefault();
+    setUpdateMessage('');
+
+    const rate = parseInt(newRate);
+    if (isNaN(rate) || rate < 1000 || rate > 10000) {
+      setUpdateMessage('Taux invalide (doit être entre 1000 et 10000)');
+      return;
+    }
+
+    try {
+      await window.firebase.firestore()
+        .collection('artifacts')
+        .doc(APP_ID)
+        .collection('public')
+        .doc('data')
+        .collection('settings')
+        .doc('global')
+        .set({
+          exchangeRates: {
+            usdToCdf: rate,
+            lastUpdated: window.firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy: window.firebase.auth().currentUser?.email || 'admin'
+          }
+        }, { merge: true });
+
+      setExchangeRate(rate);
+      setUpdateMessage('✅ Taux mis à jour avec succès!');
+      setLastUpdated(new Date().toLocaleDateString('fr-FR') + ' à ' + new Date().toLocaleTimeString('fr-FR'));
+    } catch (error) {
+      console.error('Error updating rate:', error);
+      setUpdateMessage('❌ Erreur lors de la mise à jour');
+    }
+  };
+
+  useEffect(() => {
+    document.title = 'Admin - GoShopper';
+  }, []);
+
+  if (isLoading || !firebaseLoaded) {
+    return (
+      <section className="admin-section">
+        <div className="admin-container">
+          <div className="loading-spinner">Chargement...</div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <section className="admin-section">
+        <div className="admin-container">
+          <div className="admin-login-card">
+            <h1>🔐 Admin GoShopper</h1>
+            <p>Connectez-vous pour accéder au panneau d'administration</p>
+            
+            <form onSubmit={handleLogin} className="login-form">
+              <div className="form-group">
+                <label htmlFor="email">Email</label>
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@goshopper.app"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label htmlFor="password">Mot de passe</label>
+                <input
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+              {loginError && <div className="error-message">{loginError}</div>}
+              <button type="submit" className="btn btn-primary">
+                Se connecter
+              </button>
+            </form>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="admin-section">
+      <div className="admin-container">
+        <div className="admin-header">
+          <h1>⚙️ Panneau d'Administration</h1>
+          <button onClick={handleLogout} className="btn btn-secondary">
+            Déconnexion
+          </button>
+        </div>
+
+        <div className="admin-cards">
+          {/* Exchange Rate Card */}
+          <div className="admin-card">
+            <h2>💱 Taux de Change USD/CDF</h2>
+            <div className="current-rate">
+              <span className="rate-label">Taux actuel:</span>
+              <span className="rate-value">1 USD = {exchangeRate.toLocaleString()} CDF</span>
+            </div>
+            {lastUpdated && (
+              <p className="last-updated">Dernière mise à jour: {lastUpdated}</p>
+            )}
+            
+            <form onSubmit={handleUpdateRate} className="update-form">
+              <div className="form-group">
+                <label htmlFor="newRate">Nouveau taux (CDF pour 1 USD)</label>
+                <input
+                  type="number"
+                  id="newRate"
+                  value={newRate}
+                  onChange={(e) => setNewRate(e.target.value)}
+                  placeholder="2200"
+                  min="1000"
+                  max="10000"
+                  required
+                />
+              </div>
+              <button type="submit" className="btn btn-primary">
+                Mettre à jour
+              </button>
+              {updateMessage && (
+                <div className={updateMessage.includes('✅') ? 'success-message' : 'error-message'}>
+                  {updateMessage}
+                </div>
+              )}
+            </form>
+          </div>
+
+          {/* Info Card */}
+          <div className="admin-card info-card">
+            <h2>ℹ️ Information</h2>
+            <p>Le taux de change est utilisé pour:</p>
+            <ul>
+              <li>Conversion des prix sur les reçus</li>
+              <li>Calcul du budget mensuel</li>
+              <li>Affichage des statistiques</li>
+            </ul>
+            <p><strong>Note:</strong> Les changements sont appliqués en temps réel sur tous les appareils.</p>
           </div>
         </div>
       </div>

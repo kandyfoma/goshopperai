@@ -518,7 +518,7 @@ export function ShoppingListDetailScreen() {
               {(() => {
                 let totalUSD = 0;
                 let totalCDF = 0;
-                const exchangeRate = 2700; // CDF per USD
+                const exchangeRate = 2200; // CDF per USD (Dec 2025)
 
                 list.items.forEach(item => {
                   const price = item.bestPrice || item.estimatedPrice || 0;

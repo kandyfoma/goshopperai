@@ -344,7 +344,7 @@ export async function updateShoppingPatterns(
     }, {merge: true});
 
   } catch (error) {
-    console.error('Error updating shopping patterns:', error);
+    console.warn('Error updating shopping patterns (non-critical):', error instanceof Error ? error.message : error);
   }
 }
 

@@ -10,3 +10,9 @@ export {spotlightSearchService} from './spotlightSearchService';
 export {offlineService} from './offlineService';
 export {widgetDataService} from './widgetDataService';
 export {ocrCorrectionService} from './ocrCorrectionService';
+
+// Caching services
+export {cacheManager, CacheTTL, CachePriority} from './caching';
+export {cacheAnalytics} from './caching/CacheAnalytics';
+export type {CacheConfig, CacheStats, CacheNamespace} from './caching';
+export type {CacheHealthReport} from './caching/CacheAnalytics';

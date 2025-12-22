@@ -29,7 +29,7 @@ import {
   PriceComparisonScreen,
   ReceiptProcessingScreen,
 } from '@/features/scanner/screens';
-import {SubscriptionScreen} from '@/features/subscription/screens';
+import {SubscriptionScreen, SubscriptionDetailsScreen} from '@/features/subscription/screens';
 import {SettingsScreen} from '@/features/settings/screens';
 import {UpdateProfileScreen, BudgetSettingsScreen, SupportScreen, ContactScreen, TermsScreen} from '@/features/profile/screens';
 
@@ -42,9 +42,9 @@ import {AchievementsScreen} from '@/features/achievements';
 import {CitySelectionScreen} from '@/features/onboarding/screens';
 import {FAQScreen, PrivacyPolicyScreen, TermsOfServiceScreen} from '@/features/legal';
 import {ShopsScreen, ShopDetailScreen} from '@/features/shops';
-import {HistoryScreen} from '@/features/history/screens';
 import {CityItemsScreen} from '@/features/items/screens';
 import {ItemsScreen} from '@/features/items';
+import {StatsScreen} from '@/features/stats/screens/StatsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -287,16 +287,16 @@ export function RootNavigator() {
         }}
       />
       <Stack.Screen
+        name="SubscriptionDetails"
+        component={SubscriptionDetailsScreen}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
         name="Settings"
         component={SettingsScreen}
         options={{headerShown: false}}
       />
       {/* Phase 1.1 Screens */}
-      <Stack.Screen
-        name="History"
-        component={HistoryScreen}
-        options={{headerShown: false}}
-      />
       <Stack.Screen
         name="Notifications"
         component={NotificationsScreen}
@@ -362,6 +362,11 @@ export function RootNavigator() {
       <Stack.Screen
         name="Items"
         component={ItemsScreen}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="Stats"
+        component={StatsScreen}
         options={{headerShown: false}}
       />
       <Stack.Screen

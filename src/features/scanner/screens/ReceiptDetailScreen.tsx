@@ -22,7 +22,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {formatCurrency, formatDate} from '@/shared/utils/helpers';
+import {formatCurrency, formatDate, convertCurrency} from '@/shared/utils/helpers';
 import {receiptStorageService, authService} from '@/shared/services/firebase';
 import {hapticService, shareService} from '@/shared/services';
 import {useAuth, useToast} from '@/shared/contexts';
@@ -61,7 +61,14 @@ export function ReceiptDetailScreen() {
 
   useEffect(() => {
     if (passedReceipt) {
-      setReceipt(passedReceipt);
+      // Add converted currency if not present
+      const enhancedReceipt = {...passedReceipt};
+      if (enhancedReceipt.currency === 'USD' && !enhancedReceipt.totalCDF) {
+        enhancedReceipt.totalCDF = convertCurrency(enhancedReceipt.total, 'USD', 'CDF');
+      } else if (enhancedReceipt.currency === 'CDF' && !enhancedReceipt.totalUSD) {
+        enhancedReceipt.totalUSD = convertCurrency(enhancedReceipt.total, 'CDF', 'USD');
+      }
+      setReceipt(enhancedReceipt);
       setLoading(false);
       return;
     }
@@ -85,6 +92,13 @@ export function ReceiptDetailScreen() {
         if (!fetchedReceipt) {
           setError('Reçu non trouvé');
           return;
+        }
+
+        // Add converted currency if not present
+        if (fetchedReceipt.currency === 'USD' && !fetchedReceipt.totalCDF) {
+          fetchedReceipt.totalCDF = convertCurrency(fetchedReceipt.total, 'USD', 'CDF');
+        } else if (fetchedReceipt.currency === 'CDF' && !fetchedReceipt.totalUSD) {
+          fetchedReceipt.totalUSD = convertCurrency(fetchedReceipt.total, 'CDF', 'USD');
         }
 
         setReceipt(fetchedReceipt);
@@ -355,19 +369,30 @@ export function ReceiptDetailScreen() {
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total</Text>
             <View style={styles.totalAmountContainer}>
-              {receipt.totalUSD !== undefined && receipt.totalCDF !== undefined ? (
+              {receipt.currency === 'USD' ? (
                 <>
                   <Text style={styles.totalAmount}>
-                    {formatCurrency(receipt.totalUSD)}
+                    {formatCurrency(receipt.total, 'USD')}
                   </Text>
                   <Text style={styles.totalAmountSecondary}>
-                    {formatCurrency(receipt.totalCDF, 'CDF')}
+                    {receipt.totalCDF 
+                      ? formatCurrency(receipt.totalCDF, 'CDF')
+                      : `≈ ${formatCurrency(convertCurrency(receipt.total, 'USD', 'CDF'), 'CDF')}`
+                    }
                   </Text>
                 </>
               ) : (
-                <Text style={styles.totalAmount}>
-                  {formatCurrency(receipt.total, receipt.currency)}
-                </Text>
+                <>
+                  <Text style={styles.totalAmount}>
+                    {formatCurrency(receipt.total, 'CDF')}
+                  </Text>
+                  <Text style={styles.totalAmountSecondary}>
+                    {receipt.totalUSD
+                      ? formatCurrency(receipt.totalUSD, 'USD')
+                      : `≈ ${formatCurrency(convertCurrency(receipt.total, 'CDF', 'USD'), 'USD')}`
+                    }
+                  </Text>
+                </>
               )}
             </View>
           </View>

@@ -531,7 +531,9 @@ export function RegisterScreen() {
               <Icon name="x" size="md" color={Colors.text.primary} />
             </TouchableOpacity>
           </View>
-          <ScrollView style={styles.modalContent}>
+          <ScrollView 
+            style={styles.modalContent}
+            contentContainerStyle={styles.modalScrollContent}>
             {countryCodeList.map((country, index) => (
               <TouchableOpacity
                 key={index}
@@ -594,7 +596,9 @@ export function RegisterScreen() {
             )}
           </View>
 
-          <ScrollView style={styles.modalContent}>
+          <ScrollView 
+            style={styles.modalContent}
+            contentContainerStyle={styles.modalScrollContent}>
             {citySearchQuery.trim() ? (
               /* Global search results */
               searchCities(citySearchQuery).length === 0 ? (
@@ -810,7 +814,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: BorderRadius.xl,
     paddingHorizontal: Spacing.base,
-    minHeight: 52,
+    minHeight: 44,
     borderWidth: 1.5,
     borderColor: '#FDB913',
   },
@@ -838,13 +842,16 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: BorderRadius.xl,
     paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.base,
+    paddingVertical: Spacing.sm,
     borderWidth: 1.5,
     borderColor: '#FDB913',
   },
   countryFlag: {
     fontSize: Typography.fontSize.lg,
     marginRight: Spacing.xs,
+    opacity: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   countryCode: {
     fontSize: Typography.fontSize.base,
@@ -864,7 +871,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     color: Colors.text.primary,
     paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.base,
+    paddingVertical: Spacing.sm,
   },
   inputError: {
     borderColor: Colors.status.error,
@@ -964,7 +971,10 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     flex: 1,
+  },
+  modalScrollContent: {
     paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing['3xl'],
   },
   countryItem: {
     flexDirection: 'row',
@@ -976,6 +986,9 @@ const styles = StyleSheet.create({
   countryItemFlag: {
     fontSize: Typography.fontSize.lg,
     marginRight: Spacing.base,
+    opacity: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   countryItemName: {
     flex: 1,

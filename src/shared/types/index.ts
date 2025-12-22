@@ -14,7 +14,7 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
-  VerifyOtp: {phoneNumber: string; isRegistration?: boolean; registrationData?: {password: string; city: string; countryCode: string}};
+  VerifyOtp: {phoneNumber: string; isRegistration?: boolean; registrationData?: {password: string; city: string; countryCode: string}; isPhoneVerification?: boolean};
   ResetPassword: {phoneNumber: string; verificationToken: string};
   ChangePassword: undefined;
   ProfileSetup: {firstName?: string; surname?: string};
@@ -24,6 +24,7 @@ export type RootStackParamList = {
   ReceiptDetail: {receiptId: string; receipt?: Receipt};
   PriceComparison: {receiptId: string};
   Subscription: undefined;
+  SubscriptionDetails: undefined;
   Settings: undefined;
   CitySelection: undefined;
   UpdateProfile: undefined;
@@ -46,6 +47,8 @@ export type RootStackParamList = {
   TermsOfService: undefined;
   CityItems: undefined;
   Items: undefined;
+  // Stats Screen
+  Stats: undefined;
   // Support Screens
   Support: undefined;
   Contact: undefined;
@@ -54,7 +57,6 @@ export type RootStackParamList = {
 
 export type MainTabParamList = {
   Home: undefined;
-  History: undefined;
   Scanner: undefined;
   Items: undefined;
   Profile: undefined;

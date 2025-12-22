@@ -4,7 +4,7 @@
  */
 
 import React, {useEffect, useState} from 'react';
-import {StatusBar, LogBox, View, Text, StyleSheet} from 'react-native';
+import {StatusBar, LogBox, View, Text, StyleSheet, InteractionManager} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ import {initializeFirebase} from '@/shared/services/firebase/config';
 import {analyticsService} from '@/shared/services';
 import {pushNotificationService} from '@/shared/services/firebase';
 import {quickActionsService, inAppReviewService, spotlightSearchService, offlineService, widgetDataService} from '@/shared/services';
+import {cacheInitializer} from '@/shared/services/caching';
 
 // Ignore specific warnings in development
 LogBox.ignoreLogs([
@@ -67,12 +68,24 @@ function App(): React.JSX.Element {
         await initializeFirebase();
         console.log('Firebase initialized successfully');
 
+        // Initialize Cache System (early for better performance)
+        console.log('Initializing Cache System...');
+        await cacheInitializer.initialize();
+        console.log('Cache System initialized successfully');
+
         // Initialize Analytics
         console.log('Initializing Analytics...');
         await analyticsService.initialize();
         console.log('Analytics initialized successfully');
 
-        // Initialize Push Notifications
+        // Wait for all interactions to complete before requesting permissions
+        await new Promise(resolve => {
+          InteractionManager.runAfterInteractions(() => {
+            resolve(undefined);
+          });
+        });
+
+        // Initialize Push Notifications (after interaction is complete)
         console.log('Initializing Push Notifications...');
         await pushNotificationService.init();
         console.log('Push Notifications initialized successfully');

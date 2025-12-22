@@ -18,6 +18,14 @@
       ]
     },
     {
+      "collectionGroup": "receipts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "storeNameNormalized", "order": "ASCENDING"},
+        {"fieldPath": "scannedAt", "order": "DESCENDING"}
+      ]
+    },
+    {
       "collectionGroup": "prices",
       "queryScope": "COLLECTION",
       "fields": [
@@ -85,6 +93,20 @@
     {
       "collectionGroup": "receipts",
       "fieldPath": "date",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        },
+        {
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "receipts",
+      "fieldPath": "scannedAt",
       "indexes": [
         {
           "order": "ASCENDING",

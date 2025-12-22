@@ -85,7 +85,7 @@ export function ProfileSetupScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingPhone, setIsCheckingPhone] = useState(false);
   const [phoneExists, setPhoneExists] = useState(false);
-  const [phoneCheckDebounce, setPhoneCheckDebounce] = useState<NodeJS.Timeout | null>(null);
+  const [phoneCheckDebounce, setPhoneCheckDebounce] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [errors, setErrors] = useState<{
     firstName?: string;
     surname?: string;
@@ -217,6 +217,9 @@ export function ProfileSetupScreen() {
     try {
       const formattedPhone = PhoneService.formatPhoneNumber(selectedCountry.code, phoneNumber);
       
+      // Determine if user is in DRC based on selected location country
+      const isDRC = selectedLocationCountry?.code === 'CD';
+      
       // Save profile to Firestore
       await firestore()
         .collection('artifacts')
@@ -230,11 +233,50 @@ export function ProfileSetupScreen() {
             displayName: `${firstName.trim()} ${surname.trim()}`,
             phoneNumber: formattedPhone,
             defaultCity: selectedCity,
+            countryCode: selectedLocationCountry?.code,
+            isInDRC: isDRC,
             profileCompleted: true,
             updatedAt: firestore.FieldValue.serverTimestamp(),
           },
           {merge: true},
         );
+
+      // Create subscription document if it doesn't exist
+      const subscriptionRef = firestore()
+        .collection('artifacts')
+        .doc(APP_ID)
+        .collection('subscriptions')
+        .doc(user.uid);
+
+      const subscriptionDoc = await subscriptionRef.get();
+      
+      if (!subscriptionDoc.exists) {
+        console.log('📝 Creating trial subscription for new user');
+        const now = new Date();
+        const trialEnd = new Date(now);
+        trialEnd.setDate(trialEnd.getDate() + 60); // 60 days trial
+        
+        const billingPeriodEnd = new Date(now);
+        billingPeriodEnd.setMonth(billingPeriodEnd.getMonth() + 1); // 1 month billing cycle
+        
+        await subscriptionRef.set({
+          userId: user.uid,
+          status: 'trial',
+          planId: 'free',
+          isSubscribed: false,
+          trialStartDate: firestore.Timestamp.fromDate(now),
+          trialEndDate: firestore.Timestamp.fromDate(trialEnd),
+          trialScansUsed: 0,
+          monthlyScansUsed: 0,
+          currentBillingPeriodStart: firestore.Timestamp.fromDate(now),
+          currentBillingPeriodEnd: firestore.Timestamp.fromDate(billingPeriodEnd),
+          createdAt: firestore.FieldValue.serverTimestamp(),
+          updatedAt: firestore.FieldValue.serverTimestamp(),
+        });
+        console.log('✅ Trial subscription created successfully');
+      } else {
+        console.log('✅ Subscription already exists');
+      }
 
       // Navigate to main app
       showToast('Bienvenue sur GoShopper!', 'success', 3000);
@@ -250,7 +292,28 @@ export function ProfileSetupScreen() {
     }
   };
 
-  // City picker modal with hierarchical country → city selection
+  // Get chip color based on index for variety
+  const getChipColors = (index: number, isSelected: boolean) => {
+    if (isSelected) {
+      return {
+        bg: Colors.card.blue,
+        border: Colors.card.blue,
+        text: Colors.white,
+        icon: Colors.white,
+      };
+    }
+    
+    const colorSets = [
+      { bg: Colors.card.blue + '15', border: Colors.card.blue + '40', text: Colors.card.blue, icon: Colors.card.blue },
+      { bg: Colors.card.red + '10', border: Colors.card.red + '30', text: Colors.card.red, icon: Colors.card.red },
+      { bg: Colors.card.cosmos + '15', border: Colors.card.cosmos + '40', text: Colors.card.cosmos, icon: Colors.card.cosmos },
+      { bg: Colors.status.success + '10', border: Colors.status.success + '30', text: Colors.status.success, icon: Colors.status.success },
+    ];
+    
+    return colorSets[index % colorSets.length];
+  };
+
+  // Render city picker modal with hierarchical country → city selection
   const renderCityPicker = () => {
     const handleCitySelect = (city: string, country?: CountryData) => {
       setSelectedCity(city);
@@ -367,7 +430,7 @@ export function ProfileSetupScreen() {
                       <Text style={styles.cityCountryText}>{result.country}</Text>
                     </View>
                     {selectedCity === result.name && (
-                      <Icon name="check-circle" size="md" color={Colors.primary} />
+                      <Icon name="check-circle" size="md" color={Colors.card.blue} />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -387,10 +450,10 @@ export function ProfileSetupScreen() {
                       style={styles.countryItem}
                       onPress={() => handleCountrySelect(country)}
                       activeOpacity={0.7}>
-                      <Text style={styles.countryFlagLarge}>{country.flag}</Text>
+                      <Text style={styles.countryFlag}>{country.flag}</Text>
                       <View style={styles.countryInfo}>
-                        <Text style={styles.countryNameText}>{country.name}</Text>
-                        <Text style={styles.countryCityCount}>
+                        <Text style={styles.countryName}>{country.name}</Text>
+                        <Text style={styles.cityCountryText}>
                           {country.cities.length} ville{country.cities.length !== 1 ? 's' : ''}
                         </Text>
                       </View>
@@ -411,10 +474,10 @@ export function ProfileSetupScreen() {
                     style={styles.countryItem}
                     onPress={() => handleCountrySelect(country)}
                     activeOpacity={0.7}>
-                    <Text style={styles.countryFlagLarge}>{country.flag}</Text>
+                    <Text style={styles.countryFlag}>{country.flag}</Text>
                     <View style={styles.countryInfo}>
-                      <Text style={styles.countryNameText}>{country.name}</Text>
-                      <Text style={styles.countryCityCount}>
+                      <Text style={styles.countryName}>{country.name}</Text>
+                      <Text style={styles.cityCountryText}>
                         {country.cities.length} ville{country.cities.length !== 1 ? 's' : ''}
                       </Text>
                     </View>
@@ -442,29 +505,35 @@ export function ProfileSetupScreen() {
                   <View style={styles.popularCitiesGrid}>
                     {countryCities
                       .filter(city => POPULAR_CITIES.includes(city))
-                      .map(city => (
-                        <TouchableOpacity
-                          key={city}
-                          style={[
-                            styles.popularCityChip,
-                            selectedCity === city && styles.popularCityChipSelected,
-                          ]}
-                          onPress={() => handleCitySelect(city, selectedLocationCountry || undefined)}
-                          activeOpacity={0.7}>
-                          <Icon
-                            name="map-pin"
-                            size="xs"
-                            color={selectedCity === city ? Colors.white : Colors.primary}
-                          />
-                          <Text
+                      .map((city, index) => {
+                        const chipColors = getChipColors(index, selectedCity === city);
+                        return (
+                          <TouchableOpacity
+                            key={city}
                             style={[
-                              styles.popularCityText,
-                              selectedCity === city && styles.popularCityTextSelected,
-                            ]}>
-                            {city}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
+                              styles.popularCityChip,
+                              {
+                                backgroundColor: chipColors.bg,
+                                borderColor: chipColors.border,
+                              },
+                            ]}
+                            onPress={() => handleCitySelect(city, selectedLocationCountry || undefined)}
+                            activeOpacity={0.7}>
+                            <Icon
+                              name="map-pin"
+                              size="xs"
+                              color={chipColors.icon}
+                            />
+                            <Text
+                              style={[
+                                styles.popularCityText,
+                                { color: chipColors.text },
+                              ]}>
+                              {city}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
                   </View>
                 </View>
               )}
@@ -484,10 +553,7 @@ export function ProfileSetupScreen() {
                     onPress={() => handleCitySelect(city, selectedLocationCountry || undefined)}
                     activeOpacity={0.7}>
                     <View
-                      style={[
-                        styles.cityIconWrapper,
-                        selectedCity === city && styles.cityIconWrapperSelected,
-                      ]}>
+                      style={styles.cityIconWrapper}>
                       <Icon
                         name="map-pin"
                         size="sm"
@@ -503,7 +569,7 @@ export function ProfileSetupScreen() {
                     </Text>
                     {selectedCity === city && (
                       <View style={styles.cityCheckIcon}>
-                        <Icon name="check-circle" size="md" color={Colors.primary} />
+                        <Icon name="check-circle" size="md" color={Colors.card.blue} />
                       </View>
                     )}
                   </TouchableOpacity>
@@ -573,13 +639,16 @@ export function ProfileSetupScreen() {
                 setShowCountryPicker(false);
                 setCountrySearchQuery('');
               }}>
-              <Text style={styles.countryFlag}>{item.flag}</Text>
+              <Text style={[
+                styles.countryFlag,
+                selectedCountry.code === item.code && styles.countryFlagSelected,
+              ]}>{item.flag}</Text>
               <View style={styles.countryInfo}>
                 <Text style={styles.countryName}>{item.name}</Text>
                 <Text style={styles.countryCode}>{item.code}</Text>
               </View>
               {selectedCountry.code === item.code && (
-                <Icon name="check-circle" size="md" color={Colors.primary} />
+                <Icon name="check-circle" size="md" color={Colors.card.blue} />
               )}
             </TouchableOpacity>
           )}
@@ -903,7 +972,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   selectWrapper: {
-    paddingVertical: Spacing.base,
+    paddingVertical: Spacing.sm,
   },
   inputError: {
     borderColor: Colors.status.error,
@@ -918,7 +987,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    paddingVertical: Spacing.base,
+    paddingVertical: Spacing.sm,
     fontSize: Typography.fontSize.base,
     fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
@@ -950,8 +1019,8 @@ const styles = StyleSheet.create({
     borderColor: '#FDB913',
     borderRadius: BorderRadius.xl,
     backgroundColor: Colors.white,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.base,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.sm,
     gap: Spacing.xs,
   },
   countryCodeText: {
@@ -972,7 +1041,7 @@ const styles = StyleSheet.create({
   },
   phoneInput: {
     flex: 1,
-    paddingVertical: Spacing.base,
+    paddingVertical: Spacing.sm,
     fontSize: Typography.fontSize.base,
     fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
@@ -994,7 +1063,7 @@ const styles = StyleSheet.create({
   },
   countryList: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing.xl,
+    paddingBottom: Spacing['3xl'],
   },
   countryItem: {
     flexDirection: 'row',
@@ -1002,18 +1071,26 @@ const styles = StyleSheet.create({
     padding: Spacing.base,
     borderRadius: BorderRadius.xl,
     marginBottom: Spacing.sm,
-    marginHorizontal: 0,
     gap: Spacing.md,
     backgroundColor: Colors.white,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.border.light,
   },
   countryItemSelected: {
-    backgroundColor: Colors.primary + '10',
-    borderColor: Colors.primary,
+    borderColor: Colors.card.blue,
+    borderWidth: 2,
   },
   countryFlag: {
     fontSize: 24,
+    opacity: 1,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+  },
+  countryFlagSelected: {
+    fontSize: 28,
+    textShadowColor: 'rgba(102, 155, 188, 0.3)',
+    textShadowOffset: {width: 0, height: 0},
+    textShadowRadius: 8,
   },
   countryInfo: {
     flex: 1,
@@ -1085,7 +1162,7 @@ const styles = StyleSheet.create({
   },
   cityListContent: {
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Spacing['2xl'],
+    paddingBottom: Spacing['3xl'],
   },
   citySection: {
     marginBottom: Spacing.lg,
@@ -1111,25 +1188,15 @@ const styles = StyleSheet.create({
   popularCityChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary + '10',
     borderRadius: BorderRadius.full,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.base,
     gap: Spacing.xs,
     borderWidth: 1.5,
-    borderColor: Colors.primary + '30',
-  },
-  popularCityChipSelected: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
   },
   popularCityText: {
     fontSize: Typography.fontSize.sm,
     fontFamily: Typography.fontFamily.medium,
-    color: Colors.primary,
-  },
-  popularCityTextSelected: {
-    color: Colors.white,
   },
   cityList: {
     paddingHorizontal: Spacing.lg,
@@ -1138,30 +1205,26 @@ const styles = StyleSheet.create({
   cityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.base,
+    paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.base,
-    borderRadius: BorderRadius.lg,
-    marginBottom: Spacing.xs,
-    marginHorizontal: 0,
+    borderRadius: BorderRadius.xl,
+    marginBottom: Spacing.sm,
     backgroundColor: Colors.white,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.border.light,
   },
   cityItemSelected: {
-    backgroundColor: Colors.primary + '10',
-    borderColor: Colors.primary,
+    borderColor: Colors.card.blue,
+    borderWidth: 2,
   },
   cityIconWrapper: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.primary + '15',
+    backgroundColor: Colors.background.secondary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: Spacing.md,
-  },
-  cityIconWrapperSelected: {
-    backgroundColor: Colors.primary,
   },
   cityText: {
     flex: 1,
@@ -1218,35 +1281,6 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
   // Country selection styles
-  countryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.base,
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.lg,
-    marginBottom: Spacing.sm,
-    gap: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border.light,
-    marginHorizontal: Spacing.lg,
-  },
-  countryFlagLarge: {
-    fontSize: 32,
-  },
-  countryInfo: {
-    flex: 1,
-  },
-  countryNameText: {
-    fontSize: Typography.fontSize.base,
-    fontFamily: Typography.fontFamily.semiBold,
-    color: Colors.text.primary,
-    marginBottom: 2,
-  },
-  countryCityCount: {
-    fontSize: Typography.fontSize.sm,
-    fontFamily: Typography.fontFamily.regular,
-    color: Colors.text.tertiary,
-  },
   backToCountries: {
     flexDirection: 'row',
     alignItems: 'center',

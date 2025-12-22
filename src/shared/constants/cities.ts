@@ -64,7 +64,6 @@ export const COUNTRIES_CITIES: CountryData[] = [
     name: 'Nigeria',
     code: 'NG',
     flag: '🇳🇬',
-    isPopular: true,
     cities: [
       'Lagos',
       'Abuja',
@@ -92,7 +91,6 @@ export const COUNTRIES_CITIES: CountryData[] = [
     name: 'Kenya',
     code: 'KE',
     flag: '🇰🇪',
-    isPopular: true,
     cities: [
       'Nairobi',
       'Mombasa',
@@ -115,7 +113,6 @@ export const COUNTRIES_CITIES: CountryData[] = [
     name: 'South Africa',
     code: 'ZA',
     flag: '🇿🇦',
-    isPopular: true,
     cities: [
       'Johannesburg',
       'Cape Town',
@@ -188,6 +185,7 @@ export const COUNTRIES_CITIES: CountryData[] = [
     name: 'Rwanda',
     code: 'RW',
     flag: '🇷🇼',
+    isPopular: true,
     cities: [
       'Kigali',
       'Butare',
@@ -221,6 +219,7 @@ export const COUNTRIES_CITIES: CountryData[] = [
     name: 'Cameroon',
     code: 'CM',
     flag: '🇨🇲',
+    isPopular: true,
     cities: [
       'Douala',
       'Yaoundé',
@@ -515,16 +514,23 @@ export const COUNTRIES_CITIES: CountryData[] = [
   return a.name.localeCompare(b.name);
 });
 
-// Popular cities for quick access
+// Popular cities for quick access - African cities near DRC
 export const POPULAR_CITIES = [
+  // RDC - 4 cities (first in line)
   'Kinshasa',
   'Lubumbashi',
-  'Lagos',
-  'Nairobi',
-  'Johannesburg',
-  'Abuja',
-  'Cape Town',
-  'Accra',
+  'Goma',
+  'Bukavu',
+  // Rwanda - 4 cities
+  'Kigali',
+  'Butare',
+  'Gitarama',
+  'Gisenyi',
+  // Cameroon - 4 cities
+  'Douala',
+  'Yaoundé',
+  'Garoua',
+  'Bamenda',
 ];
 
 // Helper function to search cities globally

@@ -330,6 +330,77 @@ export const countryCodeList = [
     flag: '🇿🇼',
     shortName: 'ZW'
   },
+  // Europe
+  {
+    name: 'France',
+    code: '+33',
+    flag: '🇫🇷',
+    shortName: 'FR'
+  },
+  {
+    name: 'Royaume-Uni',
+    code: '+44',
+    flag: '🇬🇧',
+    shortName: 'GB'
+  },
+  {
+    name: 'Allemagne',
+    code: '+49',
+    flag: '🇩🇪',
+    shortName: 'DE'
+  },
+  {
+    name: 'Belgique',
+    code: '+32',
+    flag: '🇧🇪',
+    shortName: 'BE'
+  },
+  // North America
+  {
+    name: 'États-Unis',
+    code: '+1',
+    flag: '🇺🇸',
+    shortName: 'US'
+  },
+  {
+    name: 'Canada',
+    code: '+1',
+    flag: '🇨🇦',
+    shortName: 'CA'
+  },
+  // Asia
+  {
+    name: 'Inde',
+    code: '+91',
+    flag: '🇮🇳',
+    shortName: 'IN'
+  },
+  {
+    name: 'Chine',
+    code: '+86',
+    flag: '🇨🇳',
+    shortName: 'CN'
+  },
+  {
+    name: 'Japon',
+    code: '+81',
+    flag: '🇯🇵',
+    shortName: 'JP'
+  },
+  // Middle East
+  {
+    name: 'Émirats Arabes Unis',
+    code: '+971',
+    flag: '🇦🇪',
+    shortName: 'AE'
+  },
+  // South America
+  {
+    name: 'Brésil',
+    code: '+55',
+    flag: '🇧🇷',
+    shortName: 'BR'
+  },
 ];
 
 export const congoCities = [

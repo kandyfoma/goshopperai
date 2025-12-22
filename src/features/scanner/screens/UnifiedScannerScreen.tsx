@@ -15,10 +15,10 @@ import {
   SafeAreaView,
 } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
-import {useSubscription, useAuth} from '@/shared/contexts';
+import {useSubscription, useAuth, useUser} from '@/shared/contexts';
 import {useToast} from '@/shared/contexts';
 import {cameraService, imageCompressionService} from '@/shared/services/camera';
 import {geminiService} from '@/shared/services/ai/gemini';
@@ -35,8 +35,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon} from '@/shared/components';
-import {TransactionAnimation} from '@/shared/components/TransactionAnimation';
+import {Icon, ScanProgressIndicator} from '@/shared/components';
 import functions from '@react-native-firebase/functions';
 
 const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
@@ -71,14 +70,48 @@ export function UnifiedScannerScreen() {
   const {user, isAuthenticated} = useAuth();
   const {canScan, recordScan, scansRemaining, isTrialActive} = useSubscription();
   const {showToast} = useToast();
+  const {profile} = useUser();
 
   // State
   const [photos, setPhotos] = useState<CapturedPhoto[]>([]);
   const [state, setState] = useState<ScanState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
-  const [showTransactionAnimation, setShowTransactionAnimation] = useState(false);
-  const [transactionType, setTransactionType] = useState<'scan' | 'payment' | 'success' | 'processing'>('scan');
+  const [processingStep, setProcessingStep] = useState(0);
+
+  // Processing steps for progress indicator
+  const PROCESSING_STEPS = [
+    {
+      key: 'compression',
+      title: 'Compression',
+      subtitle: 'Optimisation des images...',
+      icon: 'image',
+    },
+    {
+      key: 'detection',
+      title: 'Détection',
+      subtitle: 'Recherche du reçu...',
+      icon: 'search',
+    },
+    {
+      key: 'extraction',
+      title: 'Extraction',
+      subtitle: 'Lecture des articles...',
+      icon: 'file-text',
+    },
+    {
+      key: 'validation',
+      title: 'Validation',
+      subtitle: 'Vérification des prix...',
+      icon: 'check-circle',
+    },
+    {
+      key: 'finalization',
+      title: 'Enregistrement',
+      subtitle: 'Sauvegarde du reçu...',
+      icon: 'save',
+    },
+  ];
 
   // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -91,6 +124,31 @@ export function UnifiedScannerScreen() {
   const scanLineAnim = useRef(new Animated.Value(0)).current;
   const retryCountRef = useRef(0);
   const confettiRef = useRef<any>(null);
+
+  // Reset state when screen comes into focus (e.g., after viewing receipt)
+  useFocusEffect(
+    useCallback(() => {
+      // Reset to idle state when returning to scanner
+      if (state === 'success' || state === 'error') {
+        setState('idle');
+        setPhotos([]);
+        setError(null);
+        setLoadingMessageIndex(0);
+        setProcessingStep(0);
+        retryCountRef.current = 0;
+        
+        // Reset animations
+        fadeAnim.setValue(1);
+        scaleAnim.setValue(1);
+        pulseAnim.setValue(1);
+        rotateAnim.setValue(0);
+        bounceAnim.setValue(0);
+        slideAnim.setValue(0);
+        progressAnim.setValue(0);
+        scanLineAnim.setValue(0);
+      }
+    }, [state])
+  );
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -308,6 +366,7 @@ export function UnifiedScannerScreen() {
       const newPhotos = prev.filter(p => p.id !== photoId);
       if (newPhotos.length === 0) {
         setState('idle');
+        setProcessingStep(0);
       }
       return newPhotos;
     });
@@ -320,21 +379,60 @@ export function UnifiedScannerScreen() {
       return;
     }
 
+    // Validate subscription before processing (double-check)
+    if (!canScan) {
+      analyticsService.logCustomEvent('scan_blocked_no_scans');
+      Alert.alert(
+        'Limite atteinte',
+        isTrialActive
+          ? `Vous avez utilisé vos scans gratuits pour ce mois. Passez à Premium pour continuer.`
+          : 'Vous avez atteint votre limite de scans. Passez à Premium pour continuer.',
+        [
+          {text: 'Annuler', style: 'cancel'},
+          {text: 'Voir Premium', onPress: () => navigation.push('Subscription')},
+        ]
+      );
+      setState('idle');
+      setPhotos([]);
+      return;
+    }
+
+    // Validate user has a city set
+    if (!profile?.defaultCity) {
+      analyticsService.logCustomEvent('scan_blocked_no_city');
+      Alert.alert(
+        'Ville requise',
+        'Veuillez configurer votre ville dans les paramètres avant de scanner.',
+        [
+          {text: 'Annuler', style: 'cancel'},
+          {text: 'Configurer', onPress: () => navigation.push('Settings')},
+        ]
+      );
+      setState('idle');
+      setPhotos([]);
+      return;
+    }
+
     setState('processing');
     setError(null);
     setLoadingMessageIndex(0);
+    setProcessingStep(0);
     retryCountRef.current = 0;
 
-    // Show transaction animation for scanning
-    setShowTransactionAnimation(true);
-    setTransactionType('scan');
-
     try {
+      // Step 1: Compression
+      setProcessingStep(0);
+      await new Promise<void>(r => setTimeout(r, 500)); // Visual feedback
+      
       // Generate base64 from URIs on-demand to avoid memory issues
       const images = await Promise.all(
         photos.map(p => imageCompressionService.compressToBase64(p.uri))
       );
 
+      // Step 2: Detection
+      setProcessingStep(1);
+      await new Promise<void>(r => setTimeout(r, 500));
+      
       // Check for duplicates on first image
       if (images.length > 0 && user?.uid) {
         const duplicateCheck = await duplicateDetectionService.checkForDuplicate(
@@ -370,15 +468,39 @@ export function UnifiedScannerScreen() {
 
       let result: ParseReceiptV2Result | undefined;
 
+      // Step 3: Extraction
+      setProcessingStep(2);
+
       if (images.length === 1) {
         // Single photo - use hybrid processing (local + AI fallback)
         console.log('Using hybrid receipt processor...');
         const response = await hybridReceiptProcessor.processReceipt(
           images[0],
-          user?.uid || 'unknown-user'
+          user?.uid || 'unknown-user',
+          profile?.defaultCity
         );
 
         if (response.success && response.receipt) {
+          // Step 4: Validation
+          setProcessingStep(3);
+          await new Promise<void>(r => setTimeout(r, 400));
+          
+          // Add user's default city if receipt doesn't have a city
+          if (!response.receipt.city && profile?.defaultCity) {
+            response.receipt.city = profile.defaultCity;
+            // Also add city to all items
+            if (response.receipt.items) {
+              response.receipt.items = response.receipt.items.map(item => ({
+                ...item,
+                city: profile.defaultCity
+              }));
+            }
+          }
+          
+          // Step 5: Finalization
+          setProcessingStep(4);
+          await new Promise<void>(r => setTimeout(r, 400));
+          
           // Save the receipt to Firestore
           const savedReceiptId = await receiptStorageService.saveReceipt(
             response.receipt,
@@ -396,7 +518,13 @@ export function UnifiedScannerScreen() {
             }).catch(err => console.log('Failed to track shopping patterns:', err));
           }
 
-          await recordScan();
+          console.log('📸 About to record scan...');
+          const scanRecorded = await recordScan();
+          console.log('📸 Scan recorded result:', scanRecorded);
+
+          if (!scanRecorded) {
+            console.error('⚠️ Failed to record scan usage');
+          }
 
           analyticsService.logCustomEvent('scan_completed', {
             success: true,
@@ -409,9 +537,6 @@ export function UnifiedScannerScreen() {
           hapticService.success();
           setState('success');
 
-          // Show success animation
-          setTransactionType('success');
-
           // Track scan for in-app review
           inAppReviewService.incrementScanCount().then(() => {
             inAppReviewService.requestReviewIfAppropriate();
@@ -422,7 +547,6 @@ export function UnifiedScannerScreen() {
 
           // Navigate after animation
           setTimeout(() => {
-            setShowTransactionAnimation(false);
             navigation.navigate('ReceiptDetail', {
               receiptId: savedReceiptId,
             });
@@ -442,7 +566,13 @@ export function UnifiedScannerScreen() {
         result = response.data as ParseReceiptV2Result;
 
         if (result.success && result.receiptId) {
-          await recordScan();
+          console.log('📸 About to record scan (multiple photos)...');
+          const scanRecorded = await recordScan();
+          console.log('📸 Scan recorded result (multiple photos):', scanRecorded);
+
+          if (!scanRecorded) {
+            console.error('⚠️ Failed to record scan usage (multiple photos)');
+          }
 
           analyticsService.logCustomEvent('scan_completed', {
             success: true,
@@ -452,9 +582,6 @@ export function UnifiedScannerScreen() {
           // Success haptic feedback
           hapticService.success();
           setState('success');
-
-          // Show success animation
-          setTransactionType('success');
 
           // Track scan for in-app review
           inAppReviewService.incrementScanCount().then(() => {
@@ -466,7 +593,6 @@ export function UnifiedScannerScreen() {
 
           const receiptId = result.receiptId;
           setTimeout(() => {
-            setShowTransactionAnimation(false);
             navigation.navigate('ReceiptDetail', {
               receiptId: receiptId,
             });
@@ -749,76 +875,19 @@ export function UnifiedScannerScreen() {
           </Animated.View>
         )}
 
-        {/* Processing State - Animated Loading */}
+        {/* Processing State - Progress Stepper */}
         {state === 'processing' && (
           <View style={styles.processingContainer}>
-            {/* Animated Receipt Card */}
-            <View style={styles.processingCard}>
-              <Animated.View 
-                style={[
-                  styles.processingIconContainer,
-                  {transform: [{scale: pulseAnim}]}
-                ]}
-              >
-                <Animated.View style={{transform: [{rotate: spin}]}}>
-                  <Icon 
-                    name={LOADING_MESSAGES[loadingMessageIndex].icon}
-                    size="3xl"
-                    color={Colors.primary}
-                    variant="filled"
-                  />
-                </Animated.View>
-              </Animated.View>
-
-              {/* Scan Line Effect */}
-              <Animated.View 
-                style={[
-                  styles.scanLine,
-                  {transform: [{translateY: scanLineY}]}
-                ]}
-              />
-
-              {/* Progress Bar */}
-              <View style={styles.progressContainer}>
-                <Animated.View 
-                  style={[
-                    styles.progressBar,
-                    {
-                      width: progressAnim.interpolate({
-                        inputRange: [0, 100],
-                        outputRange: ['0%', '100%'],
-                      })
-                    }
-                  ]}
-                />
-              </View>
-
-              {/* Loading Messages */}
-              <Animated.View style={styles.loadingTextContainer}>
-                <Text style={styles.loadingTitle}>
-                  {LOADING_MESSAGES[loadingMessageIndex].text}
-                </Text>
-                <Text style={styles.loadingSubtitle}>
-                  {LOADING_MESSAGES[loadingMessageIndex].subtext}
-                </Text>
-              </Animated.View>
-
-              {/* Photo Count */}
-              <Text style={styles.photoCountText}>
-                {photos.length} photo{photos.length > 1 ? 's' : ''} en cours d'analyse
-              </Text>
-            </View>
-
-            {/* Fun Facts */}
-            <View style={styles.funFactCard}>
-              <Icon 
-                name="help-circle"
-                size="lg"
-                color={Colors.primary}
-                variant="filled"
-              />
-              <Text style={styles.funFactText}>
-                L'IA analyse chaque article, prix et devise de votre facture
+            <ScanProgressIndicator
+              steps={PROCESSING_STEPS}
+              currentStep={processingStep}
+            />
+            
+            {/* Photo Count Badge */}
+            <View style={styles.photoCountBadge}>
+              <Icon name="image" size="sm" color={Colors.primary} />
+              <Text style={styles.photoCountBadgeText}>
+                {photos.length} photo{photos.length > 1 ? 's' : ''}
               </Text>
             </View>
           </View>
@@ -900,17 +969,6 @@ export function UnifiedScannerScreen() {
           colors={['#FFD700', '#FFA500', '#FF6347', '#32CD32', '#1E90FF', '#FF69B4']}
         />
       )}
-
-      {/* Transaction Animation Overlay */}
-      <TransactionAnimation
-        isVisible={showTransactionAnimation}
-        transactionType={transactionType}
-        onComplete={() => {
-          if (transactionType === 'success') {
-            setShowTransactionAnimation(false);
-          }
-        }}
-      />
       </View>
     </SafeAreaView>
   );
@@ -927,7 +985,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: Spacing['2xl'],
+    paddingBottom: 100,
   },
   
   // Modern Header
@@ -1275,9 +1333,28 @@ const styles = StyleSheet.create({
 
   // Processing State
   processingContainer: {
+    flex: 1,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing['2xl'],
+    paddingBottom: Spacing.xl,
+    justifyContent: 'center',
+  },
+  photoCountBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: Colors.white,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.full,
+    marginTop: Spacing.xl,
+    gap: Spacing.sm,
+    ...Shadows.sm,
+  },
+  photoCountBadgeText: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.medium,
+    color: Colors.text.primary,
   },
   processingCard: {
     width: '100%',
