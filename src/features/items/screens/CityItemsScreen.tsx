@@ -28,7 +28,7 @@ import {Icon, FadeIn, SlideIn} from '@/shared/components';
 import {formatCurrency, safeToDate} from '@/shared/utils/helpers';
 import {useAuth, useUser} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
-import {productSearchService} from '@/shared/services/productSearchService';
+import {intelligentSearchService} from '@/shared/services/intelligentSearchService';
 import {RootStackParamList} from '@/shared/types';
 
 // City/Community item data (Tier 3: Community Prices - Anonymous)
@@ -166,21 +166,30 @@ export function CityItemsScreen() {
       return;
     }
 
-    const searchResults = productSearchService.searchItems(items, searchQuery);
+    // Use intelligent search with multilingual, fuzzy, phonetic matching
+    const searchResults = intelligentSearchService.searchItems(items, searchQuery, {
+      minScore: 0.35, // Lower threshold for more inclusive results
+      maxResults: 100,
+    });
     const filtered = searchResults.map(result => result.item);
 
     setFilteredItems(filtered);
 
-    // Track item search with match types
+    // Track item search with match types and confidence
     const matchTypeCounts = searchResults.reduce((acc, result) => {
       acc[result.matchType] = (acc[result.matchType] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
+    const avgConfidence = searchResults.length > 0
+      ? searchResults.reduce((sum, r) => sum + r.confidence, 0) / searchResults.length
+      : 0;
+
     analyticsService.logCustomEvent('city_item_search', {
       query: searchQuery,
       results_count: filtered.length,
       match_types: matchTypeCounts,
+      avg_confidence: avgConfidence,
     });
   };
 

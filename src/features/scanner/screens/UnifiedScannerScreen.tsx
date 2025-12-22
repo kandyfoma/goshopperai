@@ -72,7 +72,7 @@ const LOADING_MESSAGES = [
 async function checkProcessedReceiptDuplicate(
   receipt: any,
   userId: string
-): Promise<{isDuplicate: boolean; existingReceipt?: any}> {
+): Promise<{isDuplicate: boolean; existingReceipt?: any; matchReason?: string}> {
   try {
     // Get recent receipts from last 30 days
     const thirtyDaysAgo = new Date();
@@ -83,35 +83,93 @@ async function checkProcessedReceiptDuplicate(
       .where('scannedAt', '>=', firestore.Timestamp.fromDate(thirtyDaysAgo))
       .get();
 
+    // Parse new receipt date
+    let newReceiptDate: Date | null = null;
+    if (receipt.date) {
+      newReceiptDate = new Date(receipt.date);
+      // Invalid date check
+      if (isNaN(newReceiptDate.getTime())) {
+        newReceiptDate = null;
+      }
+    }
+
     // Check for exact matches
     for (const doc of receiptsSnapshot.docs) {
       const existingReceipt = doc.data();
       
-      // Match criteria: same store, same date, same total, or same receipt number
-      const sameStore = existingReceipt.storeName?.toLowerCase() === receipt.storeName?.toLowerCase();
-      const sameTotal = Math.abs((existingReceipt.total || 0) - (receipt.total || 0)) < 0.01;
-      const sameReceiptNumber = receipt.receiptNumber && 
-                                 existingReceipt.receiptNumber === receipt.receiptNumber;
-      
-      // Check date similarity (same day)
-      let sameDate = false;
-      if (existingReceipt.scannedAt && receipt.date) {
-        const existingDate = existingReceipt.scannedAt.toDate();
-        const newDate = new Date(receipt.date);
-        sameDate = 
-          existingDate.getFullYear() === newDate.getFullYear() &&
-          existingDate.getMonth() === newDate.getMonth() &&
-          existingDate.getDate() === newDate.getDate();
-      }
-
-      // If any strong match found, consider it a duplicate
-      if (sameReceiptNumber || (sameStore && sameDate && sameTotal)) {
+      // ========== 1. RECEIPT NUMBER MATCH (strongest indicator) ==========
+      // If both have receipt numbers and they match exactly, it's definitely a duplicate
+      if (receipt.receiptNumber && 
+          existingReceipt.receiptNumber && 
+          receipt.receiptNumber.trim() === existingReceipt.receiptNumber.trim()) {
         return {
           isDuplicate: true,
           existingReceipt: {
             ...existingReceipt,
+            id: doc.id,
             date: existingReceipt.scannedAt?.toDate(),
           },
+          matchReason: 'Même numéro de reçu',
+        };
+      }
+
+      // ========== 2. EXACT MATCH: Same store + Same date + Same total ==========
+      // Normalize store names for comparison
+      const normalizeStoreName = (name: string) => 
+        (name || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+      
+      const newStoreName = normalizeStoreName(receipt.storeName);
+      const existingStoreName = normalizeStoreName(existingReceipt.storeName);
+      
+      // Store must match (at least partially)
+      const storeMatches = newStoreName && existingStoreName && (
+        newStoreName === existingStoreName ||
+        newStoreName.includes(existingStoreName) ||
+        existingStoreName.includes(newStoreName)
+      );
+
+      if (!storeMatches) {
+        continue; // Different store, not a duplicate
+      }
+
+      // Check date - must be SAME day
+      let dateMatches = false;
+      if (existingReceipt.scannedAt && newReceiptDate) {
+        const existingDate = existingReceipt.scannedAt.toDate();
+        dateMatches = 
+          existingDate.getFullYear() === newReceiptDate.getFullYear() &&
+          existingDate.getMonth() === newReceiptDate.getMonth() &&
+          existingDate.getDate() === newReceiptDate.getDate();
+      } else if (existingReceipt.date && newReceiptDate) {
+        // Fallback to date field
+        const existingDate = new Date(existingReceipt.date);
+        if (!isNaN(existingDate.getTime())) {
+          dateMatches = 
+            existingDate.getFullYear() === newReceiptDate.getFullYear() &&
+            existingDate.getMonth() === newReceiptDate.getMonth() &&
+            existingDate.getDate() === newReceiptDate.getDate();
+        }
+      }
+
+      if (!dateMatches) {
+        continue; // Different day, not a duplicate
+      }
+
+      // Check total - must be within 1% or $0.10
+      const newTotal = receipt.total || receipt.totalUSD || 0;
+      const existingTotal = existingReceipt.total || existingReceipt.totalUSD || 0;
+      const totalDiff = Math.abs(newTotal - existingTotal);
+      const totalMatches = totalDiff < 0.10 || totalDiff < (newTotal * 0.01);
+
+      if (storeMatches && dateMatches && totalMatches) {
+        return {
+          isDuplicate: true,
+          existingReceipt: {
+            ...existingReceipt,
+            id: doc.id,
+            date: existingReceipt.scannedAt?.toDate() || existingReceipt.date,
+          },
+          matchReason: 'Même magasin, date et montant',
         };
       }
     }

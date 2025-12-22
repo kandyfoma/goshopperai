@@ -36,50 +36,486 @@ interface AggregatedItem {
 
 /**
  * Normalize item name for consistent matching
+ * - Corrects common OCR mistakes (1/l/i confusion, 0/o confusion)
+ * - Removes product codes, SKUs, and size/weight info
+ * - Cleans up noise to get the core product name
  */
 function normalizeItemName(name: string): string {
-  return name
+  let normalized = name
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .replace(/[^a-z0-9\s]/g, '') // Remove special chars
-    .replace(/\s+/g, ' ') // Normalize spaces
     .trim();
+
+  // ============ STEP 1: Remove parenthetical codes like (l2), (z4), (e6), (lnd) ============
+  normalized = normalized
+    .replace(/\([^)]*\)/g, '') // Remove anything in parentheses
+    .trim();
+
+  // ============ STEP 2: Remove product codes/SKUs ============
+  // Remove patterns like: e30, z85, t5, l4x18, a0m1, z8
+  normalized = normalized
+    .replace(/\b[a-z]\d+[a-z]?\d*\b/gi, '') // e30, z85, t5, a0m1
+    .replace(/\b[a-z]\d+x\d+\b/gi, '') // l4x18
+    .replace(/\b\d+[a-z]\d+\b/gi, '') // 4g00
+    .trim();
+
+  // ============ STEP 3: Remove size/weight/volume info ============
+  // So "Sprite 330ml" and "Sprite 500ml" normalize to same product
+  normalized = normalized
+    .replace(/\b\d+\s*(ml|cl|dl|l|litre|liter|litres|liters)\b/gi, '') // 330ml, 1.5l, 5 litres
+    .replace(/\b\d+\s*(g|kg|gram|grams|kilogram|kilograms)\b/gi, '') // 500g, 1kg
+    .replace(/\b\d+\s*(oz|lb|lbs|pound|pounds|ounce|ounces)\b/gi, '') // 16oz, 2lb
+    .replace(/\b\d+\s*(pcs|pieces|pack|packs|sachets?|packets?)\b/gi, '') // 6 packs, 10 sachets
+    .replace(/\b\d+\s*x\s*\d+\s*(ml|g|cl)?\b/gi, '') // 6x330ml, 4x100g
+    .trim();
+
+  // ============ STEP 4: Remove noise words ============
+  normalized = normalized
+    .replace(/\b(alt\.?\s*unit|unit|pce|pcs|piece|pieces)\b/gi, '')
+    .replace(/\b(medium|large|small|mini|maxi|jumbo|giant|family)\b/gi, '')
+    .replace(/\b(new|nouveau|promo|promotion|special|edition)\b/gi, '')
+    .trim();
+
+  // ============ STEP 5: Clean up special characters ============
+  normalized = normalized
+    .replace(/[^a-z0-9\s]/g, ' ') // Replace special chars with space
+    .replace(/\s+/g, ' ') // Normalize multiple spaces
+    .trim();
+
+  // ============ STEP 6: Fix common OCR mistakes ============
+  normalized = normalized
+    // Fix specific known words first
+    .replace(/\bm1lk\b/g, 'milk')
+    .replace(/\bmi1k\b/g, 'milk')
+    .replace(/\bm11k\b/g, 'milk')
+    .replace(/\bo11\b/g, 'oil')
+    .replace(/\bo1l\b/g, 'oil')
+    .replace(/\boi1\b/g, 'oil')
+    .replace(/\b0il\b/g, 'oil')
+    .replace(/\b011\b/g, 'oil')
+    .replace(/\b0live\b/g, 'olive')
+    .replace(/\b01ive\b/g, 'olive')
+    .replace(/\bwa1er\b/g, 'water')
+    .replace(/\bwaler\b/g, 'water')
+    .replace(/\bsuga1\b/g, 'sugar')
+    .replace(/\bsa1t\b/g, 'salt')
+    .replace(/\bf1our\b/g, 'flour')
+    .replace(/\bflour\b/g, 'flour')
+    .replace(/\bri1e\b/g, 'rice')
+    .replace(/\brlce\b/g, 'rice')
+    .replace(/\br1ce\b/g, 'rice')
+    .replace(/\bju1ce\b/g, 'juice')
+    .replace(/\bjulce\b/g, 'juice')
+    .replace(/\bspr1te\b/g, 'sprite')
+    .replace(/\bsprlte\b/g, 'sprite')
+    .replace(/\bcoca co1a\b/g, 'coca cola')
+    .replace(/\bfan1a\b/g, 'fanta')
+    .replace(/\bfanla\b/g, 'fanta')
+    .replace(/\bbeer\b/g, 'beer')
+    .replace(/\bbiscuit\b/g, 'biscuit')
+    .replace(/\bchoco1ate\b/g, 'chocolate')
+    .replace(/\bchocolale\b/g, 'chocolate')
+    .replace(/\bbut1er\b/g, 'butter')
+    .replace(/\bbuller\b/g, 'butter')
+    .replace(/\bcheese\b/g, 'cheese')
+    .replace(/\byogur1\b/g, 'yogurt')
+    .replace(/\byogurl\b/g, 'yogurt')
+    
+    // Generic OCR fixes: 1 between letters → l
+    .replace(/([a-z])1([a-z])/g, '$1l$2')
+    // Apply twice for consecutive issues (m11k → m1lk → milk)
+    .replace(/([a-z])1([a-z])/g, '$1l$2')
+    
+    // 0 between letters → o
+    .replace(/([a-z])0([a-z])/g, '$1o$2')
+    .replace(/([a-z])0([a-z])/g, '$1o$2')
+    
+    // Fix common word endings
+    .replace(/1ng\b/g, 'ing')
+    .replace(/1on\b/g, 'ion')
+    .replace(/1er\b/g, 'ier')
+    .replace(/1e\b/g, 'le')
+    
+    // Fix word starts
+    .replace(/\b1n/g, 'in')
+    .replace(/\b0n/g, 'on');
+
+  // ============ STEP 7: Final cleanup ============
+  normalized = normalized
+    .replace(/\s+/g, ' ') // Normalize spaces again
+    .trim();
+
+  return normalized;
 }
 
 /**
  * Get canonical form of a product name using synonyms
+ * Comprehensive list for supermarket products
  */
 function getCanonicalName(name: string): string {
   const normalized = normalizeItemName(name);
 
-  // Common product synonyms for better grouping
+  // Comprehensive product synonyms for better grouping
   const synonyms: Record<string, string[]> = {
-    'lait': ['milk', 'milch', 'leche'],
-    'fromage': ['cheese', 'käse', 'queso'],
-    'yaourt': ['yogurt', 'yoghurt', 'yogourt', 'yog', 'yo'],
-    'creme': ['cream', 'crema'],
-    'beurre': ['butter', 'mantequilla'],
-    'oeuf': ['egg', 'eggs', 'huevo'],
-    'pain': ['bread', 'baguette', 'pan'],
-    'viande': ['meat', 'carne'],
-    'poulet': ['chicken', 'pollo'],
-    'boeuf': ['beef', 'carne de res'],
-    'porc': ['pork', 'cerdo'],
-    'poisson': ['fish', 'pescado'],
-    'pomme': ['apple', 'apples', 'manzana'],
-    'banane': ['banana', 'bananas', 'platano'],
-    'orange': ['orange', 'oranges'],
-    'tomate': ['tomato', 'tomatoes', 'jitomate'],
-    'carotte': ['carrot', 'carrots', 'zanahoria'],
-    'eau': ['water', 'agua'],
+    // Dairy Products
+    'lait': ['milk', 'milch', 'leche', 'lait'],
+    'fromage': ['cheese', 'kase', 'queso', 'fromage'],
+    'yaourt': ['yogurt', 'yoghurt', 'yogourt', 'yog', 'yo', 'yaourt'],
+    'creme': ['cream', 'crema', 'creme'],
+    'beurre': ['butter', 'mantequilla', 'beurre'],
+    'oeuf': ['egg', 'eggs', 'huevo', 'oeuf', 'oeufs'],
+    
+    // Bread & Bakery
+    'pain': ['bread', 'baguette', 'pan', 'pain'],
+    
+    // Meat & Protein
+    'viande': ['meat', 'carne', 'viande'],
+    'poulet': ['chicken', 'pollo', 'poulet'],
+    'boeuf': ['beef', 'boeuf'],
+    'porc': ['pork', 'cerdo', 'porc'],
+    'poisson': ['fish', 'pescado', 'poisson'],
+    'saucisse': ['sausage', 'salchicha', 'saucisse'],
+    'jambon': ['ham', 'jamon', 'jambon'],
+    
+    // Fruits
+    'pomme': ['apple', 'apples', 'manzana', 'pomme'],
+    'banane': ['banana', 'bananas', 'platano', 'banane'],
+    'orange': ['orange', 'oranges', 'naranja'],
+    'raisin': ['grape', 'grapes', 'uva', 'raisin'],
+    'fraise': ['strawberry', 'fresa', 'fraise'],
+    'ananas': ['pineapple', 'pina', 'ananas'],
+    'mangue': ['mango', 'mangue'],
+    'avocat': ['avocado', 'aguacate', 'avocat'],
+    'citron': ['lemon', 'limon', 'citron'],
+    'poire': ['pear', 'pera', 'poire'],
+    'peche': ['peach', 'melocoton', 'peche'],
+    
+    // Vegetables
+    'tomate': ['tomato', 'tomatoes', 'jitomate', 'tomate'],
+    'carotte': ['carrot', 'carrots', 'zanahoria', 'carotte'],
+    'oignon': ['onion', 'cebolla', 'oignon'],
+    'ail': ['garlic', 'ajo', 'ail'],
+    'pomme de terre': ['potato', 'potatoes', 'patata', 'pomme de terre'],
+    'salade': ['lettuce', 'salad', 'lechuga', 'salade'],
+    'chou': ['cabbage', 'col', 'chou'],
+    'haricot': ['bean', 'beans', 'frijol', 'haricot'],
+    'petit pois': ['peas', 'guisantes', 'petit pois', 'pois'],
+    'poivron': ['pepper', 'pimiento', 'poivron'],
+    'concombre': ['cucumber', 'pepino', 'concombre'],
+    'courgette': ['zucchini', 'calabacin', 'courgette'],
+    'aubergine': ['eggplant', 'berenjena', 'aubergine'],
+    
+    // Beverages
+    'eau': ['water', 'agua', 'eau'],
     'cafe': ['coffee', 'cafe'],
-    'the': ['tea', 'te'],
-    'biere': ['beer', 'cerveza'],
-    'jus': ['juice', 'jugo'],
-    'savon': ['soap', 'sav', 'savonnette'],
-    'shampooing': ['shampoo', 'shamp', 'champoing'],
-    'dentifrice': ['toothpaste', 'dent', 'pate dentifrice'],
+    'the': ['tea', 'te', 'the'],
+    'biere': ['beer', 'cerveza', 'biere'],
+    'vin': ['wine', 'vino', 'vin'],
+    'jus': ['juice', 'jugo', 'jus'],
+    'soda': ['soda', 'refresco', 'soft drink'],
+    'coca': ['cola', 'coca cola', 'coke'],
+    'sprite': ['sprite', 'lemon soda'],
+    'fanta': ['fanta', 'orange soda'],
+    
+    // Grains & Pasta
+    'riz': ['rice', 'arroz', 'riz'],
+    'pates': ['pasta', 'noodles', 'pates'],
+    'farine': ['flour', 'harina', 'farine'],
+    'cereales': ['cereal', 'cereales'],
+    'avoine': ['oats', 'avena', 'avoine'],
+    
+    // Cooking Essentials
+    'huile': ['oil', 'aceite', 'huile', 'cooking oil'],
+    'sucre': ['sugar', 'azucar', 'sucre'],
+    'sel': ['salt', 'sal', 'sel'],
+    'poivre': ['pepper', 'pimienta', 'poivre'],
+    'vinaigre': ['vinegar', 'vinagre', 'vinaigre'],
+    'epice': ['spice', 'especia', 'epice'],
+    
+    // Household & Cleaning
+    'savon': ['soap', 'jabon', 'sav', 'savonnette', 'savon'],
+    'detergent': ['detergent', 'washing powder', 'lessive'],
+    'javel': ['bleach', 'eau de javel', 'lejia'],
+    'eponge': ['sponge', 'esponja', 'eponge'],
+    'papier toilette': ['toilet paper', 'papel higienico'],
+    'essuie tout': ['paper towel', 'toalla papel'],
+    
+    // Personal Care
+    'shampooing': ['shampoo', 'champu', 'shamp', 'champoing'],
+    'dentifrice': ['toothpaste', 'pasta dental', 'dent', 'pate dentifrice'],
+    'brosse a dents': ['toothbrush', 'cepillo dental'],
+    'deodorant': ['deodorant', 'desodorante'],
+    'gel douche': ['shower gel', 'gel de ducha'],
+    'lotion': ['lotion', 'body lotion', 'moisturizer'],
+    
+    // Snacks & Sweets
+    'chips': ['chips', 'crisps', 'patatas fritas'],
+    'biscuit': ['cookie', 'biscuit', 'galleta'],
+    'chocolat': ['chocolate', 'chocolat'],
+    'bonbon': ['candy', 'sweet', 'caramelo', 'bonbon'],
+    'gateau': ['cake', 'pastel', 'gateau'],
+    'glace': ['ice cream', 'helado', 'glace'],
+    
+    // Condiments & Sauces
+    'ketchup': ['ketchup', 'tomato sauce'],
+    'moutarde': ['mustard', 'mostaza', 'moutarde'],
+    'mayonnaise': ['mayo', 'mayonnaise', 'mayonesa'],
+    'sauce': ['sauce', 'salsa'],
+    
+    // Baby Products
+    'couche': ['diaper', 'panal', 'couche'],
+    'lait bebe': ['baby formula', 'formula', 'leche bebe'],
+    
+    // Frozen Foods
+    'surgele': ['frozen', 'congelado', 'surgele'],
+    
+    // Common Brands (lowercase)
+    'coca cola': ['coca', 'coke', 'coca cola'],
+    'pepsi': ['pepsi'],
+    'nestle': ['nestle'],
+    'danone': ['danone', 'dannon'],
+    'president': ['president'],
+    
+    // ============ AFRICAN/CONGOLESE PRODUCTS ============
+    
+    // Local Staples
+    'farine de manioc': ['fufu', 'foufou', 'cassava flour', 'farine manioc'],
+    'pondu': ['pondu', 'saka saka', 'cassava leaves'],
+    'manioc': ['cassava', 'yuca', 'manioc'],
+    'plantain': ['plantain', 'banane plantain', 'cooking banana'],
+    'igname': ['yam', 'name', 'igname'],
+    'taro': ['taro', 'macabo'],
+    'patate douce': ['sweet potato', 'patate douce', 'camote'],
+    'arachide': ['peanut', 'groundnut', 'cacahuete', 'arachide'],
+    'huile de palme': ['palm oil', 'huile palme', 'aceite palma'],
+    'huile darachide': ['peanut oil', 'groundnut oil', 'huile arachide'],
+    
+    // African Spices & Seasonings
+    'piment': ['chili', 'hot pepper', 'pili pili', 'piment'],
+    'gingembre': ['ginger', 'jengibre', 'gingembre'],
+    'cube maggi': ['maggi', 'bouillon cube', 'seasoning cube', 'jumbo'],
+    'tomate concentre': ['tomato paste', 'tomato concentrate', 'tomate concentre'],
+    
+    // Fish & Seafood (common in Congo)
+    'poisson sale': ['dried fish', 'salted fish', 'poisson sale', 'stockfish'],
+    'makayabu': ['makayabu', 'salted fish', 'dried fish'],
+    'mpiodi': ['mpiodi', 'small dried fish'],
+    'crevette': ['shrimp', 'prawn', 'crevette', 'gambas'],
+    'sardine': ['sardine', 'sardina'],
+    'thon': ['tuna', 'atun', 'thon'],
+    'maquereau': ['mackerel', 'maquereau'],
+    'tilapia': ['tilapia'],
+    'capitaine': ['capitaine', 'nile perch'],
+    
+    // Beans & Legumes
+    'haricot rouge': ['red beans', 'kidney beans', 'haricot rouge'],
+    'haricot blanc': ['white beans', 'haricot blanc'],
+    'lentille': ['lentils', 'lentejas', 'lentille'],
+    'pois chiche': ['chickpeas', 'garbanzo', 'pois chiche'],
+    'niebe': ['black eyed peas', 'cowpeas', 'niebe'],
+    
+    // Cooking Oils (expanded)
+    'huile vegetale': ['vegetable oil', 'aceite vegetal', 'huile vegetale'],
+    'huile tournesol': ['sunflower oil', 'huile tournesol'],
+    'huile olive': ['olive oil', 'aceite oliva', 'huile olive'],
+    'huile mais': ['corn oil', 'huile mais'],
+    'huile soja': ['soybean oil', 'huile soja'],
+    
+    // Rice varieties
+    'riz basmati': ['basmati rice', 'riz basmati'],
+    'riz jasmin': ['jasmine rice', 'riz jasmin'],
+    'riz long grain': ['long grain rice', 'riz long'],
+    'riz parfume': ['fragrant rice', 'riz parfume'],
+    
+    // Milk Products (expanded)
+    'lait en poudre': ['powdered milk', 'milk powder', 'lait poudre', 'nido'],
+    'lait concentre': ['condensed milk', 'evaporated milk', 'lait concentre'],
+    'lait uht': ['uht milk', 'long life milk', 'lait uht'],
+    'lait frais': ['fresh milk', 'lait frais'],
+    
+    // Beverages (expanded)
+    'jus dorange': ['orange juice', 'jus orange', 'jugo naranja'],
+    'jus de pomme': ['apple juice', 'jus pomme'],
+    'jus dananas': ['pineapple juice', 'jus ananas'],
+    'jus de mangue': ['mango juice', 'jus mangue'],
+    'eau minerale': ['mineral water', 'eau minerale'],
+    'eau gazeuse': ['sparkling water', 'eau gazeuse'],
+    'boisson energisante': ['energy drink', 'red bull', 'monster'],
+    'limonade': ['lemonade', 'limonada', 'limonade'],
+    
+    // Alcoholic Beverages
+    'whisky': ['whisky', 'whiskey'],
+    'vodka': ['vodka'],
+    'rhum': ['rum', 'ron', 'rhum'],
+    'cognac': ['cognac', 'brandy'],
+    'champagne': ['champagne', 'sparkling wine'],
+    'primus': ['primus', 'primus beer'],
+    'skol': ['skol', 'skol beer'],
+    'simba': ['simba', 'simba beer'],
+    'turbo king': ['turbo king', 'turbo'],
+    'castel': ['castel', 'castel beer'],
+    'heineken': ['heineken'],
+    'guiness': ['guinness', 'guiness'],
+    
+    // Baby & Infant
+    'lait maternise': ['infant formula', 'baby milk', 'lait maternise'],
+    'cerelac': ['cerelac', 'baby cereal'],
+    'bledine': ['bledine', 'baby food'],
+    'pampers': ['pampers', 'diapers', 'couches'],
+    'huggies': ['huggies', 'diapers'],
+    
+    // Cleaning Products (expanded)
+    'omo': ['omo', 'washing powder', 'detergent'],
+    'ariel': ['ariel', 'washing powder'],
+    'tide': ['tide', 'washing powder'],
+    'ajax': ['ajax', 'cleaner'],
+    'mr propre': ['mr clean', 'mr propre'],
+    'harpic': ['harpic', 'toilet cleaner'],
+    'air wick': ['air wick', 'air freshener'],
+    
+    // Personal Care (expanded)
+    'nivea': ['nivea', 'skin cream'],
+    'vaseline': ['vaseline', 'petroleum jelly'],
+    'lux': ['lux', 'bath soap'],
+    'dettol': ['dettol', 'antiseptic'],
+    'colgate': ['colgate', 'toothpaste'],
+    'close up': ['close up', 'closeup', 'toothpaste'],
+    'signal': ['signal', 'toothpaste'],
+    'gillette': ['gillette', 'razor'],
+    'always': ['always', 'sanitary pads'],
+    'kotex': ['kotex', 'sanitary pads'],
+    
+    // Snacks (expanded)
+    'biscuit sale': ['crackers', 'salty biscuits', 'biscuit sale'],
+    'biscuit sucre': ['sweet biscuits', 'biscuit sucre'],
+    'gaufrette': ['wafer', 'gaufrette', 'waffle'],
+    'croissant': ['croissant'],
+    'pain de mie': ['sliced bread', 'sandwich bread', 'pain de mie'],
+    'brioche': ['brioche', 'sweet bread'],
+    'madeleines': ['madeleine', 'madeleines'],
+    
+    // Canned Foods
+    'conserve': ['canned', 'tin', 'conserve'],
+    'mais en boite': ['canned corn', 'sweet corn', 'mais boite'],
+    'petits pois en boite': ['canned peas', 'petits pois boite'],
+    'haricots verts en boite': ['canned green beans'],
+    'champignon en boite': ['canned mushroom', 'champignon boite'],
+    'olive': ['olive', 'olives', 'aceituna'],
+    
+    // Pasta & Noodles (expanded)
+    'spaghetti': ['spaghetti', 'spag'],
+    'macaroni': ['macaroni', 'mac'],
+    'penne': ['penne'],
+    'tagliatelle': ['tagliatelle'],
+    'nouilles': ['noodles', 'nouilles', 'fideos'],
+    'vermicelle': ['vermicelli', 'vermicelle'],
+    'couscous': ['couscous', 'cuscus'],
+    
+    // Breakfast Items
+    'corn flakes': ['corn flakes', 'cornflakes'],
+    'muesli': ['muesli', 'granola'],
+    'cacao': ['cocoa', 'cacao', 'chocolate powder'],
+    'nescafe': ['nescafe', 'instant coffee'],
+    'milo': ['milo', 'chocolate drink'],
+    'ovaltine': ['ovaltine', 'ovomaltine'],
+    'lipton': ['lipton', 'tea bags'],
+    
+    // Spreads & Jams
+    'confiture': ['jam', 'jelly', 'mermelada', 'confiture'],
+    'miel': ['honey', 'miel'],
+    'nutella': ['nutella', 'chocolate spread'],
+    'beurre de cacahuete': ['peanut butter', 'beurre cacahuete'],
+    'margarine': ['margarine', 'margarina'],
+    
+    // Meat Products (expanded)
+    'poulet entier': ['whole chicken', 'poulet entier'],
+    'cuisse de poulet': ['chicken thigh', 'cuisse poulet'],
+    'aile de poulet': ['chicken wing', 'aile poulet'],
+    'poitrine de poulet': ['chicken breast', 'blanc poulet'],
+    'boeuf hache': ['ground beef', 'minced beef', 'boeuf hache'],
+    'cote de boeuf': ['beef rib', 'cote boeuf'],
+    'escalope': ['escalope', 'cutlet'],
+    'saucisse fumee': ['smoked sausage', 'saucisse fumee'],
+    'bacon': ['bacon', 'lard'],
+    'corned beef': ['corned beef', 'bully beef'],
+    
+    // Seasonings & Spices (expanded)
+    'curry': ['curry', 'cari'],
+    'paprika': ['paprika'],
+    'cumin': ['cumin', 'comino'],
+    'muscade': ['nutmeg', 'muscade', 'nuez moscada'],
+    'cannelle': ['cinnamon', 'canela', 'cannelle'],
+    'laurier': ['bay leaf', 'laurier'],
+    'thym': ['thyme', 'tomillo', 'thym'],
+    'persil': ['parsley', 'perejil', 'persil'],
+    'coriandre': ['coriander', 'cilantro', 'coriandre'],
+    'basilic': ['basil', 'albahaca', 'basilic'],
+    
+    // Sugar & Sweeteners
+    'sucre blanc': ['white sugar', 'sucre blanc'],
+    'sucre roux': ['brown sugar', 'sucre roux'],
+    'sucre en poudre': ['powdered sugar', 'icing sugar'],
+    'sirop': ['syrup', 'jarabe', 'sirop'],
+    
+    // Flour & Baking
+    'farine de ble': ['wheat flour', 'farine ble'],
+    'farine complete': ['whole wheat flour', 'farine complete'],
+    'levure': ['yeast', 'baking powder', 'levure'],
+    'bicarbonate': ['baking soda', 'bicarbonate'],
+    'maizena': ['cornstarch', 'maizena', 'corn flour'],
+    
+    // Cheese varieties
+    'fromage rape': ['grated cheese', 'fromage rape'],
+    'mozzarella': ['mozzarella'],
+    'cheddar': ['cheddar'],
+    'emmental': ['emmental', 'swiss cheese'],
+    'parmesan': ['parmesan', 'parmigiano'],
+    'fromage fondu': ['processed cheese', 'fromage fondu'],
+    'la vache qui rit': ['la vache qui rit', 'laughing cow'],
+    'kiri': ['kiri', 'cream cheese'],
+    
+    // Fruits (expanded)
+    'papaye': ['papaya', 'papaye'],
+    'goyave': ['guava', 'guayaba', 'goyave'],
+    'fruit de la passion': ['passion fruit', 'maracuja'],
+    'noix de coco': ['coconut', 'coco', 'noix coco'],
+    'datte': ['date', 'datil', 'datte'],
+    'prune': ['plum', 'ciruela', 'prune'],
+    'cerise': ['cherry', 'cereza', 'cerise'],
+    'kiwi': ['kiwi'],
+    'melon': ['melon', 'cantaloupe'],
+    'pasteque': ['watermelon', 'sandia', 'pasteque'],
+    
+    // Vegetables (expanded)
+    'epinard': ['spinach', 'espinaca', 'epinard'],
+    'brocoli': ['broccoli', 'brocoli'],
+    'chou fleur': ['cauliflower', 'coliflor', 'chou fleur'],
+    'celeri': ['celery', 'apio', 'celeri'],
+    'mais': ['corn', 'maiz', 'mais'],
+    'champignon': ['mushroom', 'seta', 'champignon'],
+    'asperge': ['asparagus', 'esparrago', 'asperge'],
+    'artichaut': ['artichoke', 'alcachofa', 'artichaut'],
+    'betterave': ['beetroot', 'remolacha', 'betterave'],
+    'navet': ['turnip', 'nabo', 'navet'],
+    'radis': ['radish', 'rabano', 'radis'],
+    'poireau': ['leek', 'puerro', 'poireau'],
+    'echalote': ['shallot', 'chalota', 'echalote'],
+    
+    // Common Brand Names
+    'nido': ['nido', 'powdered milk'],
+    'peak': ['peak', 'peak milk'],
+    'cowbell': ['cowbell', 'cowbell milk'],
+    'dano': ['dano', 'dano milk'],
+    'bonnet rouge': ['bonnet rouge', 'tomato paste'],
+    'gino': ['gino', 'tomato paste'],
+    'tasty tom': ['tasty tom', 'tomato paste'],
+    'royco': ['royco', 'seasoning'],
+    'knorr': ['knorr', 'seasoning', 'bouillon'],
+    'indomie': ['indomie', 'instant noodles'],
+    'golden penny': ['golden penny', 'pasta', 'semolina'],
+    'honeywell': ['honeywell', 'flour'],
+    'dangote': ['dangote', 'sugar', 'flour', 'cement'],
   };
 
   // Check if normalized name matches any synonym
@@ -112,27 +548,23 @@ function isValidItemName(name: string, normalizedName: string): boolean {
     return false;
   }
 
-  // Count alphabetic characters
-  const alphaCount = (normalizedName.match(/[a-z]/g) || []).length;
-  const digitCount = (normalizedName.match(/[0-9]/g) || []).length;
-  const totalLength = normalizedName.replace(/\s/g, '').length;
+  // Count alphabetic characters (after removing spaces)
+  const withoutSpaces = normalizedName.replace(/\s/g, '');
+  const alphaCount = (withoutSpaces.match(/[a-z]/g) || []).length;
+  const digitCount = (withoutSpaces.match(/[0-9]/g) || []).length;
 
-  // Skip if mostly numbers (e.g., "123", "4g00", "t5c")
-  if (totalLength > 0 && digitCount / totalLength > 0.6) {
+  // Skip if ONLY numbers (e.g., "123", "456")
+  if (alphaCount === 0) {
     return false;
   }
 
-  // Skip if too few alphabetic characters (e.g., "g", "t5", "l0")
-  if (alphaCount < 2) {
+  // Skip if normalized result is very short AND mostly numbers (e.g., "t5", "l0")
+  if (withoutSpaces.length <= 3 && digitCount > alphaCount) {
     return false;
   }
 
-  // Skip single character words (e.g., "b", "s", "l")
-  const words = normalizedName.split(/\s+/);
-  if (words.length === 1 && words[0].length <= 2) {
-    return false;
-  }
-
+  // Accept everything else - normalization already fixed spacing issues
+  // Examples: "b EGADANET" → "begadanet" ✓, "s AC" → "sac" ✓
   return true;
 }
 

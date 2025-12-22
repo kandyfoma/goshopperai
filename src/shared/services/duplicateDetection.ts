@@ -66,6 +66,7 @@ class DuplicateDetectionService {
 
   /**
    * Calculate similarity score between two receipts
+   * Returns a score only if ALL key fields match closely
    */
   private calculateSimilarity(
     extracted: QuickExtractResponse['data'],
@@ -75,50 +76,63 @@ class DuplicateDetectionService {
       return 0;
     }
 
-    let score = 0;
-    let totalFactors = 0;
+    // All three fields must be present for a meaningful comparison
+    const hasStore = extracted.storeName && existing.storeName;
+    const hasDate = extracted.date && existing.date;
+    const hasTotal = extracted.total !== undefined && existing.total !== undefined;
 
-    // Store name similarity (most important)
-    if (extracted.storeName && existing.storeName) {
-      const storeSimilarity = this.stringSimilarity(
-        extracted.storeName.toLowerCase(),
-        existing.storeName.toLowerCase(),
-      );
-      score += storeSimilarity * 0.4; // 40% weight
-      totalFactors++;
+    // If any key field is missing, similarity is low
+    if (!hasStore || !hasDate || !hasTotal) {
+      return 0;
     }
 
-    // Date similarity (very important)
-    if (extracted.date && existing.date) {
-      const extractedDate = new Date(extracted.date);
-      const existingDate = new Date(existing.date);
-
-      if (!isNaN(extractedDate.getTime()) && !isNaN(existingDate.getTime())) {
-        const dateDiff = Math.abs(
-          extractedDate.getTime() - existingDate.getTime(),
-        );
-        // Same day = high similarity, within 7 days = medium, beyond = low
-        const dateSimilarity = Math.max(
-          0,
-          1 - dateDiff / (7 * 24 * 60 * 60 * 1000),
-        );
-        score += dateSimilarity * 0.35; // 35% weight
-        totalFactors++;
-      }
+    // Store name similarity - must be very close
+    const storeSimilarity = this.stringSimilarity(
+      extracted.storeName!.toLowerCase(),
+      existing.storeName!.toLowerCase(),
+    );
+    
+    // If store doesn't match well, not a duplicate
+    if (storeSimilarity < 0.6) {
+      return 0;
     }
 
-    // Total amount similarity (important)
-    if (extracted.total && existing.total) {
-      const amountDiff = Math.abs(extracted.total - existing.total);
-      const amountSimilarity = Math.max(
-        0,
-        1 - amountDiff / Math.max(extracted.total, existing.total),
-      );
-      score += amountSimilarity * 0.25; // 25% weight
-      totalFactors++;
+    // Date similarity - must be same day for a duplicate
+    const extractedDate = new Date(extracted.date!);
+    const existingDate = new Date(existing.date!);
+
+    if (isNaN(extractedDate.getTime()) || isNaN(existingDate.getTime())) {
+      return 0;
     }
 
-    return totalFactors > 0 ? score / totalFactors : 0;
+    // Check if same day
+    const sameDay = 
+      extractedDate.getFullYear() === existingDate.getFullYear() &&
+      extractedDate.getMonth() === existingDate.getMonth() &&
+      extractedDate.getDate() === existingDate.getDate();
+    
+    // If not same day, definitely not a duplicate
+    if (!sameDay) {
+      return 0;
+    }
+
+    // Total amount similarity - must be within 5% or $1
+    const amountDiff = Math.abs(extracted.total! - existing.total!);
+    const percentDiff = amountDiff / Math.max(extracted.total!, existing.total!, 1);
+    
+    // If total differs by more than 5% AND more than $1, not a duplicate
+    if (amountDiff > 1 && percentDiff > 0.05) {
+      return 0;
+    }
+
+    // All checks passed - this is likely a duplicate
+    // Calculate final score based on how close the matches are
+    const totalSimilarity = 1 - Math.min(percentDiff, 1);
+    
+    // Weighted score: store (40%) + date (35%) + total (25%)
+    const finalScore = (storeSimilarity * 0.4) + (1.0 * 0.35) + (totalSimilarity * 0.25);
+    
+    return finalScore;
   }
 
   /**
@@ -153,11 +167,12 @@ class DuplicateDetectionService {
 
   /**
    * Check if a receipt image is likely a duplicate
+   * Using strict matching: same store + same day + similar total
    */
   async checkForDuplicate(
     imageBase64: string,
     userId: string,
-    similarityThreshold: number = 0.7,
+    similarityThreshold: number = 0.85, // Increased from 0.7 to reduce false positives
   ): Promise<DuplicateCheckResult> {
     try {
       // Step 1: Quick extract basic info from the image
