@@ -1,6 +1,33 @@
 /**
  * Item Aggregation Service
- * Aggregates item data from receipts for efficient querying
+ * 
+ * ARCHITECTURE:
+ * =============
+ * 
+ * We maintain TWO separate data stores for items:
+ * 
+ * 1. USER PERSONAL ITEMS (user can delete)
+ *    Path: artifacts/{appId}/users/{userId}/items/{itemId}
+ *    - Stores user's personal purchase history
+ *    - Deleted when user deletes their receipts
+ *    - Used for personal spending analytics
+ * 
+ * 2. MASTER CITY ITEMS TABLE (community data - NEVER deleted by users)
+ *    Path: artifacts/{appId}/cityItems/{city}/items/{itemId}
+ *    - Centralized price database for each city
+ *    - Contains prices from ALL users in that city
+ *    - NEVER deleted when users delete their receipts
+ *    - Provides community price comparison data
+ *    - Powers the "City Items" feature
+ * 
+ * When a receipt is scanned:
+ *    → User items collection is updated (personal)
+ *    → City items collection is updated (community)
+ * 
+ * When a receipt is deleted:
+ *    → User items collection is cleaned up (removes their prices)
+ *    → City items collection is UNTOUCHED (prices remain for community)
+ * 
  * Triggered whenever a receipt is created or updated
  */
 
@@ -10,6 +37,11 @@ import {config} from '../config';
 
 const db = admin.firestore();
 
+// ============ DATA INTERFACES ============
+
+/**
+ * Price entry for user's personal items
+ */
 interface ItemPrice {
   storeName: string;
   price: number;
@@ -18,7 +50,18 @@ interface ItemPrice {
   receiptId: string;
 }
 
-interface AggregatedItem {
+/**
+ * Price entry for master city items (includes userId for tracking)
+ */
+interface CityItemPrice extends ItemPrice {
+  userId: string;
+}
+
+/**
+ * User's personal aggregated item
+ * Path: artifacts/{appId}/users/{userId}/items/{itemId}
+ */
+interface UserItem {
   id: string;
   name: string;
   nameNormalized: string;
@@ -33,6 +76,34 @@ interface AggregatedItem {
   createdAt: admin.firestore.Timestamp;
   updatedAt: admin.firestore.Timestamp;
 }
+
+/**
+ * Master city item (community data)
+ * Path: artifacts/{appId}/cityItems/{city}/items/{itemId}
+ * 
+ * This is the MASTER TABLE - never deleted by users
+ */
+export interface CityItem {
+  id: string;
+  name: string;
+  nameNormalized: string;
+  city: string;
+  prices: CityItemPrice[];
+  minPrice: number;
+  maxPrice: number;
+  avgPrice: number;
+  storeCount: number;
+  userCount: number;        // Number of unique users who bought this
+  userIds: string[];        // Array of userIds who have prices
+  currency: 'USD' | 'CDF';
+  totalPurchases: number;
+  lastPurchaseDate: admin.firestore.Timestamp;
+  createdAt: admin.firestore.Timestamp;
+  updatedAt: admin.firestore.Timestamp;
+}
+
+// Legacy interface for backward compatibility
+interface AggregatedItem extends UserItem {}
 
 /**
  * Normalize item name for consistent matching
@@ -602,9 +673,15 @@ export const aggregateItemsOnReceipt = functions
         receiptData.date ||
         admin.firestore.Timestamp.now();
 
+      // Get user's city for master city items table
+      const userDoc = await db.collection(`artifacts/${config.app.id}/users`).doc(userId).get();
+      const userCity = userDoc.data()?.defaultCity || null;
+      console.log(`Processing receipt for user in city: ${userCity}`);
+
       // Process each item in the receipt
       const batch = db.batch();
-      const itemsCollectionPath = `artifacts/${config.app.id}/users/${userId}/items`;
+      const userItemsPath = `artifacts/${config.app.id}/users/${userId}/items`;
+      const cityItemsPath = userCity ? `artifacts/${config.app.id}/cityItems/${userCity}/items` : null;
 
       for (const item of items) {
         if (!item.name || !item.unitPrice || item.unitPrice <= 0) {
@@ -619,8 +696,9 @@ export const aggregateItemsOnReceipt = functions
           continue;
         }
 
-        const itemRef = db.collection(itemsCollectionPath).doc(itemNameNormalized);
-        const itemDoc = await itemRef.get();
+        // ===== UPDATE USER'S PERSONAL ITEMS =====
+        const userItemRef = db.collection(userItemsPath).doc(itemNameNormalized);
+        const userItemDoc = await userItemRef.get();
 
         const newPrice: ItemPrice = {
           storeName,
@@ -630,9 +708,9 @@ export const aggregateItemsOnReceipt = functions
           receiptId,
         };
 
-        if (itemDoc.exists) {
-          // Update existing item
-          const existingData = itemDoc.data() as AggregatedItem;
+        if (userItemDoc.exists) {
+          // Update existing user item
+          const existingData = userItemDoc.data() as AggregatedItem;
 
           // Check if this receipt already has a price entry (update scenario)
           const existingPriceIndex = existingData.prices.findIndex(
@@ -671,7 +749,7 @@ export const aggregateItemsOnReceipt = functions
           const newName = item.name || '';
           const bestName = newName.length > existingName.length ? newName : existingName;
 
-          batch.update(itemRef, {
+          batch.update(userItemRef, {
             name: bestName, // Use longest/most complete name
             prices: updatedPrices,
             minPrice,
@@ -684,7 +762,7 @@ export const aggregateItemsOnReceipt = functions
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           });
         } else {
-          // Create new item
+          // Create new user item
           const newItem: Omit<AggregatedItem, 'createdAt' | 'updatedAt'> = {
             id: itemNameNormalized,
             name: item.name,
@@ -699,11 +777,103 @@ export const aggregateItemsOnReceipt = functions
             lastPurchaseDate: receiptDate,
           };
 
-          batch.set(itemRef, {
+          batch.set(userItemRef, {
             ...newItem,
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
           });
+        }
+
+        // ===== UPDATE MASTER CITY ITEMS TABLE (if city is set) =====
+        if (cityItemsPath) {
+          const cityItemRef = db.collection(cityItemsPath).doc(itemNameNormalized);
+          const cityItemDoc = await cityItemRef.get();
+
+          // Price entry includes userId for tracking which users have this item
+          const cityPrice: ItemPrice & { userId: string } = {
+            ...newPrice,
+            userId,
+          };
+
+          if (cityItemDoc.exists) {
+            // Update existing city item
+            const cityData = cityItemDoc.data() as AggregatedItem & { userIds?: string[] };
+
+            // Check if this receipt already has a price entry
+            const existingCityPriceIndex = cityData.prices.findIndex(
+              (p: any) => p.receiptId === receiptId && p.userId === userId,
+            );
+
+            let updatedCityPrices: (ItemPrice & { userId: string })[];
+            if (existingCityPriceIndex >= 0) {
+              // Update existing price
+              updatedCityPrices = [...cityData.prices] as any;
+              updatedCityPrices[existingCityPriceIndex] = cityPrice;
+            } else {
+              // Add new price (limit to last 100 prices for city-wide data)
+              updatedCityPrices = [cityPrice, ...(cityData.prices as any)].slice(0, 100);
+            }
+
+            // Recalculate city statistics
+            const cityPriceValues = updatedCityPrices.map(p => p.price);
+            const minPrice = Math.min(...cityPriceValues);
+            const maxPrice = Math.max(...cityPriceValues);
+            const avgPrice = cityPriceValues.reduce((sum, p) => sum + p, 0) / cityPriceValues.length;
+            const storeCount = new Set(updatedCityPrices.map(p => p.storeName)).size;
+            const userIds = Array.from(new Set(updatedCityPrices.map(p => p.userId)));
+
+            // Determine primary currency
+            const currencyCounts = updatedCityPrices.reduce((acc, p) => {
+              acc[p.currency] = (acc[p.currency] || 0) + 1;
+              return acc;
+            }, {} as Record<string, number>);
+            const primaryCurrency = Object.entries(currencyCounts).sort(
+              ([, a], [, b]) => b - a,
+            )[0][0] as 'USD' | 'CDF';
+
+            // Choose best display name
+            const existingCityName = cityData.name || '';
+            const newCityName = item.name || '';
+            const bestCityName = newCityName.length > existingCityName.length ? newCityName : existingCityName;
+
+            batch.update(cityItemRef, {
+              name: bestCityName,
+              prices: updatedCityPrices,
+              minPrice,
+              maxPrice,
+              avgPrice,
+              storeCount,
+              userCount: userIds.length,
+              userIds,
+              currency: primaryCurrency,
+              totalPurchases: updatedCityPrices.length,
+              lastPurchaseDate: receiptDate,
+              city: userCity,
+              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+          } else {
+            // Create new city item
+            const newCityItem = {
+              id: itemNameNormalized,
+              name: item.name,
+              nameNormalized: itemNameNormalized,
+              prices: [cityPrice],
+              minPrice: item.unitPrice,
+              maxPrice: item.unitPrice,
+              avgPrice: item.unitPrice,
+              storeCount: 1,
+              userCount: 1,
+              userIds: [userId],
+              currency,
+              totalPurchases: 1,
+              lastPurchaseDate: receiptDate,
+              city: userCity,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+              updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            };
+
+            batch.set(cityItemRef, newCityItem);
+          }
         }
       }
 
@@ -722,18 +892,32 @@ export const aggregateItemsOnReceipt = functions
   });
 
 /**
- * Clean up aggregated items when a receipt is deleted
- * Removes prices from the deleted receipt and recalculates stats
+ * Clean up USER'S PERSONAL items when a receipt is deleted
+ * 
+ * IMPORTANT: This ONLY cleans up the user's personal items collection.
+ * The MASTER CITY ITEMS TABLE is NEVER modified by this function.
+ * 
+ * This is intentional - city items are community data that should persist
+ * even when individual users delete their receipts. This allows the app
+ * to maintain accurate price history for the community.
+ * 
+ * Flow:
+ * - User deletes receipt → cleanupDeletedReceiptItems called
+ * - User's items collection is updated (prices from receipt removed)
+ * - City items collection is UNTOUCHED (prices remain for community)
  */
 export async function cleanupDeletedReceiptItems(
   userId: string,
   receiptId: string,
 ): Promise<void> {
+  console.log(`🗑️ Cleaning up USER items for deleted receipt ${receiptId}`);
+  console.log(`📌 Note: Master city items table is NOT modified (community data preserved)`);
+
   const itemsCollectionPath = `artifacts/${config.app.id}/users/${userId}/items`;
   const itemsSnapshot = await db.collection(itemsCollectionPath).get();
 
   console.log(
-    `Cleaning up ${itemsSnapshot.size} items for deleted receipt ${receiptId}`,
+    `Found ${itemsSnapshot.size} user items to check for receipt ${receiptId}`,
   );
 
   const batch = db.batch();
@@ -964,9 +1148,18 @@ export const rebuildItemsAggregation = functions
   });
 
 /**
- * Callable function to get aggregated items for a city
- * Returns items from all users in the same city
- * Updated to force redeploy
+ * Get items from the MASTER CITY ITEMS TABLE
+ * 
+ * This reads from: artifacts/{appId}/cityItems/{city}/items/{itemId}
+ * 
+ * The master table contains community price data that persists forever,
+ * even when individual users delete their receipts. This provides:
+ * - Accurate price history for the community
+ * - Price comparison across different stores
+ * - Historical price trends
+ * 
+ * Data in this table is NEVER deleted by users.
+ * It can only be cleaned up by admin functions (e.g., data retention policies).
  */
 export const getCityItems = functions
   .region('europe-west1')
@@ -992,83 +1185,12 @@ export const getCityItems = functions
     try {
       console.log(`Getting city items for city: ${city}, user: ${userId}`);
 
-      // Get all users in the city
-      const usersSnapshot = await db
-        .collection(`artifacts/${config.app.id}/users`)
-        .where('defaultCity', '==', city)
+      // Read directly from master city items table
+      const cityItemsSnapshot = await db
+        .collection(`artifacts/${config.app.id}/cityItems/${city}/items`)
         .get();
 
-      const itemsMap = new Map<string, any>();
-
-      // Process each user's items
-      for (const userDoc of usersSnapshot.docs) {
-        const userId = userDoc.id;
-        const itemsSnapshot = await db
-          .collection(`artifacts/${config.app.id}/users/${userId}/items`)
-          .get();
-
-        itemsSnapshot.docs.forEach(doc => {
-          const itemData = doc.data() as AggregatedItem;
-          const itemName = itemData.nameNormalized;
-
-          // Skip items without required data
-          if (!itemName || !itemData.prices || !Array.isArray(itemData.prices)) {
-            return;
-          }
-
-          if (!itemsMap.has(itemName)) {
-            itemsMap.set(itemName, {
-              id: itemName,
-              name: itemData.name,
-              prices: [],
-              minPrice: itemData.minPrice,
-              maxPrice: itemData.maxPrice,
-              avgPrice: itemData.avgPrice,
-              storeCount: itemData.storeCount,
-              currency: itemData.currency,
-              userCount: 1,
-              lastPurchaseDate: itemData.lastPurchaseDate,
-            });
-          }
-
-          const cityItem = itemsMap.get(itemName)!;
-
-          // Update display name to use the longest/most complete version
-          // This ensures "Yogurt" is preferred over "Yog" across all users
-          const existingName = cityItem.name || '';
-          const newName = itemData.name || '';
-          if (newName.length > existingName.length) {
-            cityItem.name = newName;
-          }
-
-          // Merge prices from this user (filter out invalid prices)
-          const validPrices = itemData.prices.filter(p => p && typeof p.price === 'number');
-          cityItem.prices.push(...validPrices.map(p => ({ ...p, userId })));
-
-          // Update statistics
-          const allPrices = cityItem.prices.map((p: any) => p.price);
-          if (allPrices.length > 0) {
-            cityItem.minPrice = Math.min(...allPrices);
-            cityItem.maxPrice = Math.max(...allPrices);
-            cityItem.avgPrice = allPrices.reduce((sum: number, p: number) => sum + p, 0) / allPrices.length;
-          }
-          cityItem.storeCount = new Set(cityItem.prices.map((p: any) => p.storeName)).size;
-          cityItem.userCount = new Set(cityItem.prices.map((p: any) => p.userId)).size;
-
-          // Update last purchase date (safely)
-          if (itemData.lastPurchaseDate && cityItem.lastPurchaseDate) {
-            try {
-              const newDate = itemData.lastPurchaseDate.toMillis ? itemData.lastPurchaseDate.toMillis() : 0;
-              const currentDate = cityItem.lastPurchaseDate.toMillis ? cityItem.lastPurchaseDate.toMillis() : 0;
-              if (newDate > currentDate) {
-                cityItem.lastPurchaseDate = itemData.lastPurchaseDate;
-              }
-            } catch {
-              // Keep existing date if comparison fails
-            }
-          }
-        });
-      }
+      console.log(`Found ${cityItemsSnapshot.size} items in master table for ${city}`);
 
       // Helper function to safely convert timestamp to Date
       const safeToDate = (value: any): Date => {
@@ -1086,16 +1208,19 @@ export const getCityItems = functions
         return new Date();
       };
 
-      const cityItems = Array.from(itemsMap.values()).map(item => ({
-        ...item,
-        lastPurchaseDate: safeToDate(item.lastPurchaseDate),
-        prices: item.prices.map((p: any) => ({
-          ...p,
-          date: safeToDate(p.date),
-        })),
-      }));
+      const cityItems = cityItemsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          lastPurchaseDate: safeToDate(data.lastPurchaseDate),
+          prices: (data.prices || []).map((p: any) => ({
+            ...p,
+            date: safeToDate(p.date),
+          })),
+        };
+      });
 
-      console.log(`✅ Found ${cityItems.length} items for city ${city}`);
+      console.log(`✅ Returning ${cityItems.length} items for city ${city}`);
 
       return {
         success: true,

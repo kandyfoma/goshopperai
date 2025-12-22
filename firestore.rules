@@ -117,6 +117,14 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if false;
     }
+    
+    // MASTER CITY ITEMS TABLE (community price database)
+    // This is read-only for users - only Cloud Functions can write
+    // Data persists even when users delete their receipts
+    match /artifacts/goshopper/cityItems/{city}/items/{itemId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only Cloud Functions can write
+    }
 
     // User profiles collection (for phone number lookup during login)
     match /userProfiles/{profileId} {

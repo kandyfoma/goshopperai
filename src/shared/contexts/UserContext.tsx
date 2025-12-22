@@ -84,17 +84,19 @@ export function UserProvider({children}: UserProviderProps) {
               preferredCurrency: data?.preferredCurrency || 'USD',
               notificationsEnabled: data?.notificationsEnabled ?? true,
               priceAlertsEnabled: data?.priceAlertsEnabled ?? true,
-              displayName: data?.displayName,
-              phoneNumber: data?.phoneNumber,
+              displayName: data?.displayName || user.displayName,
+              email: data?.email || user.email,
+              phoneNumber: data?.phoneNumber || user.phoneNumber,
               emailVerified: data?.emailVerified,
               phoneVerified: data?.phoneVerified,
               verified: data?.verified,
               verifiedAt: data?.verifiedAt ? safeToDate(data.verifiedAt) : undefined,
               countryCode: data?.countryCode,
               isInDRC: data?.isInDRC,
-              // New profile fields
+              // Profile fields
               name: data?.name,
               surname: data?.surname,
+              dateOfBirth: data?.dateOfBirth,
               age: data?.age,
               sex: data?.sex,
               monthlyBudget: data?.monthlyBudget,
@@ -121,7 +123,7 @@ export function UserProvider({children}: UserProviderProps) {
             );
           } else {
             // Create default profile if doesn't exist
-            await createDefaultProfile(user.uid);
+            await createDefaultProfile(user.uid, user);
           }
           setIsLoading(false);
         },
@@ -136,14 +138,28 @@ export function UserProvider({children}: UserProviderProps) {
   }, [isAuthenticated, user?.uid]);
 
   // Create default profile for new users
-  const createDefaultProfile = async (userId: string) => {
+  const createDefaultProfile = async (userId: string, authUser?: typeof user) => {
     try {
+      // Split displayName into name and surname if available
+      let name = '';
+      let surname = '';
+      if (authUser?.displayName) {
+        const nameParts = authUser.displayName.trim().split(' ');
+        name = nameParts[0] || '';
+        surname = nameParts.slice(1).join(' ') || '';
+      }
+
       const defaultProfile: UserProfile = {
         userId,
         preferredLanguage: 'fr',
         preferredCurrency: 'USD',
         notificationsEnabled: true,
         priceAlertsEnabled: true,
+        displayName: authUser?.displayName,
+        email: authUser?.email,
+        phoneNumber: authUser?.phoneNumber,
+        name: name || undefined,
+        surname: surname || undefined,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -250,8 +266,27 @@ export function UserProvider({children}: UserProviderProps) {
           priceAlertsEnabled: data?.priceAlertsEnabled ?? true,
           displayName: data?.displayName,
           phoneNumber: data?.phoneNumber,
+          emailVerified: data?.emailVerified,
+          phoneVerified: data?.phoneVerified,
+          verified: data?.verified,
+          verifiedAt: data?.verifiedAt ? safeToDate(data.verifiedAt) : undefined,
+          countryCode: data?.countryCode,
+          isInDRC: data?.isInDRC,
+          // Profile fields
+          name: data?.name,
+          surname: data?.surname,
+          dateOfBirth: data?.dateOfBirth,
+          age: data?.age,
+          sex: data?.sex,
+          monthlyBudget: data?.monthlyBudget,
+          defaultMonthlyBudget: data?.defaultMonthlyBudget,
+          defaultCity: data?.defaultCity,
           createdAt: safeToDate(data?.createdAt),
           updatedAt: safeToDate(data?.updatedAt),
+          // ML & AI fields
+          behaviorProfile: data?.behaviorProfile,
+          recommendationPreferences: data?.recommendationPreferences,
+          engagementMetrics: data?.engagementMetrics,
         };
 
         setProfile(userProfile);
