@@ -45,6 +45,7 @@ import {ShopsScreen, ShopDetailScreen} from '@/features/shops';
 import {CityItemsScreen} from '@/features/items/screens';
 import {ItemsScreen} from '@/features/items';
 import {StatsScreen} from '@/features/stats/screens/StatsScreen';
+import {HistoryScreen} from '@/features/history/screens';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -362,6 +363,11 @@ export function RootNavigator() {
       <Stack.Screen
         name="Items"
         component={ItemsScreen}
+        options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="History"
+        component={HistoryScreen}
         options={{headerShown: false}}
       />
       <Stack.Screen

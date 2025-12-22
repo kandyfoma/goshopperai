@@ -204,14 +204,28 @@ export function StatsScreen() {
           const category = item.category || 'Autre';
           const itemTotal = item.totalPrice || 0;
 
-          // Convert item total to user's preferred currency if needed
+          // Determine the receipt's actual currency for proper conversion
+          // Use totalUSD/totalCDF existence to determine what currency the items are in
+          let itemCurrency = data.currency || 'USD';
+          
+          // If receipt has both totalUSD and totalCDF, items are in the original currency
+          // Otherwise, infer from which total field exists
+          if (data.totalUSD != null && data.totalCDF != null) {
+            itemCurrency = data.currency || 'USD';
+          } else if (data.totalUSD != null && data.totalCDF == null) {
+            itemCurrency = 'USD';
+          } else if (data.totalCDF != null && data.totalUSD == null) {
+            itemCurrency = 'CDF';
+          }
+
+          // Convert item total to user's preferred currency
           let convertedItemTotal = itemTotal;
-          if (userPreferredCurrency === 'CDF' && data.currency === 'USD') {
+          if (userPreferredCurrency === 'CDF' && itemCurrency === 'USD') {
             // Convert USD to CDF using configurable exchange rate
             convertedItemTotal = itemTotal * exchangeRate;
           } else if (
             userPreferredCurrency === 'USD' &&
-            data.currency === 'CDF'
+            itemCurrency === 'CDF'
           ) {
             // Convert CDF to USD using configurable exchange rate
             convertedItemTotal = itemTotal / exchangeRate;
