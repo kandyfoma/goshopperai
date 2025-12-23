@@ -47,11 +47,21 @@ export function MokoPaymentScreen() {
 
   const [visible, setVisible] = useState(true);
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [useRegisteredPhone, setUseRegisteredPhone] = useState(true);
   const [provider, setProvider] = useState<MobileMoneyProvider | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transactionId, setTransactionId] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('PENDING');
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  // Pre-fill phone number from profile on mount
+  useEffect(() => {
+    if (profile?.phoneNumber && useRegisteredPhone) {
+      setPhoneNumber(profile.phoneNumber);
+    } else if (!useRegisteredPhone) {
+      setPhoneNumber('');
+    }
+  }, [profile?.phoneNumber, useRegisteredPhone]);
 
   const handleClose = () => {
     Keyboard.dismiss();
@@ -232,29 +242,93 @@ export function MokoPaymentScreen() {
               </View>
             </View>
 
-            {/* Phone Number Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Numéro de Téléphone</Text>
-              <View style={[
-                styles.inputWrapper,
-                provider && styles.inputWrapperValid
-              ]}>
-                <Icon name="phone" size="sm" color={Colors.text.tertiary} />
-                <TextInput
-                  style={styles.input}
-                  value={phoneNumber}
-                  onChangeText={setPhoneNumber}
-                  placeholder="243828812498"
-                  placeholderTextColor={Colors.text.tertiary}
-                  keyboardType="phone-pad"
-                  maxLength={12}
-                  editable={!isProcessing && !transactionId}
-                />
+            {/* Phone Number Selection */}
+            {profile?.phoneNumber && (
+              <View style={styles.phoneSelectionContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.phoneOptionButton,
+                    useRegisteredPhone && styles.phoneOptionButtonActive
+                  ]}
+                  onPress={() => setUseRegisteredPhone(true)}
+                  disabled={isProcessing || !!transactionId}>
+                  <View style={styles.phoneOptionContent}>
+                    <Icon 
+                      name={useRegisteredPhone ? 'check-circle' : 'circle'} 
+                      size="md" 
+                      color={useRegisteredPhone ? Colors.primary : Colors.text.tertiary} 
+                    />
+                    <View style={styles.phoneOptionText}>
+                      <Text style={[
+                        styles.phoneOptionLabel,
+                        useRegisteredPhone && styles.phoneOptionLabelActive
+                      ]}>
+                        Téléphone enregistré
+                      </Text>
+                      <Text style={styles.phoneOptionNumber}>{profile.phoneNumber}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.phoneOptionButton,
+                    !useRegisteredPhone && styles.phoneOptionButtonActive
+                  ]}
+                  onPress={() => setUseRegisteredPhone(false)}
+                  disabled={isProcessing || !!transactionId}>
+                  <View style={styles.phoneOptionContent}>
+                    <Icon 
+                      name={!useRegisteredPhone ? 'check-circle' : 'circle'} 
+                      size="md" 
+                      color={!useRegisteredPhone ? Colors.primary : Colors.text.tertiary} 
+                    />
+                    <Text style={[
+                      styles.phoneOptionLabel,
+                      !useRegisteredPhone && styles.phoneOptionLabelActive
+                    ]}>
+                      Utiliser un autre numéro
+                    </Text>
+                  </View>
+                </TouchableOpacity>
               </View>
-              <Text style={styles.inputHint}>
-                Format: 12 chiffres commençant par 243
-              </Text>
-            </View>
+            )}
+
+            {/* Phone Number Input */}
+            {(!useRegisteredPhone || !profile?.phoneNumber) && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Numéro de Téléphone</Text>
+                <View style={[
+                  styles.inputWrapper,
+                  provider && styles.inputWrapperValid
+                ]}>
+                  <Icon name="phone" size="sm" color={Colors.text.tertiary} />
+                  <TextInput
+                    style={styles.input}
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    placeholder="243828812498"
+                    placeholderTextColor={Colors.text.tertiary}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    editable={!isProcessing && !transactionId}
+                  />
+                </View>
+                <Text style={styles.inputHint}>
+                  Format: 12 chiffres commençant par 243
+                </Text>
+              </View>
+            )}
+
+            {/* Show provider detection even when using registered phone */}
+            {useRegisteredPhone && profile?.phoneNumber && provider && (
+              <View style={styles.providerDetectedCard}>
+                <Icon name="check-circle" size="sm" color={Colors.status.success} />
+                <Text style={styles.providerDetectedText}>
+                  Opérateur détecté: {getProviderDisplayName()}
+                </Text>
+              </View>
+            )}
 
             {/* Payment Status */}
             {transactionId && (
@@ -468,6 +542,60 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.sm,
     fontFamily: Typography.fontFamily.regular,
     color: Colors.text.tertiary,
+  },
+
+  // Phone Selection
+  phoneSelectionContainer: {
+    marginBottom: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  phoneOptionButton: {
+    backgroundColor: Colors.background.primary,
+    borderWidth: 1.5,
+    borderColor: Colors.border.light,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+  },
+  phoneOptionButtonActive: {
+    borderColor: Colors.primary,
+    backgroundColor: '#F0F9FF',
+  },
+  phoneOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  phoneOptionText: {
+    flex: 1,
+  },
+  phoneOptionLabel: {
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.secondary,
+    marginBottom: 2,
+  },
+  phoneOptionLabelActive: {
+    color: Colors.primary,
+    fontFamily: Typography.fontFamily.semiBold,
+  },
+  phoneOptionNumber: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.tertiary,
+  },
+  providerDetectedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    gap: Spacing.sm,
+    marginBottom: Spacing.lg,
+  },
+  providerDetectedText: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.status.success,
   },
 
   // Instructions Card

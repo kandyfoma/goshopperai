@@ -5,11 +5,16 @@
 
 import 'react-native-url-polyfill/auto';
 import {createClient} from '@supabase/supabase-js';
+import Config from 'react-native-config';
 
 // Payment Hub Configuration
 const PAYMENT_API_URL = 'https://web-production-a4586.up.railway.app/initiate-payment';
-const SUPABASE_URL = 'https://oacrwvfivsybkvndooyx.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hY3J3dmZpdnN5Ymt2bmRvb3l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ4OTI3NzEsImV4cCI6MjA1MDQ2ODc3MX0.sb_publishable_wj3fQLQJ808R5CG5FG8FYw_5J11Ps4g';
+const SUPABASE_URL = Config.SUPABASE_URL || 'https://oacrwvfivsybkvndooyx.supabase.co';
+const SUPABASE_ANON_KEY = Config.SUPABASE_ANON_KEY || '';
+
+if (!SUPABASE_ANON_KEY) {
+  console.error('⚠️ SUPABASE_ANON_KEY is not set in environment variables');
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 

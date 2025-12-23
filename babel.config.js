@@ -3,6 +3,17 @@ module.exports = {
   plugins: [
     'nativewind/babel',
     [
+      'module:react-native-dotenv',
+      {
+        moduleName: 'react-native-config',
+        path: '.env',
+        blacklist: null,
+        whitelist: null,
+        safe: false,
+        allowUndefined: true,
+      },
+    ],
+    [
       'module-resolver',
       {
         root: ['.'],
