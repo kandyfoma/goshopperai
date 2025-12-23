@@ -409,8 +409,44 @@ async function activateSubscription(
 ): Promise<void> {
   const subscriptionRef = db.doc(collections.subscription(userId));
   const now = new Date();
-  const endDate = new Date(now);
-  endDate.setMonth(endDate.getMonth() + 1); // 1 month subscription
+
+  // Check for existing active subscription
+  const existingSubscription = await subscriptionRef.get();
+  const existingData = existingSubscription.exists
+    ? (existingSubscription.data() as any)
+    : null;
+
+  // Calculate subscription end date
+  let endDate: Date;
+
+  if (
+    existingData?.isSubscribed &&
+    existingData?.subscriptionEndDate &&
+    existingData.status === 'active'
+  ) {
+    // User has active subscription - extend from current end date
+    const currentEndDate =
+      existingData.subscriptionEndDate instanceof admin.firestore.Timestamp
+        ? existingData.subscriptionEndDate.toDate()
+        : new Date(existingData.subscriptionEndDate);
+
+    if (currentEndDate > now) {
+      // Add 1 month to existing end date (user keeps remaining time)
+      endDate = new Date(currentEndDate);
+      endDate.setMonth(endDate.getMonth() + 1);
+      console.log(
+        `Extending subscription from ${currentEndDate.toISOString()} to ${endDate.toISOString()}`,
+      );
+    } else {
+      // Old subscription expired, start fresh
+      endDate = new Date(now);
+      endDate.setMonth(endDate.getMonth() + 1);
+    }
+  } else {
+    // No active subscription, start fresh
+    endDate = new Date(now);
+    endDate.setMonth(endDate.getMonth() + 1);
+  }
 
   await subscriptionRef.set(
     {
@@ -433,6 +469,7 @@ async function activateSubscription(
       transactionId: payment.transactionId,
       customerPhone: payment.phoneNumber,
       autoRenew: true,
+      monthlyScansUsed: 0, // Reset monthly usage on new payment
       // Preserve trial info
       trialScansUsed: admin.firestore.FieldValue.increment(0),
       trialScansLimit: config.app.trialScanLimit,

@@ -15,7 +15,7 @@ import {
   openNotificationSettings,
   disableNotifications,
 } from '../services/notificationService';
-import {useAuth} from './useAuth';
+import {useAuth} from '../contexts/AuthContext';
 
 export function usePushNotifications() {
   const navigation = useNavigation();

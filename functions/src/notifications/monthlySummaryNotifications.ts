@@ -64,16 +64,20 @@ async function calculateMonthlyStats(
 
   // Get top category
   const topCategory = Object.entries(categories).length > 0
-    ? Object.entries(categories)
-        .sort(([, a], [, b]) => b - a)[0]
-        .map(([name, amount]) => ({name, amount}))[0]
+    ? (() => {
+        const [name, amount] = Object.entries(categories)
+          .sort(([, a], [, b]) => b - a)[0];
+        return {name, amount};
+      })()
     : null;
 
   // Get top store
   const topStore = Object.entries(stores).length > 0
-    ? Object.entries(stores)
-        .sort(([, a], [, b]) => b - a)[0]
-        .map(([name, amount]) => ({name, amount}))[0]
+    ? (() => {
+        const [name, amount] = Object.entries(stores)
+          .sort(([, a], [, b]) => b - a)[0];
+        return {name, amount};
+      })()
     : null;
 
   // Get previous month data for comparison

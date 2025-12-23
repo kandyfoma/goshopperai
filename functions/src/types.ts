@@ -68,7 +68,8 @@ export interface Subscription {
     | 'expired'
     | 'cancelled'
     | 'pending'
-    | 'expiring_soon';
+    | 'expiring_soon'
+    | 'grace';
   durationMonths?: 1 | 3 | 6 | 12;
 
   // Billing

@@ -118,7 +118,7 @@ export function hasFeatureAccess(
   const allowedPlans = FEATURE_ACCESS[feature];
 
   // During trial, user has access to all features
-  if (subscription.status === 'trial' && subscription.trialScansUsed !== undefined) {
+  if (subscription.status === 'trial' && subscription.trialScansUsed !== undefined && subscription.trialEndDate) {
     const now = new Date();
     const trialEnd = subscription.trialEndDate instanceof Date 
       ? subscription.trialEndDate 

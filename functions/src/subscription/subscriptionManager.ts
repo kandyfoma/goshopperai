@@ -547,8 +547,42 @@ export const upgradeSubscription = functions
       const subscriptionRef = db.doc(collections.subscription(userId));
       const now = new Date();
 
-      // Calculate subscription end date based on duration (using date-fns for safety)
-      const endDate = addMonths(now, duration);
+      // Check for existing subscription
+      const existingSubscription = await subscriptionRef.get();
+      const existingData = existingSubscription.exists
+        ? (existingSubscription.data() as Subscription)
+        : null;
+
+      // Calculate subscription end date
+      let endDate: Date;
+      let subscriptionStartDate = now;
+
+      if (
+        existingData?.isSubscribed &&
+        existingData?.subscriptionEndDate &&
+        existingData.status === 'active'
+      ) {
+        // User is upgrading with active subscription
+        // Preserve remaining time by extending from current end date
+        const currentEndDate =
+          existingData.subscriptionEndDate instanceof admin.firestore.Timestamp
+            ? existingData.subscriptionEndDate.toDate()
+            : new Date(existingData.subscriptionEndDate);
+
+        if (currentEndDate > now) {
+          // Add new duration to existing end date (user keeps remaining time)
+          endDate = addMonths(currentEndDate, duration);
+          console.log(
+            `Upgrading with active subscription. Extended from ${currentEndDate.toISOString()} to ${endDate.toISOString()}`,
+          );
+        } else {
+          // Old subscription expired, start fresh
+          endDate = addMonths(now, duration);
+        }
+      } else {
+        // No active subscription, start fresh
+        endDate = addMonths(now, duration);
+      }
 
       // Reset billing period start (monthly billing cycle for scan reset)
       const billingPeriodStart = new Date(now);
@@ -567,12 +601,13 @@ export const upgradeSubscription = functions
           planId,
           status: 'active',
           durationMonths: duration,
-          monthlyScansUsed: 0, // Reset monthly usage
+          monthlyScansUsed: 0, // Reset monthly usage on upgrade
           currentBillingPeriodStart:
             admin.firestore.Timestamp.fromDate(billingPeriodStart),
           currentBillingPeriodEnd:
             admin.firestore.Timestamp.fromDate(billingPeriodEnd),
-          subscriptionStartDate: admin.firestore.Timestamp.fromDate(now),
+          subscriptionStartDate:
+            admin.firestore.Timestamp.fromDate(subscriptionStartDate),
           subscriptionEndDate: admin.firestore.Timestamp.fromDate(endDate),
           lastPaymentDate: admin.firestore.Timestamp.fromDate(now),
           lastPaymentAmount: pricing.total,

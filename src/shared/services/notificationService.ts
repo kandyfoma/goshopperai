@@ -6,7 +6,6 @@
 import messaging, {FirebaseMessagingTypes} from '@react-native-firebase/messaging';
 import {Platform, Alert, Linking} from 'react-native';
 import firestore from '@react-native-firebase/firestore';
-import {APP_CONFIG} from '../utils/constants';
 
 /**
  * Request notification permission
@@ -58,7 +57,7 @@ export async function getFCMToken(): Promise<string | null> {
 export async function saveFCMToken(userId: string, token: string): Promise<void> {
   try {
     const userRef = firestore()
-      .collection(`artifacts/${APP_CONFIG.id}/users`)
+      .collection('users')
       .doc(userId);
 
     await userRef.update({
@@ -126,9 +125,9 @@ export function setupForegroundNotificationHandler(
     // Update notification engagement metrics
     try {
       const userId = remoteMessage.data?.userId;
-      if (userId) {
+      if (userId && typeof userId === 'string') {
         await firestore()
-          .collection(`artifacts/${APP_CONFIG.id}/users`)
+          .collection('users')
           .doc(userId)
           .update({
             pushNotificationsReceived: firestore.FieldValue.increment(1),
@@ -149,9 +148,9 @@ export function setupForegroundNotificationHandler(
           onPress: async () => {
             // Track dismissal
             const userId = remoteMessage.data?.userId;
-            if (userId) {
+            if (userId && typeof userId === 'string') {
               await firestore()
-                .collection(`artifacts/${APP_CONFIG.id}/users`)
+                .collection('users')
                 .doc(userId)
                 .update({
                   pushNotificationDismissed: firestore.FieldValue.increment(1),
@@ -164,9 +163,9 @@ export function setupForegroundNotificationHandler(
           onPress: async () => {
             // Track open
             const userId = remoteMessage.data?.userId;
-            if (userId) {
+            if (userId && typeof userId === 'string') {
               await firestore()
-                .collection(`artifacts/${APP_CONFIG.id}/users`)
+                .collection('users')
                 .doc(userId)
                 .update({
                   pushNotificationsOpened: firestore.FieldValue.increment(1),
@@ -194,9 +193,9 @@ export function setupBackgroundNotificationHandler(
 
     // Track notification opened
     const userId = remoteMessage.data?.userId;
-    if (userId) {
+    if (userId && typeof userId === 'string') {
       await firestore()
-        .collection(`artifacts/${APP_CONFIG.id}/users`)
+        .collection('users')
         .doc(userId)
         .update({
           pushNotificationsOpened: firestore.FieldValue.increment(1),
@@ -215,9 +214,9 @@ export function setupBackgroundNotificationHandler(
 
         // Track notification opened
         const userId = remoteMessage.data?.userId;
-        if (userId) {
+        if (userId && typeof userId === 'string') {
           await firestore()
-            .collection(`artifacts/${APP_CONFIG.id}/users`)
+            .collection('users')
             .doc(userId)
             .update({
               pushNotificationsOpened: firestore.FieldValue.increment(1),
@@ -335,7 +334,7 @@ export async function openNotificationSettings(): Promise<void> {
 export async function disableNotifications(userId: string): Promise<void> {
   try {
     await firestore()
-      .collection(`artifacts/${APP_CONFIG.id}/users`)
+      .collection('users')
       .doc(userId)
       .update({
         notificationsEnabled: false,
