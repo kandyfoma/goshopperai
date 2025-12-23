@@ -727,18 +727,61 @@ async function mergeMultiPageReceipt(parsedResults, images) {
         .slice()
         .reverse()
         .find(p => p.total > 0) || parsedResults[parsedResults.length - 1];
-    // 5. Collect all unique items (deduplication by name + price)
+    // 5. Collect all unique items (SMART deduplication by name similarity + price)
     const itemMap = new Map();
-    for (const page of parsedResults) {
-        for (const item of page.items) {
-            const key = `${item.nameNormalized}-${item.unitPrice}`;
-            if (itemMap.has(key)) {
-                // Same item appears on multiple pages - add quantities
-                const existing = itemMap.get(key);
-                existing.quantity += item.quantity;
-                existing.totalPrice += item.totalPrice;
+    /**
+     * Check if two product names are similar (fuzzy match)
+     * This catches OCR errors like "Yog" vs "Yogurt"
+     */
+    function areNamesSimilar(name1, name2) {
+        // If one name is a substring of the other, they're similar
+        if (name1.includes(name2) || name2.includes(name1)) {
+            return true;
+        }
+        // Calculate simple Levenshtein-like similarity
+        const longer = name1.length > name2.length ? name1 : name2;
+        const shorter = name1.length > name2.length ? name2 : name1;
+        // If lengths differ by more than 50%, probably different items
+        if (longer.length > shorter.length * 1.5) {
+            return false;
+        }
+        // Count matching characters in order
+        let matches = 0;
+        let j = 0;
+        for (let i = 0; i < shorter.length && j < longer.length; i++) {
+            if (shorter[i] === longer[j]) {
+                matches++;
+                j++;
             }
             else {
+                j++;
+            }
+        }
+        // If 70%+ characters match, consider similar
+        return matches / shorter.length >= 0.7;
+    }
+    for (const page of parsedResults) {
+        for (const item of page.items) {
+            let foundSimilar = false;
+            // Check if there's already a similar item with the same price
+            for (const [, existingItem] of itemMap.entries()) {
+                // Same price AND similar name = likely duplicate with OCR correction
+                if (existingItem.unitPrice === item.unitPrice &&
+                    areNamesSimilar(existingItem.nameNormalized, item.nameNormalized)) {
+                    // Merge items - keep the LONGER/more complete name (likely the corrected one)
+                    if (item.name.length > existingItem.name.length) {
+                        existingItem.name = item.name;
+                        existingItem.nameNormalized = item.nameNormalized;
+                    }
+                    existingItem.quantity += item.quantity;
+                    existingItem.totalPrice += item.totalPrice;
+                    foundSimilar = true;
+                    break;
+                }
+            }
+            if (!foundSimilar) {
+                // New unique item
+                const key = `${item.nameNormalized}-${item.unitPrice}`;
                 itemMap.set(key, { ...item });
             }
         }

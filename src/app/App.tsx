@@ -15,7 +15,8 @@ import {UserProvider} from '@/shared/contexts/UserContext';
 import {SubscriptionProvider} from '@/shared/contexts/SubscriptionContext';
 import {ThemeProvider} from '@/shared/contexts/ThemeContext';
 import {ToastProvider} from '@/shared/contexts/ToastContext';
-import {OfflineBanner, SplashScreen} from '@/shared/components';
+import {ScanProcessingProvider} from '@/shared/contexts/ScanProcessingContext';
+import {OfflineBanner, SplashScreen, GlobalScanProgressBanner, GlobalScanResultModal} from '@/shared/components';
 import {initializeFirebase} from '@/shared/services/firebase/config';
 import {analyticsService} from '@/shared/services';
 import {pushNotificationService} from '@/shared/services/firebase';
@@ -37,15 +38,19 @@ function NetworkAwareApp(): React.JSX.Element {
             <UserProvider>
               <SubscriptionProvider>
                 <ToastProvider>
-                  <NavigationContainer>
-                    <OfflineBanner />
-                    <StatusBar
-                      barStyle="dark-content"
-                      backgroundColor="#FFFFFF"
-                      translucent={false}
-                    />
-                    <RootNavigator />
-                  </NavigationContainer>
+                  <ScanProcessingProvider>
+                    <NavigationContainer>
+                      <OfflineBanner />
+                      <GlobalScanProgressBanner />
+                      <StatusBar
+                        barStyle="dark-content"
+                        backgroundColor="#FFFFFF"
+                        translucent={false}
+                      />
+                      <RootNavigator />
+                      <GlobalScanResultModal />
+                    </NavigationContainer>
+                  </ScanProcessingProvider>
                 </ToastProvider>
               </SubscriptionProvider>
             </UserProvider>

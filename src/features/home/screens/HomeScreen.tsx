@@ -1,6 +1,6 @@
 // Home Screen - Modern Dashboard Design
 // Inspired by Urbanist UI Kit - Soft pastels & card-based layout
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useRef, useState, useCallback} from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   Dimensions,
   StatusBar,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import LinearGradient from 'react-native-linear-gradient';
 import {RootStackParamList} from '@/shared/types';
@@ -457,43 +457,49 @@ export function HomeScreen() {
     };
   }, [userProfile?.userId, displayCurrency]);
 
-  // Fetch items count
-  useEffect(() => {
-    const fetchItemsCount = async () => {
-      if (!userProfile?.userId) return;
+  // Fetch items count - reload when screen comes into focus
+  const fetchItemsCount = useCallback(async () => {
+    if (!userProfile?.userId) return;
 
-      try {
-        const receiptsSnapshot = await firestore()
-          .collection('artifacts')
-          .doc(APP_ID)
-          .collection('users')
-          .doc(userProfile.userId)
-          .collection('receipts')
-          .get();
+    try {
+      console.log('📱 HomeScreen: Fetching items count');
+      const receiptsSnapshot = await firestore()
+        .collection('artifacts')
+        .doc(APP_ID)
+        .collection('users')
+        .doc(userProfile.userId)
+        .collection('receipts')
+        .get();
 
-        const itemsSet = new Set<string>();
+      const itemsSet = new Set<string>();
 
-        receiptsSnapshot.docs.forEach(doc => {
-          const receiptData = doc.data();
-          const items = receiptData.items || [];
+      receiptsSnapshot.docs.forEach(doc => {
+        const receiptData = doc.data();
+        const items = receiptData.items || [];
 
-          items.forEach((item: any) => {
-            const itemName = item.name?.toLowerCase().trim();
-            if (itemName && (item.unitPrice || 0) > 0) {
-              itemsSet.add(itemName);
-            }
-          });
+        items.forEach((item: any) => {
+          const itemName = item.name?.toLowerCase().trim();
+          if (itemName && (item.unitPrice || 0) > 0) {
+            itemsSet.add(itemName);
+          }
         });
+      });
 
-        setItemsCount(itemsSet.size);
-      } catch (error) {
-        console.error('Error fetching items count:', error);
-        setItemsCount(0);
-      }
-    };
-
-    fetchItemsCount();
+      console.log('📱 HomeScreen: Items count:', itemsSet.size);
+      setItemsCount(itemsSet.size);
+    } catch (error) {
+      console.error('Error fetching items count:', error);
+      setItemsCount(0);
+    }
   }, [userProfile?.userId]);
+
+  // Reload items count when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('📱 HomeScreen focused, reloading items count');
+      fetchItemsCount();
+    }, [fetchItemsCount])
+  );
 
   const handleScanPress = () => {
     if (!canScan) {

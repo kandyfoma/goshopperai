@@ -1,6 +1,6 @@
 // Items Screen - Browse and compare item prices across stores
 // Redesigned with modern UX and enhanced visual hierarchy
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   Pressable,
   Modal,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import firestore from '@react-native-firebase/firestore';
 import {firebase} from '@react-native-firebase/functions';
 import {
@@ -68,9 +68,13 @@ export function ItemsScreen() {
     analyticsService.logScreenView('Items', 'ItemsScreen');
   }, []);
 
-  useEffect(() => {
-    loadItemsData();
-  }, [user]);
+  // Reload data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('📱 ItemsScreen focused, reloading data');
+      loadItemsData();
+    }, [user])
+  );
 
   useEffect(() => {
     filterItems();

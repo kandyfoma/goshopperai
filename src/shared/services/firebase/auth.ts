@@ -736,6 +736,8 @@ class AuthService {
     try {
       const {phoneNumber, password, city, countryCode} = registrationData;
       
+      console.log('📱 Creating user with phone:', {phoneNumber, city, countryCode});
+      
       // Create a user document with phone number as the primary identifier
       const userId = firestore().collection('users').doc().id; // Generate unique ID
       
@@ -756,6 +758,8 @@ class AuthService {
         .collection('users')
         .doc(userId)
         .set(userData);
+      
+      console.log('✅ User document created with phone number:', phoneNumber);
       
       // Create a mock Firebase user for consistency
       const user: User = {
@@ -790,6 +794,8 @@ class AuthService {
     try {
       const {userId, phoneNumber, countryCode, displayName} = data;
       
+      console.log('📝 Completing registration:', {userId, phoneNumber, countryCode, displayName});
+      
       // Update user profile with verified status
       const profileRef = firestore()
         .collection('artifacts')
@@ -797,21 +803,20 @@ class AuthService {
         .collection('users')
         .doc(userId);
       
-      await profileRef.set(
-        {
-          verified: true,
-          verifiedAt: firestore.FieldValue.serverTimestamp(),
-          phoneVerified: true,
-          phoneNumber,
-          countryCode,
-          isInDRC: countryCode === 'CD',
-          displayName: displayName || phoneNumber,
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-        },
-        {merge: true}
-      );
+      const updateData = {
+        verified: true,
+        verifiedAt: firestore.FieldValue.serverTimestamp(),
+        phoneVerified: true,
+        phoneNumber,
+        countryCode,
+        isInDRC: countryCode === 'CD',
+        displayName: displayName || phoneNumber,
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      };
       
-      console.log('✅ User registration completed and verified:', userId);
+      await profileRef.set(updateData, {merge: true});
+      
+      console.log('✅ User registration completed and verified:', {userId, phoneNumber, countryCode});
     } catch (error: any) {
       console.error('❌ Complete registration failed:', error);
       throw new Error(error.message || 'Failed to complete registration');
@@ -821,8 +826,10 @@ class AuthService {
   /**
    * Verify phone number for existing user
    */
-  async verifyUserPhone(userId: string, phoneNumber: string): Promise<void> {
+  async verifyUserPhone(userId: string, phoneNumber: string, countryCode?: string): Promise<void> {
     try {
+      console.log('📞 Verifying phone for user:', {userId, phoneNumber, countryCode});
+      
       // Update user profile with verified phone status
       const profileRef = firestore()
         .collection('artifacts')
@@ -830,17 +837,25 @@ class AuthService {
         .collection('users')
         .doc(userId);
       
-      await profileRef.set(
-        {
-          phoneVerified: true,
-          verifiedAt: firestore.FieldValue.serverTimestamp(),
-          phoneNumber,
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-        },
-        {merge: true}
-      );
+      const updateData: any = {
+        phoneVerified: true,
+        verifiedAt: firestore.FieldValue.serverTimestamp(),
+        phoneNumber,
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      };
       
-      console.log('✅ User phone verified:', userId);
+      // Extract and save country code if provided in phone number
+      if (countryCode) {
+        updateData.countryCode = countryCode;
+        updateData.isInDRC = countryCode === 'CD' || countryCode === '+243';
+      } else if (phoneNumber.startsWith('+243') || phoneNumber.startsWith('243')) {
+        updateData.countryCode = 'CD';
+        updateData.isInDRC = true;
+      }
+      
+      await profileRef.set(updateData, {merge: true});
+      
+      console.log('✅ User phone verified and saved:', {userId, phoneNumber, countryCode: updateData.countryCode});
     } catch (error: any) {
       console.error('❌ Phone verification failed:', error);
       throw new Error(error.message || 'Failed to verify phone number');

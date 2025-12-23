@@ -1184,13 +1184,27 @@ export const getCityItems = functions
 
     try {
       console.log(`Getting city items for city: ${city}, user: ${userId}`);
+      console.log(`Collection path: artifacts/${config.app.id}/cityItems/${city}/items`);
+      console.log(`Config app ID: ${config.app.id}`);
 
+      // First check if the city collection exists
+      const cityCollectionRef = db.collection(`artifacts/${config.app.id}/cityItems/${city}/items`);
+      
       // Read directly from master city items table
-      const cityItemsSnapshot = await db
-        .collection(`artifacts/${config.app.id}/cityItems/${city}/items`)
-        .get();
+      const cityItemsSnapshot = await cityCollectionRef.get();
 
       console.log(`Found ${cityItemsSnapshot.size} items in master table for ${city}`);
+
+      // If no items found, return empty result instead of error
+      if (cityItemsSnapshot.empty) {
+        console.log(`No items found for city ${city}, returning empty result`);
+        return {
+          success: true,
+          items: [],
+          city,
+          message: `No items available yet for ${city}. Items will appear as users scan receipts in this city.`,
+        };
+      }
 
       // Helper function to safely convert timestamp to Date
       const safeToDate = (value: any): Date => {
@@ -1227,11 +1241,19 @@ export const getCityItems = functions
         items: cityItems,
         city,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting city items:', error);
-      throw new functions.https.HttpsError(
-        'internal',
-        'Failed to get city items',
-      );
+      console.error('Error message:', error?.message);
+      console.error('Error code:', error?.code);
+      console.error('Error stack:', error?.stack);
+      
+      // Return empty result instead of throwing error
+      return {
+        success: true,
+        items: [],
+        city,
+        message: `Unable to load items for ${city}. Please try again later.`,
+        error: error?.message || 'Unknown error',
+      };
     }
   });

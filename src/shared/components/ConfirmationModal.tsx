@@ -1,9 +1,9 @@
 import React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
-import {Modal} from './Modal';
-import Button from './Button';
+import {View, Text, StyleSheet, Modal as RNModal, TouchableOpacity, Dimensions} from 'react-native';
 import Icon from './Icon';
-import {Colors, Typography, Spacing} from '@/shared/theme/theme';
+import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
+
+const {width} = Dimensions.get('window');
 
 export interface ConfirmationModalProps {
   visible: boolean;
@@ -20,6 +20,9 @@ export interface ConfirmationModalProps {
   cancelText?: string;
   onConfirm: () => void;
   onCancel?: () => void;
+  
+  // Single button mode (for success/info states)
+  singleButton?: boolean;
 
   // Styling
   variant?: 'danger' | 'warning' | 'info' | 'success';
@@ -27,10 +30,11 @@ export interface ConfirmationModalProps {
 }
 
 /**
- * Confirmation Modal Component
+ * Confirmation Modal Component - Finly-style design
  *
  * A specialized modal for confirmation dialogs with consistent styling
- * and behavior across the app.
+ * and behavior across the app. Features a centered icon circle with
+ * clean typography.
  */
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   visible,
@@ -43,32 +47,37 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   cancelText = 'Annuler',
   onConfirm,
   onCancel,
+  singleButton = false,
   variant = 'info',
   loading = false,
 }) => {
-  // Get variant-specific styling
+  // Get variant-specific styling - Finly design uses bright yellow/lime for success
   const getVariantConfig = () => {
     switch (variant) {
       case 'danger':
         return {
           iconName: icon || 'alert-triangle',
-          iconColor: iconColor || Colors.status.error,
+          iconColor: iconColor || '#FFFFFF',
+          iconBgColor: '#FF4757',
         };
       case 'warning':
         return {
-          iconName: icon || 'alert-circle',
-          iconColor: iconColor || Colors.status.warning,
+          iconName: icon || 'alert-triangle',
+          iconColor: iconColor || '#1A1A1A',
+          iconBgColor: '#FFD43B',
         };
       case 'success':
         return {
-          iconName: icon || 'check-circle',
-          iconColor: iconColor || Colors.status.success,
+          iconName: icon || 'check',
+          iconColor: iconColor || '#1A1A1A',
+          iconBgColor: '#D4F400', // Bright lime yellow like the design
         };
       case 'info':
       default:
         return {
           iconName: icon || 'info',
-          iconColor: iconColor || Colors.primary,
+          iconColor: iconColor || '#1A1A1A',
+          iconBgColor: '#E8E8E8',
         };
     }
   };
@@ -84,86 +93,185 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   const handleConfirm = () => {
     onConfirm();
-    // Note: onClose is called by parent after confirmation if needed
   };
 
   return (
-    <Modal
+    <RNModal
       visible={visible}
-      variant="centered"
-      size="small"
-      onClose={handleCancel}
-      animationType="fade">
-      <View style={styles.content}>
-        {variantConfig.iconName && (
-          <View style={styles.iconContainer}>
-            <Icon
-              name={variantConfig.iconName}
-              size="3xl"
-              color={variantConfig.iconColor}
-            />
-          </View>
-        )}
+      transparent
+      animationType="fade"
+      onRequestClose={handleCancel}>
+      <View style={styles.overlay}>
+        <View style={styles.modalContainer}>
+          {/* Close button */}
+          {!singleButton && (
+            <TouchableOpacity style={styles.closeButton} onPress={handleCancel}>
+              <Icon name="x" size="sm" color={Colors.text.tertiary} />
+            </TouchableOpacity>
+          )}
 
-        <Text style={styles.title}>{title}</Text>
+          {/* Icon Circle - Centered */}
+          {variantConfig.iconName && (
+            <View style={[styles.iconContainer, {backgroundColor: variantConfig.iconBgColor}]}>
+              <Icon
+                name={variantConfig.iconName}
+                size="xl"
+                color={variantConfig.iconColor}
+              />
+            </View>
+          )}
 
-        {message && <Text style={styles.message}>{message}</Text>}
+          {/* Title */}
+          <Text style={styles.title}>{title}</Text>
 
-        <View style={styles.actions}>
-          <Button
-            title={cancelText}
-            variant="secondary"
-            onPress={handleCancel}
-            style={styles.cancelButton}
-          />
-          <Button
-            title={confirmText}
-            variant="primary"
-            onPress={handleConfirm}
-            loading={loading}
-            style={styles.confirmButton}
-          />
+          {/* Message */}
+          {message && <Text style={styles.message}>{message}</Text>}
+
+          {/* Buttons */}
+          {singleButton ? (
+            // Single button mode (like Done button in the design)
+            <TouchableOpacity
+              style={[styles.singleButton]}
+              onPress={handleConfirm}
+              disabled={loading}
+              activeOpacity={0.8}>
+              <Text style={styles.singleButtonText}>
+                {loading ? 'En cours...' : confirmText}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            // Two button mode
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.button, styles.secondaryButton]}
+                onPress={handleCancel}
+                disabled={loading}
+                activeOpacity={0.7}>
+                <Text style={styles.secondaryButtonText}>{cancelText}</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.button, styles.primaryButton]}
+                onPress={handleConfirm}
+                disabled={loading}
+                activeOpacity={0.7}>
+                <Text style={styles.primaryButtonText}>
+                  {loading ? 'En cours...' : confirmText}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
-    </Modal>
+    </RNModal>
   );
 };
 
 // ============================================
-// STYLES
+// STYLES - Finly Design System
 // ============================================
 const styles = StyleSheet.create({
-  content: {
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: Spacing.lg,
+    padding: Spacing.xl,
+  },
+  modalContainer: {
+    backgroundColor: Colors.white,
+    borderRadius: 24,
+    paddingTop: Spacing.xl,
+    paddingBottom: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    width: width - (Spacing.xl * 2),
+    maxWidth: 340,
+    alignItems: 'center',
+    ...Shadows.lg,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: Spacing.md,
+    right: Spacing.md,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.background.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
   },
   iconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: Spacing.lg,
+    marginTop: Spacing.md,
   },
   title: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semiBold,
+    fontSize: Typography.fontSize.xl,
+    fontFamily: Typography.fontFamily.semiBold,
     color: Colors.text.primary,
     textAlign: 'center',
     marginBottom: Spacing.sm,
   },
   message: {
-    fontSize: Typography.fontSize.md,
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
     textAlign: 'center',
-    lineHeight: Typography.lineHeight.normal,
+    lineHeight: 20,
     marginBottom: Spacing.xl,
+    paddingHorizontal: Spacing.sm,
   },
-  actions: {
+  buttonContainer: {
     flexDirection: 'row',
     gap: Spacing.md,
     width: '100%',
   },
-  cancelButton: {
+  button: {
     flex: 1,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
   },
-  confirmButton: {
-    flex: 1,
+  singleButton: {
+    width: '100%',
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: 100,
+    backgroundColor: '#1A1A1A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
+  },
+  singleButtonText: {
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.white,
+  },
+  primaryButton: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 100,
+  },
+  primaryButtonText: {
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.white,
+  },
+  secondaryButton: {
+    backgroundColor: Colors.background.secondary,
+    borderRadius: 100,
+  },
+  secondaryButtonText: {
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.primary,
   },
 });
 

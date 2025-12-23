@@ -25,7 +25,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, FadeIn, SlideIn, EmptyState, SwipeToDelete} from '@/shared/components';
+import {Icon, FadeIn, SlideIn, EmptyState, SwipeToDelete, TabSelector} from '@/shared/components';
 import {formatCurrency, formatDate, safeToDate, convertCurrency} from '@/shared/utils/helpers';
 import {useAuth} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
@@ -45,6 +45,14 @@ export function HistoryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState(0);
+
+  // Tab configuration
+  const tabs = [
+    { icon: 'list', label: 'Tous', value: 'all' },
+    { icon: 'calendar', label: 'Ce mois', value: 'month' },
+    { icon: 'archive', label: 'Cette année', value: 'year' },
+  ];
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -202,6 +210,29 @@ export function HistoryScreen() {
     }
   };
 
+  const filterReceiptsByTab = useCallback((receipts: Receipt[], tabValue: string) => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    switch (tabValue) {
+      case 'month':
+        return receipts.filter(receipt => {
+          const receiptDate = safeToDate(receipt.date);
+          return receiptDate.getMonth() === currentMonth && 
+                 receiptDate.getFullYear() === currentYear;
+        });
+      case 'year':
+        return receipts.filter(receipt => {
+          const receiptDate = safeToDate(receipt.date);
+          return receiptDate.getFullYear() === currentYear;
+        });
+      case 'all':
+      default:
+        return receipts;
+    }
+  }, []);
+
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await loadReceipts();
@@ -209,18 +240,19 @@ export function HistoryScreen() {
   }, []);
 
   useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredReceipts(receipts);
-    } else {
+    let filtered = filterReceiptsByTab(receipts, tabs[activeTab].value);
+    
+    if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase();
-      const filtered = receipts.filter(
+      filtered = filtered.filter(
         r =>
           r.storeName.toLowerCase().includes(query) ||
           r.storeAddress?.toLowerCase().includes(query),
       );
-      setFilteredReceipts(filtered);
     }
-  }, [searchQuery, receipts]);
+    
+    setFilteredReceipts(filtered);
+  }, [searchQuery, receipts, activeTab, tabs, filterReceiptsByTab]);
 
   const handleReceiptPress = (receiptId: string, receipt: Receipt) => {
     analyticsService.logCustomEvent('receipt_viewed', {receipt_id: receiptId});
@@ -414,6 +446,17 @@ export function HistoryScreen() {
         </View>
       </FadeIn>
 
+      {/* Tab Bar */}
+      <SlideIn direction="right" delay={200}>
+        <View style={styles.tabBarContainer}>
+          <TabSelector
+            tabs={tabs}
+            activeIndex={activeTab}
+            onTabPress={setActiveTab}
+          />
+        </View>
+      </SlideIn>
+
       {/* Stats Bar */}
       {receipts.length > 0 && (
         <SlideIn direction="up" delay={150}>
@@ -533,6 +576,10 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: Typography.fontSize.base,
     color: Colors.text.primary,
+  },
+  tabBarContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
   },
   statsBar: {
     flexDirection: 'row',

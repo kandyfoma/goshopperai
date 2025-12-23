@@ -120,7 +120,19 @@ const VerifyOtpScreen: React.FC = () => {
         if (isPhoneVerification && user?.uid) {
           // Verify phone for existing user
           try {
-            await authService.verifyUserPhone(user.uid, phoneNumber);
+            // Extract country code from phone number
+            let countryCode = 'CD'; // Default to DRC
+            if (phoneNumber.startsWith('+')) {
+              const match = phoneNumber.match(/^\+(\d{1,3})/);
+              if (match) {
+                const code = match[1];
+                if (code === '243') countryCode = 'CD';
+                else if (code === '1') countryCode = 'US';
+                // Add more country codes as needed
+              }
+            }
+            
+            await authService.verifyUserPhone(user.uid, phoneNumber, countryCode);
             
             Alert.alert(
               'Numéro vérifié!',
@@ -350,10 +362,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xl,
   },
   header: {
     paddingTop: Spacing.md,
-    marginBottom: Spacing.xl,
+    paddingBottom: Spacing.md,
   },
   backButton: {
     width: 44,
@@ -365,38 +378,40 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    paddingVertical: Spacing.xl,
+    paddingTop: Spacing.lg,
   },
   iconContainer: {
     alignItems: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   title: {
     fontSize: Typography.fontSize['2xl'],
     fontWeight: Typography.fontWeight.bold,
     color: Colors.text.primary,
     textAlign: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.md,
   },
   subtitle: {
     fontSize: Typography.fontSize.base,
     color: Colors.text.secondary,
     textAlign: 'center',
-    marginBottom: Spacing['2xl'],
+    marginBottom: Spacing.xl,
     lineHeight: Typography.lineHeight.relaxed,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.lg,
   },
   otpContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: Spacing.lg,
-    paddingHorizontal: Spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.sm,
   },
   otpInput: {
-    width: 45,
-    height: 55,
-    borderRadius: BorderRadius.base,
+    width: 48,
+    height: 56,
+    borderRadius: BorderRadius.lg,
     borderWidth: 2,
     borderColor: Colors.border.light,
     backgroundColor: Colors.background.secondary,
@@ -416,39 +431,47 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.sm,
     color: Colors.status.error,
     textAlign: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
+    marginTop: Spacing.xs,
+    paddingHorizontal: Spacing.md,
   },
   resendSection: {
     alignItems: 'center',
-    marginTop: Spacing.xl,
-    marginBottom: Spacing.lg,
+    marginTop: Spacing['2xl'],
+    marginBottom: Spacing.md,
+    paddingTop: Spacing.lg,
   },
   resendText: {
     fontSize: Typography.fontSize.md,
     color: Colors.text.secondary,
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
   },
   resendLink: {
     fontSize: Typography.fontSize.md,
     fontWeight: Typography.fontWeight.semiBold,
     color: Colors.accent,
+    textAlign: 'center',
   },
   countdownText: {
     fontSize: Typography.fontSize.md,
     color: Colors.text.tertiary,
+    textAlign: 'center',
   },
   wrongNumberSection: {
     alignItems: 'center',
-    marginTop: Spacing.lg,
+    marginTop: Spacing.xl,
+    paddingTop: Spacing.md,
   },
   wrongNumberButton: {
     paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
+    paddingHorizontal: Spacing.lg,
   },
   wrongNumberText: {
     fontSize: Typography.fontSize.md,
     color: Colors.text.secondary,
     textDecorationLine: 'underline',
+    textAlign: 'center',
   },
 });
 

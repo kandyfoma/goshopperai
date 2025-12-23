@@ -2,8 +2,11 @@
 import React, {useEffect, useRef} from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import {View, Text, StyleSheet, Animated, Platform, Pressable} from 'react-native';
+import {useNavigation} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import LinearGradient from 'react-native-linear-gradient';
-import {MainTabParamList} from '@/shared/types';
+import QuickActions from 'react-native-quick-actions';
+import {MainTabParamList, RootStackParamList} from '@/shared/types';
 import {
   Colors,
   Typography,
@@ -22,12 +25,70 @@ import {ProfileScreen} from '@/features/profile/screens';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
+type RootNavigationProp = NativeStackNavigationProp<RootStackParamList>;
+
 function TabIcon({focused, icon, label, badge}: {focused: boolean; icon: string; label: string; badge?: number}) {
   return <TabBarIcon focused={focused} icon={icon} label={label} badge={badge} />;
 }
 
 // Custom Tab Bar Component with rounded design
 export function MainTabNavigator() {
+  const navigation = useNavigation<RootNavigationProp>();
+
+  // Handle quick actions (app shortcuts)
+  useEffect(() => {
+    // Check if QuickActions is available (Android only, and might not be fully initialized)
+    if (!QuickActions || typeof QuickActions.popInitialAction !== 'function') {
+      console.log('QuickActions not available on this platform');
+      return;
+    }
+
+    // Handle initial quick action (app opened via shortcut)
+    QuickActions.popInitialAction()
+      .then((data) => {
+        if (data) {
+          handleQuickAction(data.type);
+        }
+      })
+      .catch((error) => {
+        console.log('Error getting initial quick action:', error);
+      });
+
+    // Handle quick actions while app is running
+    if (typeof QuickActions.addListener === 'function') {
+      const subscription = QuickActions.addListener((data) => {
+        if (data) {
+          handleQuickAction(data.type);
+        }
+      });
+
+      return () => {
+        if (subscription && typeof subscription.remove === 'function') {
+          subscription.remove();
+        }
+      };
+    }
+  }, []);
+
+  const handleQuickAction = (actionType: string) => {
+    console.log('Quick action triggered:', actionType);
+    
+    // Map action types to navigation
+    switch (actionType) {
+      case 'com.goshopperai.scan':
+        navigation.navigate('Scanner');
+        break;
+      case 'com.goshopperai.shopping':
+        navigation.navigate('ShoppingLists');
+        break;
+      case 'com.goshopperai.history':
+        navigation.navigate('History');
+        break;
+      default:
+        console.log('Unknown quick action type:', actionType);
+    }
+  };
+
   // Notification badges from real data
   const notificationBadges = {
     Home: 0,

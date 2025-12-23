@@ -17,6 +17,7 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
+import DateTimePicker, {DateTimePickerAndroid} from '@react-native-community/datetimepicker';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -83,11 +84,87 @@ export function UpdateProfileScreen() {
   const {showToast} = useToast();
   const insets = useSafeAreaInsets();
 
+  // State declarations MUST come before any early returns
+  const [formData, setFormData] = useState({
+    name: '',
+    surname: '',
+    dateOfBirth: '',
+    sex: '' as '' | 'male' | 'female' | 'other',
+    phoneNumber: '',
+    email: '',
+    city: '',
+  });
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [showCityPicker, setShowCityPicker] = useState(false);
+  const [citySearch, setCitySearch] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState(countryCodeList[0]); // Default to RDC
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showCountryModal, setShowCountryModal] = useState(false);
+
   useEffect(() => {
     if (!isAuthenticated) {
       navigation.navigate('Login');
     }
   }, [isAuthenticated, navigation]);
+
+  // Populate form data when profile is loaded
+  useEffect(() => {
+    if (profile) {
+      console.log('📝 UpdateProfileScreen: Full profile object:', profile);
+      console.log('📝 UpdateProfileScreen: User object phoneNumber:', user?.phoneNumber);
+      
+      // Parse displayName if name/surname are not available
+      let parsedName = profile.name || '';
+      let parsedSurname = profile.surname || '';
+      
+      // If name and surname are empty but we have displayName from auth, parse it
+      if ((!parsedName && !parsedSurname) && (profile.displayName || user?.displayName)) {
+        const fullName = profile.displayName || user?.displayName || '';
+        const nameParts = fullName.trim().split(' ');
+        parsedName = nameParts[0] || '';
+        parsedSurname = nameParts.slice(1).join(' ') || '';
+        console.log('📝 UpdateProfileScreen: Parsed displayName:', {
+          fullName,
+          parsedName,
+          parsedSurname,
+        });
+      }
+
+      console.log('📝 UpdateProfileScreen: Populating form with profile data:', {
+        name: parsedName,
+        surname: parsedSurname,
+        phoneNumber: profile.phoneNumber,
+        phoneVerified: profile.phoneVerified,
+        email: profile.email,
+        city: profile.defaultCity,
+      });
+      
+      setFormData({
+        name: parsedName,
+        surname: parsedSurname,
+        dateOfBirth: profile.dateOfBirth || '',
+        sex: profile.sex || '',
+        phoneNumber: profile.phoneNumber || '',
+        email: profile.email || '',
+        city: profile.defaultCity || '',
+      });
+
+      // Set the selected date for the picker if dateOfBirth exists
+      if (profile.dateOfBirth) {
+        try {
+          const existingDate = new Date(profile.dateOfBirth);
+          if (!isNaN(existingDate.getTime())) {
+            setSelectedDate(existingDate);
+          }
+        } catch (e) {
+          // If invalid date, keep the default
+          console.log('📝 UpdateProfileScreen: Invalid dateOfBirth format:', profile.dateOfBirth);
+        }
+      }
+    }
+  }, [profile, user?.displayName]);
 
   if (!isAuthenticated || profileLoading) {
     return (
@@ -107,38 +184,59 @@ export function UpdateProfileScreen() {
     );
   }
 
-  const [formData, setFormData] = useState({
-    name: '',
-    surname: '',
-    dateOfBirth: '',
-    sex: '' as '' | 'male' | 'female' | 'other',
-    phoneNumber: '',
-    email: '',
-    city: '',
-  });
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [showCityPicker, setShowCityPicker] = useState(false);
-  const [citySearch, setCitySearch] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState(countryCodeList[0]); // Default to RDC
-  const [showCountryModal, setShowCountryModal] = useState(false);
-
-  useEffect(() => {
-    if (profile) {
-      setFormData({
-        name: profile.name || '',
-        surname: profile.surname || '',
-        dateOfBirth: profile.dateOfBirth || '',
-        sex: profile.sex || '',
-        phoneNumber: profile.phoneNumber || '',
-        email: profile.email || '',
-        city: profile.defaultCity || '',
-      });
-    }
-  }, [profile]);
-
   const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({...prev, [field]: value}));
+  };
+
+  const formatDateToString = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const handleDatePickerOpen = () => {
+    // If there's already a date in the form, use it. Otherwise use a default date (18 years ago)
+    if (formData.dateOfBirth) {
+      try {
+        const existingDate = new Date(formData.dateOfBirth);
+        if (!isNaN(existingDate.getTime())) {
+          setSelectedDate(existingDate);
+        }
+      } catch (e) {
+        // If invalid date, use default
+        const defaultDate = new Date();
+        defaultDate.setFullYear(defaultDate.getFullYear() - 18);
+        setSelectedDate(defaultDate);
+      }
+    } else {
+      // Default to 18 years ago
+      const defaultDate = new Date();
+      defaultDate.setFullYear(defaultDate.getFullYear() - 18);
+      setSelectedDate(defaultDate);
+    }
+    setShowDatePicker(true);
+  };
+
+  const handleDatePickerChange = (event: any, date?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    
+    if (date) {
+      setSelectedDate(date);
+      const formattedDate = formatDateToString(date);
+      setFormData(prev => ({...prev, dateOfBirth: formattedDate}));
+      
+      if (Platform.OS === 'ios') {
+        // On iOS, we handle the close manually
+        setShowDatePicker(false);
+      }
+    }
+  };
+
+  const handleDatePickerCancel = () => {
+    setShowDatePicker(false);
   };
 
   const handleSave = async () => {
@@ -178,7 +276,18 @@ export function UpdateProfileScreen() {
         updateData.sex = formData.sex;
       }
       if (formData.phoneNumber.trim()) {
-        updateData.phoneNumber = formData.phoneNumber.trim();
+        // Format and validate phone number with country code
+        const phoneNumber = formData.phoneNumber.trim();
+        const formattedPhone = PhoneService.formatPhoneNumber(selectedCountry.code, phoneNumber);
+        
+        if (!PhoneService.validatePhoneNumber(formattedPhone)) {
+          Alert.alert('Erreur', 'Numéro de téléphone invalide pour ' + selectedCountry.name);
+          setIsLoading(false);
+          return;
+        }
+        
+        updateData.phoneNumber = formattedPhone;
+        updateData.countryCode = selectedCountry.code;
       }
       if (formData.email.trim()) {
         // Validate email format
@@ -232,6 +341,65 @@ export function UpdateProfileScreen() {
   const filteredCities = DRC_CITIES.filter(city =>
     city.toLowerCase().includes(citySearch.toLowerCase()),
   );
+
+  // Country Modal
+  if (showCountryModal) {
+    return (
+      <Modal
+        visible={showCountryModal}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setShowCountryModal(false)}>
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity
+              onPress={() => setShowCountryModal(false)}
+              style={styles.backButton}>
+              <Icon name="arrow-left" size="md" color={Colors.text.primary} />
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Sélectionner un pays</Text>
+            <View style={{width: 40}} />
+          </View>
+
+          <ScrollView
+            style={styles.cityList}
+            contentContainerStyle={styles.cityListContent}
+            showsVerticalScrollIndicator={false}>
+            {countryCodeList.map((country) => (
+              <TouchableOpacity
+                key={country.code}
+                style={[
+                  styles.cityOption,
+                  selectedCountry.code === country.code && styles.cityOptionSelected,
+                ]}
+                onPress={() => {
+                  setSelectedCountry(country);
+                  setShowCountryModal(false);
+                }}
+                activeOpacity={0.7}>
+                <View style={styles.cityOptionLeft}>
+                  <Text style={styles.flagText}>{country.flag}</Text>
+                  <View>
+                    <Text
+                      style={[
+                        styles.cityOptionText,
+                        selectedCountry.code === country.code && styles.cityOptionTextSelected,
+                      ]}>
+                      {country.name}
+                    </Text>
+                    <Text style={styles.countryCodeSubtext}>{country.code}</Text>
+                  </View>
+                </View>
+                {selectedCountry.code === country.code && (
+                  <Icon name="check" size="sm" color={Colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+    );
+  }
 
   // City Picker Screen
   if (showCityPicker) {
@@ -381,17 +549,21 @@ export function UpdateProfileScreen() {
             {/* Date of Birth Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Date de naissance</Text>
-              <View style={styles.inputWrapper}>
+              <TouchableOpacity 
+                style={styles.inputWrapper} 
+                onPress={handleDatePickerOpen}
+                activeOpacity={0.7}>
                 <Icon name="calendar" size="sm" color={Colors.text.tertiary} />
-                <TextInput
-                  style={styles.input}
-                  value={formData.dateOfBirth}
-                  onChangeText={value => handleInputChange('dateOfBirth', value)}
-                  placeholder="AAAA-MM-JJ (ex: 2000-01-31)"
-                  placeholderTextColor={Colors.text.tertiary}
-                  keyboardType="numeric"
-                />
-              </View>
+                <Text style={[
+                  styles.input,
+                  {
+                    paddingVertical: Platform.OS === 'ios' ? 16 : 12,
+                    color: formData.dateOfBirth ? Colors.text.primary : Colors.text.tertiary,
+                  }
+                ]}>
+                  {formData.dateOfBirth || 'Sélectionnez votre date de naissance'}
+                </Text>
+              </TouchableOpacity>
               <Text style={styles.inputHint}>
                 Vous devez avoir au moins 15 ans
               </Text>
@@ -429,25 +601,41 @@ export function UpdateProfileScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Contact</Text>
 
-            {/* Phone Input - Non-editable */}
+            {/* Phone Input - Editable */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Numéro de téléphone</Text>
-              <View style={[styles.inputWrapper, styles.inputDisabled]}>
-                <Icon
-                  name="phone"
-                  size="sm"
-                  color={Colors.text.tertiary}
-                />
-                <Text style={styles.disabledText}>
-                  {formData.phoneNumber || 'Non défini'}
-                </Text>
-                <View style={styles.lockedIndicator}>
-                  <Icon name="lock" size="xs" color={Colors.text.tertiary} />
+              <View style={styles.phoneInputContainer}>
+                <TouchableOpacity
+                  style={styles.countryCodeButton}
+                  onPress={() => setShowCountryModal(true)}
+                  activeOpacity={0.7}>
+                  <Text style={styles.flagText}>{selectedCountry.flag}</Text>
+                  <Text style={styles.countryCodeText}>{selectedCountry.code}</Text>
+                  <Icon name="chevron-down" size="xs" color={Colors.text.tertiary} />
+                </TouchableOpacity>
+                <View style={[styles.inputWrapper, {flex: 1}]}>
+                  <Icon name="phone" size="sm" color={Colors.text.tertiary} />
+                  <TextInput
+                    style={styles.input}
+                    value={formData.phoneNumber}
+                    onChangeText={value => {
+                      // Remove non-numeric characters
+                      const cleanValue = value.replace(/[^0-9]/g, '');
+                      handleInputChange('phoneNumber', cleanValue);
+                    }}
+                    placeholder="8XX XXX XXX"
+                    placeholderTextColor={Colors.text.tertiary}
+                    keyboardType="phone-pad"
+                    maxLength={15}
+                  />
                 </View>
               </View>
-              <Text style={styles.inputHint}>
-                Le numéro de téléphone ne peut pas être modifié
-              </Text>
+              {profile?.phoneVerified && formData.phoneNumber && (
+                <View style={styles.verifiedBadge}>
+                  <Icon name="check-circle" size="xs" color={"#10B981"} />
+                  <Text style={styles.verifiedText}>Numéro vérifié</Text>
+                </View>
+              )}
             </View>
 
             {/* Email Input */}
@@ -513,6 +701,43 @@ export function UpdateProfileScreen() {
           />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Date Picker Modal - iOS only */}
+      {showDatePicker && Platform.OS === 'ios' && (
+        <Modal
+          visible={showDatePicker}
+          transparent
+          animationType="slide"
+          onRequestClose={handleDatePickerCancel}>
+          <View style={styles.datePickerModalContainer}>
+            <View style={styles.datePickerModal}>
+              {Platform.OS === 'ios' && (
+                <View style={styles.modalHeader}>
+                  <TouchableOpacity 
+                    onPress={handleDatePickerCancel}
+                    style={styles.modalCloseButton}>
+                    <Text style={styles.modalCloseText}>Annuler</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.modalTitle}>Date de naissance</Text>
+                  <TouchableOpacity 
+                    onPress={() => setShowDatePicker(false)}
+                    style={styles.modalCloseButton}>
+                    <Text style={styles.modalDoneText}>OK</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleDatePickerChange}
+                maximumDate={new Date()} // Can't select future dates
+                minimumDate={new Date(1900, 0, 1)} // Reasonable minimum date
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -800,5 +1025,93 @@ const styles = StyleSheet.create({
   },
   cityOptionTextSelected: {
     fontFamily: Typography.fontFamily.semiBold,
+  },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  countryCodeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.base,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+    ...Shadows.sm,
+  },
+  flagText: {
+    fontSize: Typography.fontSize.xl,
+  },
+  countryCodeText: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.secondary,
+  },
+  countryCodeSubtext: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.tertiary,
+    marginTop: 2,
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.xs,
+  },
+  verifiedText: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
+    color: '#10B981',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: Colors.background.primary,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.base,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.light,
+    backgroundColor: Colors.white,
+  },
+  modalTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.primary,
+  },
+  // Date Picker Modal Styles
+  datePickerModalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  datePickerModal: {
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.lg,
+    marginHorizontal: Spacing.lg,
+    overflow: 'hidden',
+    ...Shadows.lg,
+  },
+  modalCloseButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+  },
+  modalCloseText: {
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.secondary,
+  },
+  modalDoneText: {
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.primary,
   },
 });

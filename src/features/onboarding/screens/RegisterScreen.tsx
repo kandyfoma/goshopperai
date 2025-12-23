@@ -74,6 +74,7 @@ export function RegisterScreen() {
   // Loading states
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   let phoneCheckTimeout: ReturnType<typeof setTimeout>;
 
@@ -253,10 +254,11 @@ export function RegisterScreen() {
 
   const handleGoogleSignIn = async () => {
     setSocialLoading('google');
+    setError(null);
     try {
       await signInWithGoogle();
     } catch (err: any) {
-      Alert.alert('Erreur', err?.message || 'Échec de la connexion Google');
+      setError(err?.message || 'Échec de la connexion Google');
     } finally {
       setSocialLoading(null);
     }
@@ -264,10 +266,11 @@ export function RegisterScreen() {
 
   const handleAppleSignIn = async () => {
     setSocialLoading('apple');
+    setError(null);
     try {
       await signInWithApple();
     } catch (err: any) {
-      Alert.alert('Erreur', err?.message || 'Échec de la connexion Apple');
+      setError(err?.message || 'Échec de la connexion Apple');
     } finally {
       setSocialLoading(null);
     }
@@ -388,7 +391,7 @@ export function RegisterScreen() {
                 title="Continuer avec Google"
                 onPress={handleGoogleSignIn}
                 loading={socialLoading === 'google'}
-                icon={<Icon name="google" size="sm" color={Colors.text.primary} />}
+                icon={<Icon name="logo-google" size="sm" color="#4285F4" />}
                 iconPosition="left"
               />
               
@@ -401,6 +404,13 @@ export function RegisterScreen() {
                   icon={<Icon name="apple" size="sm" color={Colors.text.primary} />}
                   iconPosition="left"
                 />
+              )}
+
+              {/* Error Message */}
+              {error && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
               )}
             </View>
           )}
@@ -875,6 +885,12 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: Colors.status.error,
+  },
+  errorContainer: {
+    backgroundColor: Colors.status.errorLight,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    marginTop: Spacing.md,
   },
   errorText: {
     fontSize: Typography.fontSize.sm,

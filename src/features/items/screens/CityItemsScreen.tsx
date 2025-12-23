@@ -1,6 +1,6 @@
 // City Items Screen - Browse items from all users in the same city
 // Shows aggregated price data for community price comparison
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   Animated,
   Pressable,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useNavigation, useFocusEffect} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import firestore from '@react-native-firebase/firestore';
 import {firebase} from '@react-native-firebase/functions';
@@ -79,13 +79,17 @@ export function CityItemsScreen() {
     analyticsService.logScreenView('City Items', 'CityItemsScreen');
   }, []);
 
-  useEffect(() => {
-    if (!profileLoading && userProfile?.defaultCity) {
-      loadCityItemsData();
-    } else if (!profileLoading) {
-      setIsLoading(false);
-    }
-  }, [userProfile?.defaultCity, profileLoading]);
+  // Reload data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('📱 CityItemsScreen focused, reloading data');
+      if (!profileLoading && userProfile?.defaultCity) {
+        loadCityItemsData();
+      } else if (!profileLoading) {
+        setIsLoading(false);
+      }
+    }, [userProfile?.defaultCity, profileLoading])
+  );
 
   useEffect(() => {
     filterItems();
@@ -140,20 +144,32 @@ export function CityItemsScreen() {
         success: boolean;
         items: CityItemData[];
         city: string;
+        message?: string;
       };
 
-      if (data.success && data.items) {
-        const itemsArray = data.items.sort(
-          (a: any, b: any) => b.prices.length - a.prices.length,
-        ); // Sort by total purchases
-        console.log('📦 Setting items:', itemsArray.length);
-        setItems(itemsArray);
+      if (data.success) {
+        if (data.items && data.items.length > 0) {
+          const itemsArray = data.items.sort(
+            (a: any, b: any) => b.prices.length - a.prices.length,
+          ); // Sort by total purchases
+          console.log('📦 Setting items:', itemsArray.length);
+          setItems(itemsArray);
+        } else {
+          console.log('ℹ️ No items available for this city yet');
+          setItems([]);
+        }
       } else {
         console.log('❌ No items returned');
         setItems([]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error loading city items:', error);
+      
+      // Check if it's a INTERNAL error or network issue
+      if (error.message?.includes('INTERNAL')) {
+        console.log('🔄 Internal server error, city items may not be populated yet');
+      }
+      
       setItems([]);
     } finally {
       setIsLoading(false);

@@ -20,6 +20,7 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {useSubscription, useAuth, useUser} from '@/shared/contexts';
 import {useToast} from '@/shared/contexts';
+import {useScanProcessing} from '@/shared/contexts/ScanProcessingContext';
 import {cameraService, imageCompressionService} from '@/shared/services/camera';
 import {geminiService} from '@/shared/services/ai/gemini';
 import {hybridReceiptProcessor} from '@/shared/services/ai/hybridReceiptProcessor';
@@ -35,7 +36,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, ScanProgressIndicator} from '@/shared/components';
+import {Icon, ScanProgressIndicator, ConfirmationModal} from '@/shared/components';
 import functions from '@react-native-firebase/functions';
 import firestore from '@react-native-firebase/firestore';
 import {APP_ID} from '@/shared/services/firebase/config';
@@ -187,6 +188,7 @@ export function UnifiedScannerScreen() {
   const {canScan, recordScan, scansRemaining, isTrialActive} = useSubscription();
   const {showToast} = useToast();
   const {profile} = useUser();
+  const scanProcessing = useScanProcessing();
 
   // State
   const [photos, setPhotos] = useState<CapturedPhoto[]>([]);
@@ -194,6 +196,18 @@ export function UnifiedScannerScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [processingStep, setProcessingStep] = useState(0);
+  
+  // Confirmation Modal State
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmModalConfig, setConfirmModalConfig] = useState<{
+    title: string;
+    message: string;
+    variant: 'info' | 'warning' | 'danger' | 'success';
+    onConfirm: () => void;
+    onCancel: () => void;
+    confirmText?: string;
+    cancelText?: string;
+  } | null>(null);
 
   // Processing steps for progress indicator
   const PROCESSING_STEPS = [
@@ -488,7 +502,205 @@ export function UnifiedScannerScreen() {
     });
   }, []);
 
-  // Process photos
+  // Background process photos - runs in background while user can navigate away
+  const processInBackground = useCallback(async (photosToProcess: CapturedPhoto[]): Promise<void> => {
+    try {
+      // Step 1: Compression
+      scanProcessing.updateProgress(10, 'Préparation de l\'analyse...');
+      
+      const images = await Promise.all(
+        photosToProcess.map(p => imageCompressionService.compressToBase64(p.uri))
+      );
+
+      // Step 2: Detection
+      scanProcessing.updateProgress(25, 'Compression et optimisation...');
+
+      interface ParseReceiptV2Result {
+        success: boolean;
+        receiptId?: string;
+        receipt?: any;
+        error?: string;
+      }
+
+      let result: ParseReceiptV2Result | undefined;
+
+      if (images.length === 1) {
+        // Single photo - use hybrid processing
+        scanProcessing.updateProgress(45, 'Extraction des données...');
+        
+        const response = await hybridReceiptProcessor.processReceipt(
+          images[0],
+          user?.uid || 'unknown-user',
+          profile?.defaultCity
+        );
+
+        if (response.success && response.receipt) {
+          // Validation checks
+          const total = response.receipt.total;
+          if (total === null || total === undefined || total === 0) {
+            scanProcessing.setError('Reçu invalide: Aucun montant détecté.\nVeuillez scanner un reçu valide avec des prix.');
+            return;
+          }
+          
+          if (!response.receipt.items || response.receipt.items.length === 0) {
+            scanProcessing.setError('Image invalide: Ceci n\'est pas un reçu.\nVeuillez scanner un reçu valide.');
+            return;
+          }
+          
+          if (!response.receipt.storeName && !response.receipt.date) {
+            scanProcessing.setError('Image invalide: Ceci ne semble pas être un reçu.');
+            return;
+          }
+          
+          // Step 4: Validation
+          scanProcessing.updateProgress(70, 'Vérification des informations...');
+          
+          // Add user's default city if receipt doesn't have a city
+          if (!response.receipt.city && profile?.defaultCity) {
+            response.receipt.city = profile.defaultCity;
+            if (response.receipt.items) {
+              response.receipt.items = response.receipt.items.map(item => ({
+                ...item,
+                city: profile.defaultCity
+              }));
+            }
+          }
+          
+          // Step 5: Finalization - Save to Firestore
+          scanProcessing.updateProgress(90, 'Finalisation...');
+          
+          const savedReceiptId = await receiptStorageService.saveReceipt(
+            response.receipt,
+            user?.uid || 'unknown-user'
+          );
+
+          // Track shopping patterns for ML
+          if (user?.uid) {
+            await userBehaviorService.updateShoppingPatterns(user.uid, {
+              total: response.receipt.total || 0,
+              itemCount: response.receipt.items?.length || 0,
+              storeName: response.receipt.storeName || '',
+              categories: [...new Set(response.receipt.items?.map(item => item.category).filter(Boolean) || [])] as string[],
+              date: new Date(),
+            }).catch(err => console.log('Failed to track shopping patterns:', err));
+          }
+
+          // Record scan usage
+          await recordScan();
+
+          analyticsService.logCustomEvent('scan_completed_background', {
+            success: true,
+            photo_count: 1,
+            items_count: response.receipt.items?.length || 0,
+          });
+
+          // Success!
+          scanProcessing.updateProgress(100, 'Presque terminé !');
+          hapticService.success();
+          scanProcessing.setSuccess(response.receipt, savedReceiptId);
+          
+          // Track for in-app review
+          inAppReviewService.incrementScanCount().then(() => {
+            inAppReviewService.requestReviewIfAppropriate();
+          });
+          
+          return;
+        } else {
+          throw new Error(response.error || 'Échec de l\'analyse');
+        }
+      } else {
+        // Multiple photos - use V2 function
+        scanProcessing.updateProgress(45, 'Extraction des données...');
+        
+        const parseReceiptV2 = functions().httpsCallable('parseReceiptV2');
+        const response = await parseReceiptV2({
+          images,
+          mimeType: 'image/jpeg',
+        });
+
+        result = response.data as ParseReceiptV2Result;
+
+        if (result.receipt) {
+          const total = result.receipt.total;
+          if (total === null || total === undefined || total === 0) {
+            scanProcessing.setError('Reçu invalide: Aucun montant détecté.');
+            return;
+          }
+          
+          if (!result.receipt.items || result.receipt.items.length === 0) {
+            scanProcessing.setError('Image invalide: Ceci n\'est pas un reçu.');
+            return;
+          }
+        }
+
+        if (result.success && result.receiptId) {
+          scanProcessing.updateProgress(90, 'Finalisation...');
+          await recordScan();
+
+          analyticsService.logCustomEvent('scan_completed_background', {
+            success: true,
+            photo_count: images.length,
+          });
+
+          scanProcessing.updateProgress(100, 'Presque terminé !');
+          hapticService.success();
+          
+          // Fetch the saved receipt for the modal
+          const savedReceipt = await receiptStorageService.getReceipt(user?.uid || 'unknown-user', result.receiptId);
+          if (savedReceipt) {
+            scanProcessing.setSuccess(savedReceipt, result.receiptId);
+          } else {
+            scanProcessing.setSuccess({
+              storeName: 'Reçu enregistré',
+              items: [],
+              total: 0,
+              currency: 'USD',
+            } as any, result.receiptId);
+          }
+          
+          inAppReviewService.incrementScanCount().then(() => {
+            inAppReviewService.requestReviewIfAppropriate();
+          });
+          
+          return;
+        } else {
+          throw new Error(result?.error || 'Échec du traitement');
+        }
+      }
+    } catch (err: any) {
+      console.error('Background processing error:', err);
+
+      // Parse error message
+      let errorText = err.message || '';
+      try {
+        if (errorText.includes('{"error":{')) {
+          const jsonMatch = errorText.match(/\{.*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.error?.message) {
+              errorText = parsed.error.message;
+            }
+          }
+        }
+      } catch (parseError) {}
+
+      let userMessage = 'Une erreur est survenue lors de l\'analyse.';
+      
+      if (errorText.includes('ne semble pas être un reçu') || 
+          errorText.includes('not a receipt')) {
+        userMessage = 'Cette image ne semble pas être un reçu.';
+      } else if (errorText.includes('Unable to detect receipt')) {
+        userMessage = 'Impossible de détecter une facture.';
+      } else if (errorText.includes('network') || errorText.includes('réseau')) {
+        userMessage = 'Pas de connexion internet.';
+      }
+
+      hapticService.error();
+      scanProcessing.setError(userMessage);
+    }
+  }, [user?.uid, profile?.defaultCity, recordScan, scanProcessing]);
+
+  // Process photos - now with background option
   const handleProcess = useCallback(async (): Promise<void> => {
     if (photos.length === 0) {
       showToast('Prenez au moins une photo', 'error');
@@ -529,259 +741,24 @@ export function UnifiedScannerScreen() {
       return;
     }
 
-    setState('processing');
+    // Start background processing
+    const photosToProcess = [...photos];
+    
+    // Reset local state and allow navigation away
+    setState('idle');
+    setPhotos([]);
     setError(null);
-    setLoadingMessageIndex(0);
-    setProcessingStep(0);
-    retryCountRef.current = 0;
-
-    try {
-      // Step 1: Compression
-      setProcessingStep(0);
-      await new Promise<void>(r => setTimeout(r, 500)); // Visual feedback
-      
-      // Generate base64 from URIs on-demand to avoid memory issues
-      const images = await Promise.all(
-        photos.map(p => imageCompressionService.compressToBase64(p.uri))
-      );
-
-      // Step 2: Detection
-      setProcessingStep(1);
-      await new Promise<void>(r => setTimeout(r, 500));
-      
-      // Check for duplicates on first image
-      if (images.length > 0 && user?.uid) {
-        const duplicateCheck = await duplicateDetectionService.checkForDuplicate(
-          images[0],
-          user.uid
-        );
-
-        if (duplicateCheck.isDuplicate && duplicateCheck.confidence > 0.8) {
-          const shouldProceed = await new Promise<boolean>(resolve => {
-            Alert.alert(
-              'Reçu potentiellement dupliqué',
-              `Un reçu similaire a été trouvé (${Math.round(duplicateCheck.confidence * 100)}% de similarité). Voulez-vous quand même continuer ?`,
-              [
-                {text: 'Annuler', style: 'cancel', onPress: () => resolve(false)},
-                {text: 'Continuer', onPress: () => resolve(true)},
-              ]
-            );
-          });
-
-          if (!shouldProceed) {
-            setState('reviewing');
-            return;
-          }
-        }
-      }
-
-      interface ParseReceiptV2Result {
-        success: boolean;
-        receiptId?: string;
-        receipt?: any;
-        error?: string;
-      }
-
-      let result: ParseReceiptV2Result | undefined;
-
-      // Step 3: Extraction
-      setProcessingStep(2);
-
-      if (images.length === 1) {
-        // Single photo - use hybrid processing (local + AI fallback)
-        console.log('Using hybrid receipt processor...');
-        const response = await hybridReceiptProcessor.processReceipt(
-          images[0],
-          user?.uid || 'unknown-user',
-          profile?.defaultCity
-        );
-
-        if (response.success && response.receipt) {
-          // Step 4: Validation
-          setProcessingStep(3);
-          await new Promise<void>(r => setTimeout(r, 400));
-          
-          // Add user's default city if receipt doesn't have a city
-          if (!response.receipt.city && profile?.defaultCity) {
-            response.receipt.city = profile.defaultCity;
-            // Also add city to all items
-            if (response.receipt.items) {
-              response.receipt.items = response.receipt.items.map(item => ({
-                ...item,
-                city: profile.defaultCity
-              }));
-            }
-          }
-          
-          // Step 5: Finalization
-          setProcessingStep(4);
-          await new Promise<void>(r => setTimeout(r, 400));
-          
-          // Check for duplicates using processed receipt data
-          if (user?.uid && response.receipt) {
-            const duplicateCheck = await checkProcessedReceiptDuplicate(
-              response.receipt,
-              user.uid
-            );
-            
-            if (duplicateCheck.isDuplicate) {
-              const shouldProceed = await new Promise<boolean>(resolve => {
-                Alert.alert(
-                  'Reçu déjà scanné',
-                  `Ce reçu a déjà été scanné:\n\n` +
-                  `Magasin: ${duplicateCheck.existingReceipt?.storeName}\n` +
-                  `Date: ${duplicateCheck.existingReceipt?.date ? new Date(duplicateCheck.existingReceipt.date).toLocaleDateString('fr-FR') : 'N/A'}\n` +
-                  `Montant: ${duplicateCheck.existingReceipt?.total} ${duplicateCheck.existingReceipt?.currency}\n\n` +
-                  `Voulez-vous quand même l'enregistrer ?`,
-                  [
-                    {text: 'Annuler', style: 'cancel', onPress: () => resolve(false)},
-                    {text: 'Enregistrer quand même', style: 'destructive', onPress: () => resolve(true)},
-                  ]
-                );
-              });
-
-              if (!shouldProceed) {
-                // User cancelled - don't save or record scan
-                setState('idle');
-                setPhotos([]);
-                return;
-              }
-            }
-          }
-          
-          // Save the receipt to Firestore
-          const savedReceiptId = await receiptStorageService.saveReceipt(
-            response.receipt,
-            user?.uid || 'unknown-user'
-          );
-
-          // Track shopping patterns for ML
-          if (user?.uid) {
-            await userBehaviorService.updateShoppingPatterns(user.uid, {
-              total: response.receipt.total || 0,
-              itemCount: response.receipt.items?.length || 0,
-              storeName: response.receipt.storeName || '',
-              categories: [...new Set(response.receipt.items?.map(item => item.category).filter(Boolean) || [])] as string[],
-              date: new Date(),
-            }).catch(err => console.log('Failed to track shopping patterns:', err));
-          }
-
-          console.log('📸 About to record scan...');
-          const scanRecorded = await recordScan();
-          console.log('📸 Scan recorded result:', scanRecorded);
-
-          if (!scanRecorded) {
-            console.error('⚠️ Failed to record scan usage');
-          }
-
-          analyticsService.logCustomEvent('scan_completed', {
-            success: true,
-            photo_count: 1,
-            items_count: response.receipt.items?.length || 0,
-            processing_method: 'hybrid', // Track that hybrid processing was used
-          });
-
-          // Success haptic feedback
-          hapticService.success();
-          setState('success');
-
-          // Track scan for in-app review
-          inAppReviewService.incrementScanCount().then(() => {
-            inAppReviewService.requestReviewIfAppropriate();
-          });
-
-          // Show success toast before navigation
-          showToast('Reçu analysé avec succès!', 'success', 2000);
-
-          // Navigate after animation
-          setTimeout(() => {
-            navigation.navigate('ReceiptDetail', {
-              receiptId: savedReceiptId,
-            });
-          }, 2000);
-          return;
-        } else {
-          throw new Error(response.error || 'Échec de l\'analyse');
-        }
-      } else {
-        // Multiple photos - use V2 function
-        const parseReceiptV2 = functions().httpsCallable('parseReceiptV2');
-        const response = await parseReceiptV2({
-          images,
-          mimeType: 'image/jpeg',
-        });
-
-        result = response.data as ParseReceiptV2Result;
-
-        if (result.success && result.receiptId) {
-          console.log('📸 About to record scan (multiple photos)...');
-          const scanRecorded = await recordScan();
-          console.log('📸 Scan recorded result (multiple photos):', scanRecorded);
-
-          if (!scanRecorded) {
-            console.error('⚠️ Failed to record scan usage (multiple photos)');
-          }
-
-          analyticsService.logCustomEvent('scan_completed', {
-            success: true,
-            photo_count: images.length,
-          });
-
-          // Success haptic feedback
-          hapticService.success();
-          setState('success');
-
-          // Track scan for in-app review
-          inAppReviewService.incrementScanCount().then(() => {
-            inAppReviewService.requestReviewIfAppropriate();
-          });
-
-          // Show success toast before navigation
-          showToast('Reçu analysé avec succès!', 'success', 2000);
-
-          const receiptId = result.receiptId;
-          setTimeout(() => {
-            navigation.navigate('ReceiptDetail', {
-              receiptId: receiptId,
-            });
-          }, 2000);
-          return;
-        } else {
-          throw new Error(result.error || 'Échec du traitement');
-        }
-      }
-    } catch (err: any) {
-      console.error('Processing error:', err);
-
-      // Auto-retry for transient errors
-      const isRetryable = err.message?.includes('timeout') ||
-        err.message?.includes('network') ||
-        err.message?.includes('503');
-
-      if (isRetryable && retryCountRef.current < MAX_RETRY_ATTEMPTS) {
-        retryCountRef.current += 1;
-        await new Promise<void>(resolve => setTimeout(resolve, 1000 * retryCountRef.current));
-        return handleProcess();
-      }
-
-      let userMessage = 'Une erreur est survenue lors de l\'analyse.';
-      if (err.message?.includes('Unable to detect receipt')) {
-        userMessage = 'Impossible de détecter une facture. Veuillez réessayer avec une photo plus claire.';
-      } else if (err.message?.includes('network')) {
-        userMessage = 'Pas de connexion internet. Veuillez vérifier votre connexion.';
-      }
-
-      setError(userMessage);
-      // Error haptic feedback
-      hapticService.error();
-      setState('error');
-
-      analyticsService.logCustomEvent('scan_failed', {
-        error: err.message,
-        photo_count: photos.length,
-      });
-    }
-  }, [photos, user, recordScan, navigation, showToast]);
+    
+    // Start the global processing state
+    scanProcessing.startProcessing(photosToProcess.length);
+    
+    // Navigate away - user can browse the app
+    navigation.goBack();
+    
+    // Process in background (non-blocking)
+    processInBackground(photosToProcess);
+    
+  }, [photos, canScan, isTrialActive, profile?.defaultCity, navigation, showToast, scanProcessing, processInBackground]);
 
   // Reset
   const handleReset = useCallback(() => {
@@ -943,51 +920,47 @@ export function UnifiedScannerScreen() {
             </View>
 
             {/* Photo Grid */}
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.photosGrid}
-              decelerationRate="fast"
-              snapToInterval={SCREEN_WIDTH * 0.85}
-            >
-              {photos.map((photo, index) => (
-                <Animated.View 
-                  key={photo.id} 
-                  style={[
-                    styles.photoCardModern,
-                    {transform: [{scale: scaleAnim}]}
-                  ]}
-                >
-                  <Image source={{uri: photo.uri}} style={styles.photoImageModern} />
-                  <View style={styles.photoOverlay}>
-                    <View style={styles.photoNumber}>
-                      <Text style={styles.photoNumberText}>{index + 1}</Text>
+            <View style={styles.photosGridContainer}>
+              <View style={styles.photosGrid}>
+                {photos.map((photo, index) => (
+                  <Animated.View 
+                    key={photo.id} 
+                    style={[
+                      styles.photoCardModern,
+                      {transform: [{scale: scaleAnim}]}
+                    ]}
+                  >
+                    <Image source={{uri: photo.uri}} style={styles.photoImageModern} />
+                    <View style={styles.photoOverlay}>
+                      <View style={styles.photoNumber}>
+                        <Text style={styles.photoNumberText}>{index + 1}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.photoDeleteButton}
+                        onPress={() => handleRemovePhoto(photo.id)}
+                        hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
+                      >
+                        <Icon name="trash-2" size="xs" color={Colors.white} />
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                      style={styles.photoDeleteButton}
-                      onPress={() => handleRemovePhoto(photo.id)}
-                      hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
-                    >
-                      <Icon name="trash-2" size="sm" color={Colors.white} />
-                    </TouchableOpacity>
-                  </View>
-                </Animated.View>
-              ))}
+                  </Animated.View>
+                ))}
 
-              {photos.length < MAX_PHOTOS && (
-                <TouchableOpacity
-                  style={styles.addPhotoCardModern}
-                  onPress={() => handleAddPhoto(false)}
-                  activeOpacity={0.9}
-                >
-                  <View style={styles.addPhotoIconContainer}>
-                    <Icon name="plus" size="lg" color={Colors.primary} />
-                  </View>
-                  <Text style={styles.addPhotoTextModern}>Ajouter</Text>
-                  <Text style={styles.addPhotoSubtext}>une photo</Text>
-                </TouchableOpacity>
-              )}
-            </ScrollView>
+                {photos.length < MAX_PHOTOS && (
+                  <TouchableOpacity
+                    style={styles.addPhotoCardModern}
+                    onPress={() => handleAddPhoto(false)}
+                    activeOpacity={0.9}
+                  >
+                    <View style={styles.addPhotoIconContainer}>
+                      <Icon name="plus" size="md" color={Colors.primary} />
+                    </View>
+                    <Text style={styles.addPhotoTextModern}>Ajouter</Text>
+                    <Text style={styles.addPhotoSubtext}>une photo</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
 
             {/* Review Actions */}
             <View style={styles.reviewActionsModern}>
@@ -1115,6 +1088,21 @@ export function UnifiedScannerScreen() {
           fadeOut={true}
           fallSpeed={3000}
           colors={['#FFD700', '#FFA500', '#FF6347', '#32CD32', '#1E90FF', '#FF69B4']}
+        />
+      )}
+      
+      {/* Confirmation Modal */}
+      {showConfirmModal && confirmModalConfig && (
+        <ConfirmationModal
+          visible={showConfirmModal}
+          title={confirmModalConfig.title}
+          message={confirmModalConfig.message}
+          variant={confirmModalConfig.variant}
+          confirmText={confirmModalConfig.confirmText}
+          cancelText={confirmModalConfig.cancelText}
+          onConfirm={confirmModalConfig.onConfirm}
+          onClose={confirmModalConfig.onCancel}
+          onCancel={confirmModalConfig.onCancel}
         />
       )}
       </View>
@@ -1348,18 +1336,24 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     marginTop: 2,
   },
+  photosGridContainer: {
+    marginBottom: Spacing.lg,
+  },
   photosGrid: {
-    paddingVertical: Spacing.md,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: Spacing.xs,
-    gap: Spacing.md,
+    justifyContent: 'flex-start',
+    gap: Spacing.sm,
   },
   photoCardModern: {
-    width: SCREEN_WIDTH * 0.7,
-    height: SCREEN_WIDTH * 0.85,
-    borderRadius: BorderRadius['2xl'],
+    width: SCREEN_WIDTH * 0.42,
+    height: SCREEN_WIDTH * 0.52,
+    borderRadius: BorderRadius.xl,
     overflow: 'hidden',
     backgroundColor: Colors.background.secondary,
-    ...Shadows.md,
+    ...Shadows.sm,
+    marginHorizontal: 4,
   },
   photoImageModern: {
     width: '100%',
@@ -1371,63 +1365,66 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    padding: Spacing.md,
+    padding: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   photoNumber: {
-    width: 36,
-    height: 36,
-    borderRadius: BorderRadius.lg,
+    width: 28,
+    height: 28,
+    borderRadius: BorderRadius.md,
     backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Shadows.md,
+    ...Shadows.sm,
   },
   photoNumberText: {
-    fontSize: Typography.fontSize.md,
+    fontSize: Typography.fontSize.sm,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.white,
   },
   photoDeleteButton: {
-    width: 36,
-    height: 36,
-    borderRadius: BorderRadius.lg,
+    width: 28,
+    height: 28,
+    borderRadius: BorderRadius.md,
     backgroundColor: Colors.status.error,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Shadows.md,
+    ...Shadows.sm,
   },
   addPhotoCardModern: {
-    width: SCREEN_WIDTH * 0.75,
-    height: SCREEN_WIDTH * 0.95,
-    borderRadius: BorderRadius['2xl'],
-    borderWidth: 3,
+    width: SCREEN_WIDTH * 0.42,
+    height: SCREEN_WIDTH * 0.52,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 2,
     borderStyle: 'dashed',
     borderColor: Colors.primary,
     backgroundColor: Colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: 8,
+    marginHorizontal: 4,
   },
   addPhotoIconContainer: {
-    width: 60,
-    height: 60,
+    width: 44,
+    height: 44,
     borderRadius: BorderRadius.full,
     backgroundColor: Colors.white,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: 6,
     ...Shadows.sm,
   },
   addPhotoTextModern: {
-    fontSize: Typography.fontSize.xl,
+    fontSize: Typography.fontSize.md,
     fontWeight: Typography.fontWeight.bold,
     color: Colors.primary,
+    textAlign: 'center',
   },
   addPhotoSubtext: {
-    fontSize: Typography.fontSize.md,
+    fontSize: Typography.fontSize.sm,
     color: Colors.text.secondary,
+    textAlign: 'center',
   },
   reviewActionsModern: {
     marginTop: Spacing.xl,

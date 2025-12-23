@@ -26,7 +26,7 @@ import {formatCurrency, formatDate, convertCurrency} from '@/shared/utils/helper
 import {receiptStorageService, authService} from '@/shared/services/firebase';
 import {hapticService, shareService} from '@/shared/services';
 import {useAuth, useToast} from '@/shared/contexts';
-import {Spinner, Icon} from '@/shared/components';
+import {Spinner, Icon, TabSelector} from '@/shared/components';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type ReceiptDetailRouteProp = RouteProp<RootStackParamList, 'ReceiptDetail'>;
@@ -58,6 +58,14 @@ export function ReceiptDetailScreen() {
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
+
+  // Tab configuration
+  const tabs = [
+    { icon: 'shopping-bag', label: 'Articles', value: 'items' },
+    { icon: 'file-text', label: 'Résumé', value: 'summary' },
+    { icon: 'share-2', label: 'Partager', value: 'share' },
+  ];
 
   useEffect(() => {
     if (passedReceipt) {
@@ -190,6 +198,23 @@ export function ReceiptDetailScreen() {
     fetchReceipt();
   }, [receiptId, passedReceipt, showToast]);
 
+  const handleShare = async () => {
+    if (!receipt) return;
+    
+    try {
+      const shareText = `Reçu de ${receipt.storeName}\n` +
+        `Date: ${formatDate(receipt.date)}\n` +
+        `Total: ${formatCurrency(receipt.total, receipt.currency)}\n` +
+        `Articles: ${receipt.items?.length || 0}`;
+      
+      await shareService.shareReceipt(shareText, receipt);
+      hapticService.success();
+    } catch (error) {
+      console.error('Error sharing receipt:', error);
+      showToast('Erreur lors du partage', 'error');
+    }
+  };
+
   const handleCompare = () => {
     navigation.push('PriceComparison', {receiptId});
   };
@@ -283,16 +308,38 @@ export function ReceiptDetailScreen() {
           )}
         </View>
 
-        {/* Items Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Articles</Text>
-            <View style={styles.itemCountBadge}>
-              <Text style={styles.itemCountText}>{receipt.items.length}</Text>
-            </View>
-          </View>
+        {/* Tab Bar */}
+        <View style={styles.tabBarContainer}>
+          <TabSelector
+            tabs={tabs}
+            activeIndex={activeTab}
+            onTabPress={(index) => {
+              setActiveTab(index);
+              hapticService.light();
+              
+              // Handle share tab press immediately
+              if (tabs[index].value === 'share') {
+                handleShare();
+                // Reset to items tab after share
+                setTimeout(() => setActiveTab(0), 500);
+              }
+            }}
+          />
+        </View>
 
-          {receipt.items.map(item => (
+        {/* Tab Content */}
+        {activeTab === 0 && (
+          <>
+            {/* Items Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Articles</Text>
+                <View style={styles.itemCountBadge}>
+                  <Text style={styles.itemCountText}>{receipt.items.length}</Text>
+                </View>
+              </View>
+
+              {receipt.items.map(item => (
             <View key={item.id} style={styles.itemCard}>
               <View style={styles.itemMain}>
                 <View style={styles.itemInfo}>
@@ -354,10 +401,10 @@ export function ReceiptDetailScreen() {
               </View>
             </View>
           ))}
-        </View>
+            </View>
 
-        {/* Total Section */}
-        <View style={styles.totalCard}>
+            {/* Total Section */}
+            <View style={styles.totalCard}>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total</Text>
             <View style={styles.totalAmountContainer}>
@@ -407,9 +454,102 @@ export function ReceiptDetailScreen() {
               )}
             </>
           )}
-        </View>
+            </View>
+          </>
+        )}
 
-        {/* Compare Prices Card */}
+        {/* Summary Tab Content */}
+        {activeTab === 1 && (
+          <>
+            {/* Total Card */}
+            <View style={styles.totalCard}>
+              <View style={styles.totalHeader}>
+                <Text style={styles.totalTitle}>Total</Text>
+                <View style={styles.totalBadge}>
+                  <Icon name="receipt" size="sm" color={Colors.white} />
+                </View>
+              </View>
+              
+              <View style={styles.totalAmountContainer}>
+                <Text style={styles.totalMainAmount}>
+                  {formatCurrency(receipt.total, receipt.currency)}
+                </Text>
+                {receipt.currency === 'USD' ? (
+                  receipt.totalCDF && (
+                    <Text style={styles.totalSecondaryAmount}>
+                      ≈ {formatCurrency(receipt.totalCDF, 'CDF')}
+                    </Text>
+                  )
+                ) : (
+                  receipt.totalUSD && (
+                    <Text style={styles.totalSecondaryAmount}>
+                      ≈ {formatCurrency(receipt.totalUSD, 'USD')}
+                    </Text>
+                  )
+                )}
+              </View>
+              
+              {receipt.subtotal !== undefined && (
+                <>
+                  <View style={styles.separator} />
+                  <View style={styles.subtotalRow}>
+                    <Text style={styles.subtotalLabel}>Sous-total</Text>
+                    <Text style={styles.subtotalAmount}>
+                      {formatCurrency(receipt.subtotal, receipt.currency)}
+                    </Text>
+                  </View>
+                  {receipt.tax !== undefined && receipt.tax > 0 && (
+                    <View style={styles.subtotalRow}>
+                      <Text style={styles.subtotalLabel}>TVA</Text>
+                      <Text style={styles.subtotalAmount}>
+                        {formatCurrency(receipt.tax, receipt.currency)}
+                      </Text>
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+
+            {/* Statistics */}
+            <View style={styles.statsCard}>
+              <Text style={styles.statsTitle}>Statistiques</Text>
+              <View style={styles.statsGrid}>
+                <View style={styles.statItem}>
+                  <View style={styles.statIconContainer}>
+                    <Icon name="shopping-bag" size="md" color={Colors.primary} />
+                  </View>
+                  <Text style={styles.statValue}>{receipt.items.length}</Text>
+                  <Text style={styles.statLabel}>Articles</Text>
+                </View>
+                
+                <View style={styles.statItem}>
+                  <View style={styles.statIconContainer}>
+                    <Icon name="dollar-sign" size="md" color={Colors.primary} />
+                  </View>
+                  <Text style={styles.statValue}>
+                    {formatCurrency(
+                      receipt.items.reduce((sum, item) => sum + item.totalPrice, 0) / receipt.items.length,
+                      receipt.currency
+                    )}
+                  </Text>
+                  <Text style={styles.statLabel}>Prix moyen</Text>
+                </View>
+                
+                <View style={styles.statItem}>
+                  <View style={styles.statIconContainer}>
+                    <Icon name="tag" size="md" color={Colors.primary} />
+                  </View>
+                  <Text style={styles.statValue}>
+                    {[...new Set(receipt.items.map(item => item.category).filter(Boolean))].length}
+                  </Text>
+                  <Text style={styles.statLabel}>Catégories</Text>
+                </View>
+              </View>
+            </View>
+          </>
+        )}
+
+        {/* Compare Prices Card - Always show */}
         <TouchableOpacity
           style={styles.compareCard}
           onPress={handleCompare}
@@ -554,6 +694,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: Spacing.sm,
   },
+
+  // Tab Bar
+  tabBarContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+  },
+
   dateContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -766,5 +913,97 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.sm,
     fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
+  },
+
+  // Summary Tab Styles
+  totalCard: {
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    ...Shadows.sm,
+  },
+  totalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  totalTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
+  },
+  totalBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  totalAmountContainer: {
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  totalMainAmount: {
+    fontSize: Typography.fontSize['3xl'],
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.primary,
+    textAlign: 'center',
+  },
+  totalSecondaryAmount: {
+    fontSize: Typography.fontSize.md,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.secondary,
+    marginTop: Spacing.xs,
+  },
+  separator: {
+    height: 1,
+    backgroundColor: Colors.border.light,
+    marginVertical: Spacing.md,
+  },
+  statsCard: {
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    ...Shadows.sm,
+  },
+  statsTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.md,
+    textAlign: 'center',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  statValue: {
+    fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.xs,
+  },
+  statLabel: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.secondary,
+    textAlign: 'center',
   },
 });

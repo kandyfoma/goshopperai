@@ -11,6 +11,7 @@ export {default as ListItem, ListSection} from './ListItem';
 export {default as EmptyState} from './EmptyState';
 export {AppFooter} from './AppFooter';
 export {ModernTabBar, TabBarIcon} from './ModernTabBar';
+export {default as TabSelector} from './TabSelector';
 export {AppStateTracker} from './AppStateTracker';
 // Illustrations
 export {
@@ -71,3 +72,7 @@ export {
 
 // Offline Components
 export {OfflineBanner, OfflineIndicator} from './OfflineBanner';
+
+// Global Scan Processing Components
+export {GlobalScanProgressBanner} from './GlobalScanProgressBanner';
+export {GlobalScanResultModal} from './GlobalScanResultModal';
