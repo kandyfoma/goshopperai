@@ -195,11 +195,11 @@ export function GlobalScanResultModal() {
             </Animated.View>
             
             {/* Title */}
-            <Text style={styles.title}>Successful</Text>
+            <Text style={styles.title}>Succès !</Text>
             
             {/* Subtitle */}
             <Text style={styles.subtitle}>
-              Your new <Text style={styles.highlightText}>receipt</Text> is successfully added.
+              Votre <Text style={styles.highlightText}>reçu</Text> a été ajouté avec succès
             </Text>
             
             {/* Receipt Summary Card */}
@@ -210,7 +210,7 @@ export function GlobalScanResultModal() {
                 </View>
                 <View style={styles.summaryTextContainer}>
                   <Text style={styles.summaryLabel}>Magasin</Text>
-                  <Text style={styles.summaryValue}>{storeName}</Text>
+                  <Text style={styles.summaryValue} numberOfLines={1}>{storeName}</Text>
                 </View>
               </View>
               
@@ -238,15 +238,13 @@ export function GlobalScanResultModal() {
                 </View>
               </View>
             </View>
-          </View>
-          
-          {/* Done Button */}
-          <View style={styles.buttonContainer}>
+            
+            {/* Done Button */}
             <TouchableOpacity
               style={styles.doneButton}
               onPress={handleViewReceipt}
               activeOpacity={0.8}>
-              <Text style={styles.doneButtonText}>Done</Text>
+              <Text style={styles.doneButtonText}>Voir le reçu</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -271,8 +269,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    minHeight: height * 0.55,
-    maxHeight: height * 0.7,
+    minHeight: height * 0.75,
+    maxHeight: height * 0.85,
     paddingBottom: 34, // Safe area
     ...Shadows.lg,
   },
@@ -303,14 +301,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.lg,
   },
   iconContainer: {
     width: 80,
     height: 80,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   iconGlow: {
     position: 'absolute',
@@ -329,11 +328,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontFamily: Typography.fontFamily.bold,
     color: Colors.text.primary,
     textAlign: 'center',
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
   },
   subtitle: {
     fontSize: Typography.fontSize.base,
@@ -341,31 +340,46 @@ const styles = StyleSheet.create({
     color: Colors.text.secondary,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   highlightText: {
     color: Colors.primary,
     fontFamily: Typography.fontFamily.semiBold,
   },
+  doneButton: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 100,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.lg,
+    width: '100%',
+  },
+  doneButtonText: {
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.white,
+  },
   summaryCard: {
     backgroundColor: Colors.background.secondary,
     borderRadius: 20,
-    padding: Spacing.lg,
+    padding: Spacing.md,
     width: '100%',
   },
   summaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.sm,
+    paddingVertical: Spacing.xs,
   },
   summaryIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: Colors.white,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: Spacing.md,
+    marginRight: Spacing.sm,
   },
   summaryTextContainer: {
     flex: 1,
@@ -377,12 +391,12 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   summaryValue: {
-    fontSize: Typography.fontSize.base,
+    fontSize: Typography.fontSize.sm,
     fontFamily: Typography.fontFamily.medium,
     color: Colors.text.primary,
   },
   summaryValueLarge: {
-    fontSize: Typography.fontSize.lg,
+    fontSize: Typography.fontSize.base,
     fontFamily: Typography.fontFamily.bold,
     color: Colors.text.primary,
   },
@@ -390,22 +404,5 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.border.light,
     marginVertical: Spacing.xs,
-  },
-  buttonContainer: {
-    paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.md,
-  },
-  doneButton: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 100,
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  doneButtonText: {
-    fontSize: Typography.fontSize.base,
-    fontFamily: Typography.fontFamily.semiBold,
-    color: Colors.white,
   },
 });

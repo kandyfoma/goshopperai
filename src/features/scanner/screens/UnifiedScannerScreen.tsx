@@ -609,11 +609,11 @@ export function UnifiedScannerScreen() {
           throw new Error(response.error || 'Échec de l\'analyse');
         }
       } else {
-        // Multiple photos - use V2 function
+        // Multiple photos - use parseReceiptMulti callable function
         scanProcessing.updateProgress(45, 'Extraction des données...');
         
-        const parseReceiptV2 = functions().httpsCallable('parseReceiptV2');
-        const response = await parseReceiptV2({
+        const parseReceiptMulti = functions().httpsCallable('parseReceiptMulti');
+        const response = await parseReceiptMulti({
           images,
           mimeType: 'image/jpeg',
         });
@@ -823,7 +823,7 @@ export function UnifiedScannerScreen() {
         showsVerticalScrollIndicator={false}
         bounces={true}
       >
-        {/* Idle State - Modern Welcome */}
+        {/* Idle State - Modern Welcome with Blue Theme */}
         {state === 'idle' && (
           <Animated.View 
             style={[
@@ -834,10 +834,51 @@ export function UnifiedScannerScreen() {
               }
             ]}
           >
+            {/* 3-Step Flow Illustration */}
+            <View style={styles.stepsFlowContainer}>
+              <View style={styles.stepsRow}>
+                {/* Step 1 */}
+                <View style={styles.stepItem}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText}>1</Text>
+                  </View>
+                  <Icon name="camera" size="sm" color={Colors.primary} />
+                  <Text style={styles.stepTitle}>Capturez</Text>
+                  <Text style={styles.stepDesc}>Photo du reçu</Text>
+                </View>
+
+                {/* Arrow */}
+                <Icon name="chevron-right" size="xs" color={Colors.border.medium} style={styles.stepArrow} />
+
+                {/* Step 2 */}
+                <View style={styles.stepItem}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText}>2</Text>
+                  </View>
+                  <Icon name="cpu" size="sm" color={Colors.accent} />
+                  <Text style={styles.stepTitle}>Analysez</Text>
+                  <Text style={styles.stepDesc}>IA extrait tout</Text>
+                </View>
+
+                {/* Arrow */}
+                <Icon name="chevron-right" size="xs" color={Colors.border.medium} style={styles.stepArrow} />
+
+                {/* Step 3 */}
+                <View style={styles.stepItem}>
+                  <View style={styles.stepNumber}>
+                    <Text style={styles.stepNumberText}>3</Text>
+                  </View>
+                  <Icon name="trending-up" size="sm" color={Colors.accentLight} />
+                  <Text style={styles.stepTitle}>Économisez</Text>
+                  <Text style={styles.stepDesc}>Suivez budget</Text>
+                </View>
+              </View>
+            </View>
+
             {/* Hero Illustration */}
             <View style={styles.heroContainer}>
               <Animated.View style={[styles.heroCircle, {transform: [{scale: pulseAnim}]}]}>
-                <Icon name="camera" size="3xl" color={Colors.primary} />
+                <Icon name="camera" size="2xl" color={Colors.white} />
               </Animated.View>
             </View>
 
@@ -873,19 +914,19 @@ export function UnifiedScannerScreen() {
             {/* Feature Cards */}
             <View style={styles.featureCards}>
               <View style={styles.featureCard}>
-                <Icon name="cpu" size="md" color={Colors.primary} />
-                <Text style={styles.featureTitle}>IA Puissante</Text>
-                <Text style={styles.featureDesc}>Extraction auto</Text>
+                <Icon name="zap" size="md" color={Colors.primary} />
+                <Text style={styles.featureTitle}>Rapide</Text>
+                <Text style={styles.featureDesc}>En 5 secondes</Text>
               </View>
               <View style={styles.featureCard}>
-                <Icon name="trending-up" size="md" color={Colors.primary} />
-                <Text style={styles.featureTitle}>Suivi Budget</Text>
-                <Text style={styles.featureDesc}>Vos dépenses</Text>
+                <Icon name="shield" size="md" color={Colors.accent} />
+                <Text style={styles.featureTitle}>Sécurisé</Text>
+                <Text style={styles.featureDesc}>Données cryptées</Text>
               </View>
               <View style={styles.featureCard}>
-                <Icon name="dollar-sign" size="md" color={Colors.primary} />
-                <Text style={styles.featureTitle}>Économies</Text>
-                <Text style={styles.featureDesc}>Comparez</Text>
+                <Icon name="globe" size="md" color={Colors.accentLight} />
+                <Text style={styles.featureTitle}>Multi-devise</Text>
+                <Text style={styles.featureDesc}>USD & CDF</Text>
               </View>
             </View>
           </Animated.View>
@@ -1200,23 +1241,71 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Modern Idle State
+  // Modern Idle State (Blue Theme)
   idleContainer: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.xl,
+    paddingTop: Spacing.lg,
+  },
+  stepsFlowContainer: {
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
+  },
+  stepsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  stepItem: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  stepNumber: {
+    width: 20,
+    height: 20,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    marginBottom: 4,
+  },
+  stepNumberText: {
+    fontSize: 11,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.primary,
+  },
+  stepTitle: {
+    fontSize: 12,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.text.primary,
+    textAlign: 'center',
+  },
+  stepDesc: {
+    fontSize: 10,
+    color: Colors.text.tertiary,
+    textAlign: 'center',
+    lineHeight: 12,
+  },
+  stepArrow: {
+    opacity: 0.4,
   },
   heroContainer: {
     alignItems: 'center',
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   heroCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: Colors.card.blue,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Shadows.sm,
+    ...Shadows.lg,
   },
   welcomeTextContainer: {
     marginBottom: Spacing.xl,
@@ -1224,7 +1313,7 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: Typography.fontSize['2xl'],
     fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.primary,
+    color: Colors.primary,
     textAlign: 'center',
     marginBottom: Spacing.xs,
   },
@@ -1236,7 +1325,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   
-  // Action Buttons
+  // Action Buttons (Blue Theme)
   actionButtonsContainer: {
     gap: Spacing.md,
     marginBottom: Spacing.xl,
@@ -1246,46 +1335,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.primary,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
+    borderRadius: 100,
+    paddingVertical: Spacing.lg + 4,
+    paddingHorizontal: Spacing.xl,
     gap: Spacing.sm,
-    ...Shadows.md,
+    elevation: 8,
+    shadowColor: Colors.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
   },
   primaryActionText: {
     fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.semiBold,
+    fontWeight: Typography.fontWeight.bold,
     color: Colors.white,
+    letterSpacing: 0.5,
   },
   secondaryActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    borderWidth: 2,
-    borderColor: Colors.border.light,
+    backgroundColor: Colors.background.secondary,
+    borderRadius: 100,
+    paddingVertical: Spacing.base + 4,
+    paddingHorizontal: Spacing.lg,
     gap: Spacing.sm,
-    ...Shadows.sm,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
   },
   secondaryActionText: {
     fontSize: Typography.fontSize.base,
-    fontWeight: Typography.fontWeight.medium,
+    fontWeight: Typography.fontWeight.semiBold,
     color: Colors.text.primary,
   },
   
-  // Feature Cards
+  // Feature Cards (Blue Theme)
   featureCards: {
     flexDirection: 'row',
     gap: Spacing.sm,
   },
   featureCard: {
     flex: 1,
-    backgroundColor: Colors.card.white,
-    borderRadius: BorderRadius.lg,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
     padding: Spacing.md,
     alignItems: 'center',
     gap: Spacing.xs,
+    borderWidth: 1,
+    borderColor: Colors.border.light,
     ...Shadows.sm,
   },
   featureTitle: {
@@ -1300,7 +1400,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Modern Review State
+  // Modern Review State (Blue Theme)
   reviewContainer: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,
@@ -1317,7 +1417,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1329,7 +1429,7 @@ const styles = StyleSheet.create({
   reviewTitle: {
     fontSize: Typography.fontSize.xl,
     fontWeight: Typography.fontWeight.bold,
-    color: Colors.text.primary,
+    color: Colors.accent,
   },
   reviewSubtitle: {
     fontSize: Typography.fontSize.sm,
@@ -1342,18 +1442,16 @@ const styles = StyleSheet.create({
   photosGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: Spacing.xs,
     justifyContent: 'flex-start',
-    gap: Spacing.sm,
+    gap: Spacing.xs,
   },
   photoCardModern: {
-    width: SCREEN_WIDTH * 0.42,
-    height: SCREEN_WIDTH * 0.52,
+    width: (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.xs) / 2,
+    height: (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.xs) / 2 * 1.2,
     borderRadius: BorderRadius.xl,
     overflow: 'hidden',
     backgroundColor: Colors.background.secondary,
     ...Shadows.sm,
-    marginHorizontal: 4,
   },
   photoImageModern: {
     width: '100%',
@@ -1373,7 +1471,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: BorderRadius.md,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     justifyContent: 'center',
     alignItems: 'center',
     ...Shadows.sm,
@@ -1393,17 +1491,16 @@ const styles = StyleSheet.create({
     ...Shadows.sm,
   },
   addPhotoCardModern: {
-    width: SCREEN_WIDTH * 0.42,
-    height: SCREEN_WIDTH * 0.52,
+    width: (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.xs) / 2,
+    height: (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.xs) / 2 * 1.2,
     borderRadius: BorderRadius.xl,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
+    borderColor: Colors.accentLight,
+    backgroundColor: '#E5F2F8',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    marginHorizontal: 4,
   },
   addPhotoIconContainer: {
     width: 44,
@@ -1418,12 +1515,12 @@ const styles = StyleSheet.create({
   addPhotoTextModern: {
     fontSize: Typography.fontSize.md,
     fontWeight: Typography.fontWeight.bold,
-    color: Colors.primary,
+    color: Colors.accent,
     textAlign: 'center',
   },
   addPhotoSubtext: {
     fontSize: Typography.fontSize.sm,
-    color: Colors.text.secondary,
+    color: Colors.accentLight,
     textAlign: 'center',
   },
   reviewActionsModern: {
@@ -1431,7 +1528,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   analyzeButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     ...Shadows.lg,
@@ -1467,13 +1564,13 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     borderWidth: 2,
-    borderColor: Colors.border.light,
+    borderColor: Colors.accentLight,
     alignItems: 'center',
   },
   cancelButtonText: {
     fontSize: Typography.fontSize.md,
     fontWeight: Typography.fontWeight.semiBold,
-    color: Colors.text.secondary,
+    color: Colors.accent,
   },
 
   // Processing State
@@ -1514,7 +1611,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: Colors.card.blue,
+    backgroundColor: Colors.accentLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.lg,
@@ -1541,7 +1638,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: '100%',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     borderRadius: BorderRadius.full,
   },
   loadingTextContainer: {
@@ -1557,7 +1654,7 @@ const styles = StyleSheet.create({
   },
   loadingSubtitle: {
     fontSize: Typography.fontSize.sm,
-    color: Colors.primary,
+    color: Colors.accent,
     fontStyle: 'italic',
   },
   photoCountText: {
@@ -1665,7 +1762,7 @@ const styles = StyleSheet.create({
   retryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.accent,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.xl,
@@ -1685,12 +1782,12 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.xl,
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: Colors.accent,
   },
   newScanButtonText: {
     fontSize: Typography.fontSize.md,
     fontWeight: Typography.fontWeight.semiBold,
-    color: Colors.primary,
+    color: Colors.accent,
     marginLeft: Spacing.sm,
   },
   helpButton: {

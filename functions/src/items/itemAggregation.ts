@@ -34,6 +34,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import {config} from '../config';
+import {ReceiptItem} from '../types';
 
 const db = admin.firestore();
 
@@ -683,6 +684,14 @@ export const aggregateItemsOnReceipt = functions
       const userItemsPath = `artifacts/${config.app.id}/users/${userId}/items`;
       const cityItemsPath = userCity ? `artifacts/${config.app.id}/cityItems/${userCity}/items` : null;
 
+      // First, collect all item refs and fetch them in parallel
+      const itemRefs: Array<{
+        itemNameNormalized: string;
+        item: ReceiptItem;
+        userItemRef: FirebaseFirestore.DocumentReference;
+        cityItemRef: FirebaseFirestore.DocumentReference | null;
+      }> = [];
+
       for (const item of items) {
         if (!item.name || !item.unitPrice || item.unitPrice <= 0) {
           continue;
@@ -696,9 +705,30 @@ export const aggregateItemsOnReceipt = functions
           continue;
         }
 
-        // ===== UPDATE USER'S PERSONAL ITEMS =====
         const userItemRef = db.collection(userItemsPath).doc(itemNameNormalized);
-        const userItemDoc = await userItemRef.get();
+        const cityItemRef = cityItemsPath ? db.collection(cityItemsPath).doc(itemNameNormalized) : null;
+
+        itemRefs.push({
+          itemNameNormalized,
+          item,
+          userItemRef,
+          cityItemRef,
+        });
+      }
+
+      // Fetch all documents in parallel to avoid race conditions
+      const userItemDocs = await Promise.all(
+        itemRefs.map(ref => ref.userItemRef.get())
+      );
+      const cityItemDocs = await Promise.all(
+        itemRefs.map(ref => ref.cityItemRef ? ref.cityItemRef.get() : Promise.resolve(null))
+      );
+
+      // Now process each item with the fetched data
+      for (let i = 0; i < itemRefs.length; i++) {
+        const {itemNameNormalized, item, userItemRef, cityItemRef} = itemRefs[i];
+        const userItemDoc = userItemDocs[i];
+        const cityItemDoc = cityItemDocs[i];
 
         const newPrice: ItemPrice = {
           storeName,
@@ -708,6 +738,7 @@ export const aggregateItemsOnReceipt = functions
           receiptId,
         };
 
+        // ===== UPDATE USER'S PERSONAL ITEMS =====
         if (userItemDoc.exists) {
           // Update existing user item
           const existingData = userItemDoc.data() as AggregatedItem;
@@ -785,10 +816,7 @@ export const aggregateItemsOnReceipt = functions
         }
 
         // ===== UPDATE MASTER CITY ITEMS TABLE (if city is set) =====
-        if (cityItemsPath) {
-          const cityItemRef = db.collection(cityItemsPath).doc(itemNameNormalized);
-          const cityItemDoc = await cityItemRef.get();
-
+        if (cityItemRef && cityItemDoc) {
           // Price entry includes userId for tracking which users have this item
           const cityPrice: ItemPrice & { userId: string } = {
             ...newPrice,

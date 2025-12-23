@@ -47,12 +47,12 @@ export function HistoryScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
 
-  // Tab configuration
-  const tabs = [
+  // Tab configuration (useMemo to prevent recreation on every render)
+  const tabs = React.useMemo(() => [
     { icon: 'list', label: 'Tous', value: 'all' },
     { icon: 'calendar', label: 'Ce mois', value: 'month' },
     { icon: 'archive', label: 'Cette année', value: 'year' },
-  ];
+  ], []);
 
   // Redirect if not authenticated
   useEffect(() => {

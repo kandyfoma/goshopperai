@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Dimensions,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Icon} from '@/shared/components';
 import {Colors, Typography, Spacing, Shadows} from '@/shared/theme/theme';
@@ -120,7 +121,7 @@ export function GlobalScanProgressBanner() {
     outputRange: [-100, 100],
   });
   
-  const backgroundColor = isError ? '#DC3545' : '#1A1A1A';
+  const backgroundColor = isError ? '#DC3545' : Colors.primary; // Use Crimson Blaze brand color
   const iconName = isError ? 'alert-circle' : 'camera';
   const title = isError ? 'Erreur d\'analyse' : 'Analyse en cours...';
   
@@ -154,7 +155,7 @@ export function GlobalScanProgressBanner() {
             styles.iconContainer, 
             {
               transform: [{scale: pulseAnim}],
-              backgroundColor: isError ? 'rgba(255, 255, 255, 0.2)' : Colors.primary,
+              backgroundColor: isError ? 'rgba(255, 255, 255, 0.2)' : Colors.primaryDark,
             }
           ]}>
           <Icon name={iconName} size="sm" color={Colors.white} />
@@ -185,18 +186,31 @@ export function GlobalScanProgressBanner() {
       {/* Progress bar (only show when processing) */}
       {isProcessing && (
         <View style={styles.progressBarContainer}>
+          <LinearGradient
+            colors={['rgba(212, 244, 0, 0.3)', 'rgba(102, 155, 188, 0.3)']} // Yellow to Blue gradient
+            start={{x: 0, y: 0}}
+            end={{x: 1, y: 0}}
+            style={StyleSheet.absoluteFill}
+          />
           <Animated.View 
             style={[styles.progressBar, {width: progressWidth}]} 
           >
-            {/* Shimmer effect overlay */}
-            <Animated.View
-              style={[
-                styles.shimmerOverlay,
-                {
-                  transform: [{translateX: shimmerTranslate}],
-                },
-              ]}
-            />
+            <LinearGradient
+              colors={['#669BBC', '#003049']} // Cosmos Blue gradient for progress
+              start={{x: 0, y: 0}}
+              end={{x: 1, y: 0}}
+              style={StyleSheet.absoluteFill}
+            >
+              {/* Shimmer effect overlay */}
+              <Animated.View
+                style={[
+                  styles.shimmerOverlay,
+                  {
+                    transform: [{translateX: shimmerTranslate}],
+                  },
+                ]}
+              />
+            </LinearGradient>
           </Animated.View>
         </View>
       )}
@@ -262,15 +276,13 @@ const styles = StyleSheet.create({
   },
   progressBarContainer: {
     height: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 2,
+    borderRadius: 8,
     marginTop: Spacing.sm,
     overflow: 'hidden',
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#D4F400', // Lime green to match our success color
-    borderRadius: 2,
+    borderRadius: 8,
     overflow: 'hidden',
   },
   shimmerOverlay: {
@@ -280,7 +292,7 @@ const styles = StyleSheet.create({
     right: -50,
     height: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: 2,
+    borderRadius: 8,
     width: 50,
   },
 });

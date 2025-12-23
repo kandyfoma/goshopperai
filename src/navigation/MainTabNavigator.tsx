@@ -55,18 +55,25 @@ export function MainTabNavigator() {
       });
 
     // Handle quick actions while app is running
-    if (typeof QuickActions.addListener === 'function') {
-      const subscription = QuickActions.addListener((data) => {
-        if (data) {
-          handleQuickAction(data.type);
-        }
-      });
+    // Note: QuickActions listener may not be available on all platforms
+    try {
+      // @ts-ignore - QuickActions listener API varies by platform
+      if (QuickActions.addListener) {
+        // @ts-ignore
+        const subscription = QuickActions.addListener((data: any) => {
+          if (data) {
+            handleQuickAction(data.type);
+          }
+        });
 
-      return () => {
-        if (subscription && typeof subscription.remove === 'function') {
-          subscription.remove();
-        }
-      };
+        return () => {
+          if (subscription && typeof subscription.remove === 'function') {
+            subscription.remove();
+          }
+        };
+      }
+    } catch (error) {
+      console.log('QuickActions listener not available:', error);
     }
   }, []);
 

@@ -40,7 +40,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseReceiptV2 = exports.parseReceipt = void 0;
+exports.parseReceiptMulti = exports.parseReceiptV2 = exports.parseReceipt = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const generative_ai_1 = require("@google/generative-ai");
@@ -344,6 +344,26 @@ const PARSING_PROMPT = `You are an expert receipt/invoice OCR and data extractio
 7. If BOTH item name AND price are invisible/faded → SKIP that item entirely
 8. Always ensure the total amount matches the receipt, even if some items are skipped
 
+⚠️ CRITICAL: FINDING THE CORRECT TOTAL AMOUNT:
+9. DO NOT just take the last number at the bottom of the receipt
+10. LOOK FOR TEXT LABELS that indicate the total amount:
+   - "TOTAL" or "Total" or "total"
+   - "MONTANT A PAYER" or "Montant à payer" 
+   - "TOTAL A PAYER" or "Total à payer"
+   - "NET A PAYER" or "Net à payer"
+   - "AMOUNT DUE" or "Amount Due"
+   - "GRAND TOTAL"
+11. The number next to or below these labels is the ACTUAL TOTAL
+12. IGNORE other numbers at the bottom like:
+   - Customer numbers
+   - Transaction IDs
+   - Receipt numbers
+   - Payment reference numbers
+   - Change given ("Monnaie")
+   - Amount tendered ("Montant reçu")
+13. If you see "Subtotal" and "Total", use the "Total" (which includes tax)
+14. The total MUST match the sum of all item prices (within small rounding tolerance)
+
 You MUST extract the ACTUAL machine-printed text visible in the image. DO NOT use placeholder text like "Test Store", "Item 1", "Item 2", etc.
 
 READ THE IMAGE CAREFULLY and extract EXACTLY what you see in PRINTED text:
@@ -370,7 +390,7 @@ Return ONLY a valid JSON object with double quotes around all property names and
   ],
   "subtotal": ACTUAL_SUBTOTAL_OR_NULL,
   "tax": ACTUAL_TAX_OR_NULL,
-  "total": ACTUAL_TOTAL_AMOUNT,
+  "total": ACTUAL_TOTAL_AMOUNT_NEXT_TO_TOTAL_LABEL,
   "totalUSD": ACTUAL_USD_TOTAL_OR_NULL,
   "totalCDF": ACTUAL_CDF_TOTAL_OR_NULL
 }
@@ -386,6 +406,7 @@ EXTRACTION RULES:
 8. Categories: Alimentation (food/groceries), Boissons (beverages), Hygiène (personal care), Ménage (household items), Bébé (baby products), Autres (other)
 9. Common DRC stores: Shoprite, Carrefour, Peloustore, Hasson & Frères, City Market, Kin Marché
 10. ⚠️ IGNORE HANDWRITTEN TEXT - Only read printed/typed text from machines
+11. ⚠️ FIND TOTAL BY READING THE LABEL "TOTAL" OR "MONTANT A PAYER" - Not just the last number!
 
 ⚠️ IMPORTANT: Return ONLY the JSON object with ACTUAL data from the MACHINE-PRINTED receipt text. Use double quotes for all strings. No markdown formatting, no explanations, no placeholder data.`;
 /**
@@ -904,6 +925,78 @@ exports.parseReceiptV2 = functions
     catch (error) {
         console.error('Multi-page receipt parsing error:', error);
         res.status(500).send('Failed to parse receipt');
+    }
+});
+/**
+ * V2 Callable version - Multi-image support via callable function
+ * Use this from mobile apps instead of the HTTP endpoint
+ */
+exports.parseReceiptMulti = functions
+    .region(config_1.config.app.region)
+    .runWith({
+    timeoutSeconds: 120,
+    memory: '1GB',
+    secrets: ['GEMINI_API_KEY'],
+})
+    .https.onCall(async (data, context) => {
+    // Check authentication
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated to parse receipts');
+    }
+    const userId = context.auth.uid;
+    const { images, mimeType = 'image/jpeg' } = data;
+    if (!images || !Array.isArray(images) || images.length === 0) {
+        throw new functions.https.HttpsError('invalid-argument', 'At least one image is required');
+    }
+    try {
+        // Check subscription
+        const subscriptionRef = db.doc(config_1.collections.subscription(userId));
+        const subscriptionDoc = await subscriptionRef.get();
+        const subscription = subscriptionDoc.data();
+        if (!subscription) {
+            throw new functions.https.HttpsError('permission-denied', 'Subscription not initialized');
+        }
+        // Parse all images and merge results
+        const parsedResults = await Promise.all(images.map((img) => parseWithGemini(img, mimeType)));
+        // Use improved multi-page merging with validation
+        const mergedReceipt = await mergeMultiPageReceipt(parsedResults, images);
+        // Get user profile to include city
+        const userProfileRef = db.doc(config_1.collections.userDoc(userId));
+        const userProfileDoc = await userProfileRef.get();
+        const userProfile = userProfileDoc.data();
+        // Save receipt
+        const receiptRef = db.collection(config_1.collections.receipts(userId)).doc();
+        const now = admin.firestore.FieldValue.serverTimestamp();
+        await receiptRef.set({
+            ...mergedReceipt,
+            id: receiptRef.id,
+            userId,
+            city: (userProfile === null || userProfile === void 0 ? void 0 : userProfile.defaultCity) || null,
+            processingStatus: 'completed',
+            pageCount: images.length,
+            createdAt: now,
+            updatedAt: now,
+            scannedAt: now,
+        });
+        // Update scan count
+        await subscriptionRef.update({
+            trialScansUsed: admin.firestore.FieldValue.increment(1),
+            updatedAt: now,
+        });
+        return {
+            success: true,
+            receiptId: receiptRef.id,
+            receipt: mergedReceipt,
+            pageCount: images.length,
+        };
+    }
+    catch (error) {
+        console.error('Multi-page receipt parsing error:', error);
+        // Re-throw as HttpsError if not already
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        throw new functions.https.HttpsError('internal', error.message || 'Failed to parse receipt');
     }
 });
 /**

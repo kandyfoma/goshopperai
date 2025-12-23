@@ -202,12 +202,7 @@ export function ReceiptDetailScreen() {
     if (!receipt) return;
     
     try {
-      const shareText = `Reçu de ${receipt.storeName}\n` +
-        `Date: ${formatDate(receipt.date)}\n` +
-        `Total: ${formatCurrency(receipt.total, receipt.currency)}\n` +
-        `Articles: ${receipt.items?.length || 0}`;
-      
-      await shareService.shareReceipt(shareText, receipt);
+      await shareService.shareReceipt(receipt);
       hapticService.success();
     } catch (error) {
       console.error('Error sharing receipt:', error);
@@ -916,13 +911,6 @@ const styles = StyleSheet.create({
   },
 
   // Summary Tab Styles
-  totalCard: {
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    marginBottom: Spacing.lg,
-    ...Shadows.sm,
-  },
   totalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -941,10 +929,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  totalAmountContainer: {
-    alignItems: 'center',
-    marginBottom: Spacing.md,
   },
   totalMainAmount: {
     fontSize: Typography.fontSize['3xl'],
