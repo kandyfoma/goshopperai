@@ -5,7 +5,8 @@ const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 
-const SOURCE_ICON = path.join(__dirname, '..', 'temp-logo', '1024x1024.png');
+// Use assets/logo.png as the source (NOT temp-logo/1024x1024.png which is the old logo-icon)
+const SOURCE_ICON = path.join(__dirname, '..', 'assets', 'logo.png');
 const ANDROID_RES_PATH = path.join(__dirname, '..', 'android', 'app', 'src', 'main', 'res');
 const IOS_ASSETS_PATH = path.join(__dirname, '..', 'ios', 'goshopperai', 'Images.xcassets', 'AppIcon.appiconset');
 
