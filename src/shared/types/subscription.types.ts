@@ -1,9 +1,11 @@
 // Type definitions for Subscription
 
-export type SubscriptionPlanId = 'free' | 'basic' | 'standard' | 'premium';
+export type SubscriptionPlanId = 'freemium' | 'free' | 'basic' | 'standard' | 'premium';
 export type SubscriptionStatus =
   | 'trial'
   | 'active'
+  | 'grace'
+  | 'freemium'
   | 'expired'
   | 'cancelled'
   | 'pending'
@@ -34,6 +36,7 @@ export interface Subscription {
   plan?: SubscriptionPlanId; // Alias for planId
   status: SubscriptionStatus;
   durationMonths?: SubscriptionDuration; // Subscription duration in months
+  gracePeriodEnd?: Date; // Grace period end date (7 days to use remaining scans)
 
   // Billing
   subscriptionStartDate?: Date;
@@ -60,6 +63,22 @@ export interface Subscription {
   expirationNotificationSent?: boolean;
   expirationNotificationDate?: Date;
   daysUntilExpiration?: number;
+
+  // Grace period notifications
+  graceNotificationDay?: number; // Last day notified (7, 5, 3, 1)
+  graceNotificationSent?: boolean;
+  graceNotificationDate?: Date;
+
+  // Scan limit warnings
+  scan80PercentWarningSent?: boolean;
+  scan80PercentWarningDate?: Date;
+  scan90PercentWarningSent?: boolean;
+  scan90PercentWarningDate?: Date;
+  scanLimitReachedNotificationSent?: boolean;
+  scanLimitReachedDate?: Date;
+
+  // Remaining scans (for grace period)
+  scansRemaining?: number;
 
   // Timestamps
   createdAt?: Date;

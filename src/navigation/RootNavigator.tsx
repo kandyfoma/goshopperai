@@ -30,6 +30,7 @@ import {
   ReceiptProcessingScreen,
 } from '@/features/scanner/screens';
 import {SubscriptionScreen, SubscriptionDetailsScreen} from '@/features/subscription/screens';
+import {MokoPaymentScreen} from '@/features/payment/screens/MokoPaymentScreen';
 import {SettingsScreen} from '@/features/settings/screens';
 import {UpdateProfileScreen, BudgetSettingsScreen, SupportScreen, ContactScreen, TermsScreen} from '@/features/profile/screens';
 
@@ -291,6 +292,15 @@ export function RootNavigator() {
         name="SubscriptionDetails"
         component={SubscriptionDetailsScreen}
         options={{headerShown: false}}
+      />
+      <Stack.Screen
+        name="MokoPayment"
+        component={MokoPaymentScreen}
+        options={{
+          headerShown: false,
+          animation: 'slide_from_bottom',
+          presentation: 'modal',
+        }}
       />
       <Stack.Screen
         name="Settings"

@@ -26,6 +26,7 @@ import {
 } from '@/shared/theme/theme';
 import {Icon, Button} from '@/shared/components';
 import {analyticsService, hapticService, widgetDataService} from '@/shared/services';
+import {hasFeatureAccess, showUpgradePrompt} from '@/shared/utils/featureAccess';
 import firestore from '@react-native-firebase/firestore';
 import {formatCurrency, safeToDate} from '@/shared/utils/helpers';
 import {APP_ID} from '@/shared/services/firebase/config';
@@ -706,6 +707,25 @@ export function HomeScreen() {
           </Text>
         </View>
 
+        {/* Grace Period Banner */}
+        {subscription?.status === 'grace' && subscription?.gracePeriodEnd && (
+          <TouchableOpacity
+            style={styles.graceBanner}
+            onPress={() => navigation.push('Subscription')}>
+            <View style={styles.graceIconContainer}>
+              <Icon name="clock" size="md" color={Colors.status.warning} />
+            </View>
+            <View style={styles.graceContent}>
+              <Text style={styles.graceTitle}>Période de grâce</Text>
+              <Text style={styles.graceMessage}>
+                {scansRemaining} scans restants • Expire le{' '}
+                {new Date(subscription.gracePeriodEnd).toLocaleDateString('fr-FR')}
+              </Text>
+            </View>
+            <Icon name="chevron-right" size="sm" color={Colors.text.tertiary} />
+          </TouchableOpacity>
+        )}
+
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
           <View style={styles.statsRow}>
@@ -776,7 +796,13 @@ export function HomeScreen() {
           <QuickAction
             icon="stats"
             label="Statistiques"
-            onPress={() => navigation.push('Stats')}
+            onPress={() => {
+              if (hasFeatureAccess('stats', subscription)) {
+                navigation.push('Stats');
+              } else {
+                showUpgradePrompt('stats', () => navigation.push('Subscription'));
+              }
+            }}
             color="cosmos"
           />
           <QuickAction
@@ -886,6 +912,42 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.lg,
     color: Colors.text.secondary,
     marginTop: Spacing.xs,
+  },
+
+  // Grace Period Banner
+  graceBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.card.yellow,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.md,
+    marginBottom: Spacing.xl,
+    borderWidth: 2,
+    borderColor: Colors.status.warning,
+    ...Shadows.sm,
+  },
+  graceIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  graceContent: {
+    flex: 1,
+  },
+  graceTitle: {
+    fontSize: Typography.fontSize.md,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
+    marginBottom: 2,
+  },
+  graceMessage: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.secondary,
   },
 
   // Stats Grid

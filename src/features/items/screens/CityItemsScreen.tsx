@@ -26,7 +26,8 @@ import {
 } from '@/shared/theme/theme';
 import {Icon, FadeIn, SlideIn} from '@/shared/components';
 import {formatCurrency, safeToDate} from '@/shared/utils/helpers';
-import {useAuth, useUser} from '@/shared/contexts';
+import {useAuth, useUser, useSubscription} from '@/shared/contexts';
+import {hasFeatureAccess, showUpgradePrompt} from '@/shared/utils/featureAccess';
 import {analyticsService} from '@/shared/services/analytics';
 import {RootStackParamList} from '@/shared/types';
 
@@ -58,6 +59,7 @@ export function CityItemsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const {isAuthenticated} = useAuth();
   const {profile: userProfile, isLoading: profileLoading} = useUser();
+  const {subscription} = useSubscription();
   const [items, setItems] = useState<CityItemData[]>([]);
   const [filteredItems, setFilteredItems] = useState<CityItemData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,6 +69,9 @@ export function CityItemsScreen() {
   const [showSortMenu, setShowSortMenu] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
   const searchAnimation = useRef(new Animated.Value(0)).current;
+
+  // Check feature access
+  const hasAccess = hasFeatureAccess('priceComparison', subscription);
 
   // Redirect if not authenticated
   React.useEffect(() => {
@@ -78,7 +83,14 @@ export function CityItemsScreen() {
   useEffect(() => {
     // Track screen view
     analyticsService.logScreenView('City Items', 'CityItemsScreen');
-  }, []);
+    
+    // Show upgrade prompt if no access
+    if (!hasAccess) {
+      showUpgradePrompt('priceComparison', () => {
+        navigation.navigate('Subscription');
+      });
+    }
+  }, [hasAccess]);
 
   // Reload data when screen comes into focus
   useFocusEffect(

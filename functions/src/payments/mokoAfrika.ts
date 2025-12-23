@@ -10,6 +10,7 @@ import axios from 'axios';
 import * as crypto from 'crypto';
 import {config, collections} from '../config';
 import {MokoPaymentRequest, MokoPaymentResponse, PaymentRecord} from '../types';
+import {sendPaymentSuccessNotification, sendPaymentFailedNotification} from '../notifications/paymentNotifications';
 
 const db = admin.firestore();
 
@@ -370,6 +371,24 @@ export const mokoPaymentWebhook = functions
           userId,
           payment.planId as 'basic' | 'premium',
           payment,
+        );
+        
+        // Send payment success notification
+        await sendPaymentSuccessNotification(
+          userId,
+          payment.planId,
+          payment.amount,
+          payment.provider || 'mobile_money',
+          transaction_id,
+        );
+      } else if (newStatus === 'failed') {
+        // Send payment failed notification
+        await sendPaymentFailedNotification(
+          userId,
+          payment.planId,
+          payment.amount,
+          payment.provider || 'mobile_money',
+          status,
         );
       }
 

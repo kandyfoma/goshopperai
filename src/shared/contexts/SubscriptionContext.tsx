@@ -76,6 +76,17 @@ export function SubscriptionProvider({children}: SubscriptionProviderProps) {
           trialLimit - (subscription.trialScansUsed || 0),
         );
         canScan = scansRemaining > 0;
+      } else if (subscription.status === 'grace') {
+        // Grace period - keep using remaining scans from expired plan
+        const planLimit =
+          PLAN_SCAN_LIMITS[
+            subscription.planId as keyof typeof PLAN_SCAN_LIMITS
+          ] || 0;
+        scansRemaining = Math.max(
+          0,
+          planLimit - (subscription.monthlyScansUsed || 0),
+        );
+        canScan = scansRemaining > 0;
       } else if (
         subscription.isSubscribed &&
         subscription.status === 'active'

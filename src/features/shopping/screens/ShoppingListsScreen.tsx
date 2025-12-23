@@ -16,7 +16,8 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
-import {useAuth} from '@/shared/contexts';
+import {useAuth, useSubscription} from '@/shared/contexts';
+import {canCreateShoppingList, showUpgradePrompt} from '@/shared/utils/featureAccess';
 import {
   shoppingListService,
   ShoppingList,
@@ -38,6 +39,7 @@ export function ShoppingListsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
   const {user, isAuthenticated} = useAuth();
+  const {subscription} = useSubscription();
 
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,6 +98,20 @@ export function ShoppingListsScreen() {
 
   const handleCreateList = async () => {
     if (!user?.uid || !newListName.trim()) return;
+
+    // Check if user can create more lists (freemium: 1 list only)
+    const listCheck = canCreateShoppingList(subscription, lists.length);
+    if (!listCheck.canCreate) {
+      Alert.alert(
+        'Limite atteinte',
+        listCheck.reason || 'Vous avez atteint la limite de listes',
+        [
+          {text: 'Annuler', style: 'cancel'},
+          {text: 'Mettre à niveau', onPress: () => navigation.navigate('Subscription')},
+        ]
+      );
+      return;
+    }
 
     setIsCreating(true);
     try {

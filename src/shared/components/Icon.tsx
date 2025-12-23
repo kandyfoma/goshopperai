@@ -2247,6 +2247,72 @@ const iconPaths: Record<
       </>
     ),
   },
+  diamond: {
+    outline: (
+      <>
+        <Path
+          d="M12 2L2 7l10 15 10-15-10-5z"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <Path d="M2 7h20" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M12 22V7" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M7 7L12 2l5 5" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ),
+    filled: (
+      <Path d="M12 2L2 7l10 15 10-15-10-5z" fill="currentColor" />
+    ),
+  },
+  'chart-line': {
+    outline: (
+      <>
+        <Path
+          d="M3 3v18h18"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <Path
+          d="M18 9l-5 5-4-4-6 6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </>
+    ),
+  },
+  'chart-bar': {
+    outline: (
+      <>
+        <Rect x="3" y="3" width="18" height="18" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M7 16V8" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M12 16v-4" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M17 16V12" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ),
+  },
+  infinity: {
+    outline: (
+      <Path
+        d="M18.178 8c2.942 0 5.322 2.312 5.322 5.166 0 2.855-2.38 5.167-5.322 5.167-1.862 0-3.496-.96-4.432-2.413a5.316 5.316 0 0 1-.746-1.26 5.316 5.316 0 0 1-.746 1.26c-.936 1.454-2.57 2.413-4.432 2.413-2.942 0-5.322-2.312-5.322-5.167C2.5 10.313 4.88 8 7.822 8c1.862 0 3.496.96 4.432 2.413.273.42.5.873.746 1.26.247-.387.473-.84.746-1.26C14.682 8.96 16.316 8 18.178 8z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    ),
+  },
+  'check-circle': {
+    outline: (
+      <>
+        <Circle cx="12" cy="12" r="10" strokeLinecap="round" strokeLinejoin="round" />
+        <Path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ),
+    filled: (
+      <>
+        <Circle cx="12" cy="12" r="10" fill="currentColor" />
+        <Path d="M9 12l2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ),
+  },
   'map-pin': {
     outline: (
       <>

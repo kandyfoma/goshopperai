@@ -102,6 +102,38 @@ export {
   checkSubscriptionExpiration,
 } from './notifications/notifications';
 
+// New notification systems
+export {
+  checkGracePeriodReminders,
+  sendManualGracePeriodReminder,
+} from './notifications/gracePeriodNotifications';
+
+export {
+  onReceiptCreated,
+  resetScanLimitWarnings,
+  sendManualScanLimitWarning,
+} from './notifications/scanLimitNotifications';
+
+export {
+  sendManualPaymentNotification,
+} from './notifications/paymentNotifications';
+
+export {
+  onCityItemPriceUpdate,
+  setPriceAlert,
+  removePriceAlert,
+} from './notifications/priceAlertNotifications';
+
+export {
+  sendMonthlySummaries,
+  sendManualMonthlySummary,
+} from './notifications/monthlySummaryNotifications';
+
+export {
+  onSubscriptionPlanChange,
+  sendManualFeatureUnlockNotification,
+} from './notifications/featureUnlockNotifications';
+
 // Phase 1.2 - Natural Language Query functions
 export {
   processNLQuery,

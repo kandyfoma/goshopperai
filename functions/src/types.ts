@@ -104,6 +104,22 @@ export interface Subscription {
   expirationNotificationDate?: Date;
   daysUntilExpiration?: number;
 
+  // Grace period notifications
+  graceNotificationDay?: number; // Last day notified (7, 5, 3, 1)
+  graceNotificationSent?: boolean;
+  graceNotificationDate?: Date;
+
+  // Scan limit warnings
+  scan80PercentWarningSent?: boolean;
+  scan80PercentWarningDate?: Date;
+  scan90PercentWarningSent?: boolean;
+  scan90PercentWarningDate?: Date;
+  scanLimitReachedNotificationSent?: boolean;
+  scanLimitReachedDate?: Date;
+
+  // Remaining scans (for grace period)
+  scansRemaining?: number;
+
   // Timestamps
   createdAt?: Date;
   updatedAt?: Date;

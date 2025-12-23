@@ -159,7 +159,12 @@ class PushNotificationService {
         {
           fcmToken: token,
           fcmTokenUpdatedAt: firestore.FieldValue.serverTimestamp(),
+          notificationsEnabled: true,
           platform: Platform.OS,
+          deviceInfo: {
+            os: Platform.OS,
+            version: Platform.Version,
+          },
         },
         {merge: true},
       );

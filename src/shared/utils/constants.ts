@@ -67,6 +67,19 @@ export const calculateDiscountedPrice = (
 
 // Subscription Plans Object (for UI)
 export const SUBSCRIPTION_PLANS = {
+  freemium: {
+    id: 'freemium',
+    name: 'Gratuit',
+    price: 0,
+    priceCDF: 0,
+    scanLimit: 3,
+    features: [
+      '3 scans par mois',
+      'Reconnaissance IA basique',
+      'Historique 7 jours',
+      '1 liste de courses',
+    ],
+  },
   free: {
     id: 'free',
     name: 'Essai Gratuit',
@@ -88,7 +101,7 @@ export const SUBSCRIPTION_PLANS = {
     scanLimit: 25,
     features: [
       '25 scans par mois',
-      'Comparaison de prix basique',
+      'Listes de courses',
       'Historique 30 jours',
       'Localisation française',
     ],
@@ -101,6 +114,8 @@ export const SUBSCRIPTION_PLANS = {
     scanLimit: 100,
     features: [
       '100 scans par mois',
+      'Comparaison de prix',
+      'Historique 2 mois',
       'Rapports de dépenses',
       'Historique des prix',
       'Analyse par catégorie',
@@ -112,13 +127,18 @@ export const SUBSCRIPTION_PLANS = {
     name: 'Premium',
     price: 4.99,
     priceCDF: 20000,
-    scanLimit: -1, // Unlimited
+    scanLimit: 1000, // Fair use limit
     features: [
-      'Scans illimités',
+      'Jusqu\'à 1,000 scans/mois',
+      'Comparaison de prix',
+      'Historique 2 mois',
+      'Rapports de dépenses',
+      'Historique des prix',
+      'Analyse par catégorie',
+      'Mode hors ligne',
       'Alertes de prix',
       'Listes de courses',
       'Export des données',
-      'Support prioritaire',
     ],
   },
 } as const;
