@@ -191,7 +191,6 @@ export function CityItemsScreen() {
             await cacheManager.set(cacheKey, itemsArray, {
               namespace: 'receipts',
               ttl: CacheTTL.DAY, // Cache for 24 hours
-              priority: 'high',
             });
             console.log('💾 Cached city items for city:', city);
           } catch (cacheError) {

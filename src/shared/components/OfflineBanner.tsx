@@ -2,9 +2,10 @@
  * OfflineBanner Component
  * 
  * Shows offline status and sync information to users.
+ * Also shows toast notifications when network status changes.
  */
 
-import React from 'react';
+import React, {useRef, useEffect} from 'react';
 import {
   View,
   Text,
@@ -13,6 +14,7 @@ import {
   Animated,
 } from 'react-native';
 import {useOffline} from '../hooks/useOffline';
+import {useToast} from '../contexts/ToastContext';
 import {Colors, Typography, Spacing, BorderRadius} from '../theme/theme';
 import Icon from './Icon';
 
@@ -26,7 +28,31 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
   onSyncPress,
 }) => {
   const {isOffline, isSyncing, pendingActions, syncNow} = useOffline();
+  const {showToast} = useToast();
   const [animation] = React.useState(new Animated.Value(0));
+  const previousOfflineState = useRef<boolean | null>(null);
+  const isFirstMount = useRef(true);
+
+  // Show toast when network status changes
+  useEffect(() => {
+    // Skip the first render to avoid showing toast on app start
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      previousOfflineState.current = isOffline;
+      return;
+    }
+
+    // Only show toast if state actually changed
+    if (previousOfflineState.current !== null && previousOfflineState.current !== isOffline) {
+      if (isOffline) {
+        showToast('📴 Connexion perdue - Mode hors ligne', 'warning', 4000);
+      } else {
+        showToast('✅ Connexion rétablie', 'success', 3000);
+      }
+    }
+    
+    previousOfflineState.current = isOffline;
+  }, [isOffline, showToast]);
 
   React.useEffect(() => {
     Animated.timing(animation, {
