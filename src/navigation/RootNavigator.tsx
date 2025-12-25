@@ -175,78 +175,78 @@ export function RootNavigator() {
           headerShown: false,
           animation: 'slide_from_right',
         }}>
-      {/* Welcome Screen - shown for first-time users who haven't logged in */}
-      {isFirstLaunch && !isAuthenticated && (
+        {/* Welcome Screen - shown for first-time users who haven't logged in */}
+        {isFirstLaunch && !isAuthenticated && (
+          <Stack.Screen
+            name="Welcome"
+            component={WelcomeScreenModern}
+            options={{
+              animation: 'fade',
+              gestureEnabled: false,
+            }}
+          />
+        )}
+        {/* Profile Setup - shown first if authenticated but profile incomplete */}
+        {isAuthenticated && isProfileComplete === false && (
+          <Stack.Screen
+            name="ProfileSetup"
+            component={ProfileSetupScreen}
+            options={{
+              animation: 'fade',
+              gestureEnabled: false, // Prevent back gesture
+            }}
+          />
+        )}
+          <Stack.Screen name="Main" component={MainTabNavigator} />
+        {/* Auth screens available for navigation */}
         <Stack.Screen
-          name="Welcome"
-          component={WelcomeScreenModern}
+          name="SignIn"
+          component={LoginScreen}
+          options={{animation: 'slide_from_right'}}
+        />
+        <Stack.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{animation: 'slide_from_right'}}
+        />
+        <Stack.Screen
+          name="Register"
+          component={RegisterScreen}
+          options={{animation: 'slide_from_right'}}
+        />
+        <Stack.Screen
+          name="ForgotPassword"
+          component={ForgotPasswordScreen}
+          options={{animation: 'slide_from_right'}}
+        />
+        <Stack.Screen
+          name="VerifyOtp"
+          component={VerifyOtpScreen}
+          options={{animation: 'slide_from_right'}}
+        />
+        <Stack.Screen
+          name="ResetPassword"
+          component={ResetPasswordScreen}
+          options={{animation: 'slide_from_right'}}
+        />
+        <Stack.Screen
+          name="Scanner"
+          component={UnifiedScannerScreen}
           options={{
-            animation: 'fade',
-            gestureEnabled: false,
+            animation: 'slide_from_bottom',
+            presentation: 'fullScreenModal',
+            headerShown: false,
           }}
         />
-      )}
-      {/* Profile Setup - shown first if authenticated but profile incomplete */}
-      {isAuthenticated && isProfileComplete === false && (
         <Stack.Screen
-          name="ProfileSetup"
-          component={ProfileSetupScreen}
+          name="CitySelection"
+          component={CitySelectionScreen}
           options={{
-            animation: 'fade',
-            gestureEnabled: false, // Prevent back gesture
+            animation: 'slide_from_right',
+            presentation: 'modal',
           }}
         />
-      )}
-      <Stack.Screen name="Main" component={MainTabNavigator} />
-      {/* Auth screens available for navigation */}
-      <Stack.Screen
-        name="SignIn"
-        component={LoginScreen}
-        options={{animation: 'slide_from_right'}}
-      />
-      <Stack.Screen
-        name="Login"
-        component={LoginScreen}
-        options={{animation: 'slide_from_right'}}
-      />
-      <Stack.Screen
-        name="Register"
-        component={RegisterScreen}
-        options={{animation: 'slide_from_right'}}
-      />
-      <Stack.Screen
-        name="ForgotPassword"
-        component={ForgotPasswordScreen}
-        options={{animation: 'slide_from_right'}}
-      />
-      <Stack.Screen
-        name="VerifyOtp"
-        component={VerifyOtpScreen}
-        options={{animation: 'slide_from_right'}}
-      />
-      <Stack.Screen
-        name="ResetPassword"
-        component={ResetPasswordScreen}
-        options={{animation: 'slide_from_right'}}
-      />
-      <Stack.Screen
-        name="Scanner"
-        component={UnifiedScannerScreen}
-        options={{
-          animation: 'slide_from_bottom',
-          presentation: 'fullScreenModal',
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
-        name="CitySelection"
-        component={CitySelectionScreen}
-        options={{
-          animation: 'slide_from_right',
-          presentation: 'modal',
-        }}
-      />
-      <Stack.Screen
+        <Stack.Screen
         name="UpdateProfile"
         component={UpdateProfileScreen}
         options={{
@@ -261,168 +261,168 @@ export function RootNavigator() {
           animation: 'slide_from_right',
           headerShown: false,
         }}
-      />
+        />
 
-      <Stack.Screen
-        name="ReceiptDetail"
-        component={ReceiptDetailScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="ReceiptProcessing"
-        component={ReceiptProcessingScreen}
-        options={{
-          headerShown: false,
-          gestureEnabled: false, // Prevent swipe back during processing
-        }}
-      />
-      <Stack.Screen
-        name="PriceComparison"
-        component={PriceComparisonScreen}
-        options={{headerShown: true, title: 'Comparaison'}}
-      />
-      <Stack.Screen
-        name="Subscription"
-        component={SubscriptionScreen}
-        options={{
-          animation: 'slide_from_bottom',
-          presentation: 'modal',
-        }}
-      />
-      <Stack.Screen
-        name="ScanPacks"
-        component={ScanPacksScreen}
-        options={{
-          animation: 'slide_from_bottom',
-          presentation: 'modal',
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
+        <Stack.Screen
+          name="ReceiptDetail"
+          component={ReceiptDetailScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="ReceiptProcessing"
+          component={ReceiptProcessingScreen}
+          options={{
+            headerShown: false,
+            gestureEnabled: false, // Prevent swipe back during processing
+          }}
+        />
+        <Stack.Screen
+          name="PriceComparison"
+          component={PriceComparisonScreen}
+          options={{headerShown: true, title: 'Comparaison'}}
+        />
+        <Stack.Screen
+          name="Subscription"
+          component={SubscriptionScreen}
+          options={{
+            animation: 'slide_from_bottom',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="ScanPacks"
+          component={ScanPacksScreen}
+          options={{
+            animation: 'slide_from_bottom',
+            presentation: 'modal',
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
         name="SubscriptionDuration"
         component={SubscriptionDurationScreen}
         options={{
           animation: 'slide_from_right',
           headerShown: false,
         }}
-      />
-      <Stack.Screen
-        name="SubscriptionDetails"
-        component={SubscriptionDetailsScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="MokoPayment"
-        component={MokoPaymentScreen}
-        options={{
-          headerShown: false,
-          animation: 'slide_from_bottom',
-          presentation: 'modal',
-        }}
-      />
-      <Stack.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="DeveloperTools"
-        component={DeveloperToolsScreen}
-        options={{headerShown: false}}
-      />
-      {/* Phase 1.1 Screens */
-      <Stack.Screen
+        />
+        <Stack.Screen
+          name="SubscriptionDetails"
+          component={SubscriptionDetailsScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="MokoPayment"
+          component={MokoPaymentScreen}
+          options={{
+            headerShown: false,
+            animation: 'slide_from_bottom',
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="Settings"
+          component={SettingsScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="DeveloperTools"
+          component={DeveloperToolsScreen}
+          options={{headerShown: false}}
+        />
+        {/* Phase 1.1 Screens */}
+        <Stack.Screen
         name="Notifications"
         component={NotificationsScreen}
         options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="PriceAlerts"
-        component={PriceAlertsScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="Achievements"
-        component={AchievementsScreen}
-        options={{headerShown: false}}
-      />
-      {/* Phase 1.2 Screens */}
-      <Stack.Screen
-        name="ShoppingLists"
-        component={ShoppingListsScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="ShoppingListDetail"
-        component={ShoppingListDetailScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="AIAssistant"
-        component={AIAssistantScreen}
-        options={{headerShown: false}}
-      />
-      {/* Shops */}
-      <Stack.Screen
-        name="Shops"
-        component={ShopsScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="ShopDetail"
-        component={ShopDetailScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="FAQ"
-        component={FAQScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="PrivacyPolicy"
-        component={PrivacyPolicyScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="TermsOfService"
-        component={TermsOfServiceScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="CityItems"
-        component={CityItemsScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="Items"
-        component={ItemsScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="History"
-        component={HistoryScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="Stats"
-        component={StatsScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="Support"
-        component={SupportScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="Contact"
-        component={ContactScreen}
-        options={{headerShown: false}}
-      />
-      <Stack.Screen
-        name="Terms"
-        component={TermsScreen}
-        options={{headerShown: false}}
-      />
+        />
+        <Stack.Screen
+          name="PriceAlerts"
+          component={PriceAlertsScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="Achievements"
+          component={AchievementsScreen}
+          options={{headerShown: false}}
+        />
+        {/* Phase 1.2 Screens */}
+        <Stack.Screen
+          name="ShoppingLists"
+          component={ShoppingListsScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="ShoppingListDetail"
+          component={ShoppingListDetailScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="AIAssistant"
+          component={AIAssistantScreen}
+          options={{headerShown: false}}
+        />
+        {/* Shops */}
+        <Stack.Screen
+          name="Shops"
+          component={ShopsScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="ShopDetail"
+          component={ShopDetailScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="FAQ"
+          component={FAQScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="PrivacyPolicy"
+          component={PrivacyPolicyScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="TermsOfService"
+          component={TermsOfServiceScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="CityItems"
+          component={CityItemsScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="Items"
+          component={ItemsScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="History"
+          component={HistoryScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="Stats"
+          component={StatsScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="Support"
+          component={SupportScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="Contact"
+          component={ContactScreen}
+          options={{headerShown: false}}
+        />
+        <Stack.Screen
+          name="Terms"
+          component={TermsScreen}
+          options={{headerShown: false}}
+        />
       </Stack.Navigator>
       <AppStateTracker />
     </React.Fragment>

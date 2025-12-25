@@ -409,8 +409,9 @@ class GeminiService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 280000); // 4min 40s timeout (before Cloud Function's 5min)
 
+      let response: Response;
       try {
-        const response = await fetch(
+        response = await fetch(
           `https://${FUNCTIONS_REGION}-${PROJECT_ID}.cloudfunctions.net/parseReceiptVideo`,
           {
             method: 'POST',
