@@ -219,6 +219,7 @@ export function ShoppingListDetailScreen() {
           quantity: parseInt(newItemQuantity) || 1,
           bestStore: selectedStore?.storeName,
           bestPrice: selectedStore?.price,
+          currency: selectedStore?.currency,
         },
       );
 
@@ -417,14 +418,14 @@ export function ShoppingListDetailScreen() {
                   <View style={styles.priceBadge}>
                     <Icon name="tag" size="xs" color={Colors.status.success} />
                     <Text style={styles.itemPrice}>
-                      ${item.bestPrice.toFixed(2)} @ {item.bestStore}
+                      {formatCurrency(item.bestPrice, item.currency || 'USD')} @ {item.bestStore}
                     </Text>
                   </View>
                 )}
                 {item.estimatedPrice && !item.bestPrice && (
                   <View style={styles.estimatedPriceBadge}>
                     <Text style={styles.itemEstimatedPrice}>
-                      ~${item.estimatedPrice.toFixed(2)}
+                      ~{formatCurrency(item.estimatedPrice, item.currency || 'USD')}
                     </Text>
                   </View>
                 )}
@@ -435,7 +436,7 @@ export function ShoppingListDetailScreen() {
                 <View style={styles.savingsBadge}>
                   <Icon name="trending-down" size="xs" color={Colors.status.success} />
                   <Text style={styles.savingsText}>
-                    Économie: ${(item.estimatedPrice - item.bestPrice).toFixed(2)}
+                    Économie: {formatCurrency(item.estimatedPrice - item.bestPrice, item.currency || 'USD')}
                   </Text>
                 </View>
               )}

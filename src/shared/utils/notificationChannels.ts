@@ -4,6 +4,9 @@
  * This file documents the channels for reference
  */
 
+import notifee, {AndroidImportance} from '@notifee/react-native';
+import {Platform} from 'react-native';
+
 export const NOTIFICATION_CHANNELS = {
   GRACE_PERIOD: {
     id: 'grace_period',
@@ -18,6 +21,20 @@ export const NOTIFICATION_CHANNELS = {
     description: 'Notifications when approaching your monthly scan limit',
     importance: 'high',
     color: '#ef4444',
+  },
+  SCAN_COMPLETION: {
+    id: 'scan-completion',
+    name: 'Scan Completion',
+    description: 'Notifications when receipt scanning is complete',
+    importance: 'high',
+    color: '#10b981',
+  },
+  PAYMENT_COMPLETION: {
+    id: 'payment-completion',
+    name: 'Payment Status',
+    description: 'Payment success and failure notifications',
+    importance: 'high',
+    color: '#10b981',
   },
   SUBSCRIPTION_ALERTS: {
     id: 'subscription_alerts',
@@ -86,3 +103,35 @@ export const NOTIFICATION_CHANNELS = {
 
 export type NotificationChannel = keyof typeof NOTIFICATION_CHANNELS;
 
+/**
+ * Initialize notification channels for Android
+ */
+export async function initializeNotificationChannels(): Promise<void> {
+  if (Platform.OS !== 'android') {
+    return;
+  }
+
+  try {
+    // Create all notification channels
+    for (const channel of Object.values(NOTIFICATION_CHANNELS)) {
+      await notifee.createChannel({
+        id: channel.id,
+        name: channel.name,
+        description: channel.description,
+        importance: channel.importance === 'high' 
+          ? AndroidImportance.HIGH 
+          : channel.importance === 'default'
+          ? AndroidImportance.DEFAULT
+          : AndroidImportance.LOW,
+        sound: 'default',
+        vibration: true,
+        lights: true,
+        lightColor: channel.color,
+      });
+    }
+
+    console.log('✅ Notification channels initialized');
+  } catch (error) {
+    console.error('Error initializing notification channels:', error);
+  }
+}

@@ -23,8 +23,10 @@ import {
 } from '@/shared/theme/theme';
 import {Icon, FadeIn, SlideIn} from '@/shared/components';
 import {formatCurrency, safeToDate} from '@/shared/utils/helpers';
-import {useAuth, useUser} from '@/shared/contexts';
+import {useAuth, useUser, useSubscription} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
+import {hasFeatureAccess} from '@/shared/utils/featureAccess';
+import {SubscriptionLimitModal} from '@/shared/components';
 import {globalSettingsService} from '@/shared/services/globalSettingsService';
 import {APP_ID} from '@/shared/services/firebase/config';
 import {getCurrentMonthBudget} from '@/shared/services/firebase/budgetService';
@@ -51,6 +53,11 @@ export function StatsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const {user, isAuthenticated} = useAuth();
   const {profile, isLoading: profileLoading} = useUser();
+  const {subscription} = useSubscription();
+  const [showLimitModal, setShowLimitModal] = useState(false);
+
+  // Check if user has access to stats (Standard+ feature)
+  const hasAccess = hasFeatureAccess('stats', subscription);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -58,6 +65,18 @@ export function StatsScreen() {
       navigation.navigate('Login');
     }
   }, [isAuthenticated, navigation]);
+
+  // Show modal if no access
+  useEffect(() => {
+    if (isAuthenticated && !profileLoading && !hasAccess) {
+      setShowLimitModal(true);
+    }
+  }, [isAuthenticated, profileLoading, hasAccess]);
+
+  // Don't render content if no access
+  if (!hasAccess && !showLimitModal) {
+    return null;
+  }
 
   const [totalSpending, setTotalSpending] = useState(0);
   const [monthlyBudget, setMonthlyBudget] = useState<number>(0); // Will be set from profile
@@ -542,18 +561,19 @@ export function StatsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <FadeIn>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Statistiques</Text>
-          <Text style={styles.headerSubtitle}>Ce mois-ci</Text>
-        </View>
-      </FadeIn>
+    <>
+      <SafeAreaView style={styles.container}>
+        <FadeIn>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Statistiques</Text>
+            <Text style={styles.headerSubtitle}>Ce mois-ci</Text>
+          </View>
+        </FadeIn>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}>
         {/* Summary Cards */}
         <SlideIn delay={100}>
           <View style={styles.summaryRow}>
@@ -869,6 +889,19 @@ export function StatsScreen() {
         </SlideIn>
       </ScrollView>
     </SafeAreaView>
+
+    {/* Subscription Limit Modal */}
+    <SubscriptionLimitModal
+      visible={showLimitModal}
+      onClose={() => {
+        setShowLimitModal(false);
+        navigation.goBack();
+      }}
+      limitType="generic"
+      customTitle="Statistiques"
+      customMessage="Les statistiques sont réservées aux abonnés Premium. Mettez à niveau pour visualiser vos dépenses et tendances."
+    />
+    </>
   );
 }
 

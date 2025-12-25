@@ -9,10 +9,15 @@ import React, {
   useRef,
   useEffect,
 } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {mokoPaymentService, PaymentStatus} from '@/shared/services/payment';
 import firebase from '@react-native-firebase/app';
 import '@react-native-firebase/functions';
 import {subscriptionService} from '@/shared/services/firebase';
+import notifee from '@notifee/react-native';
+import {Platform} from 'react-native';
+
+const PAYMENT_PROCESSING_KEY = '@goshopperai/payment_processing_state';
 
 export type PaymentProcessingStatus = 'idle' | 'pending' | 'success' | 'failed';
 
@@ -80,7 +85,54 @@ interface PaymentProcessingProviderProps {
 
 export function PaymentProcessingProvider({children}: PaymentProcessingProviderProps) {
   const [state, setState] = useState<PaymentProcessingState>(defaultState);
+  const [isLoaded, setIsLoaded] = useState(false);
   const pollUnsubscribeRef = useRef<(() => void) | null>(null);
+
+  // Load persisted state on mount
+  useEffect(() => {
+    loadPersistedState();
+  }, []);
+
+  // Save state whenever it changes
+  useEffect(() => {
+    if (isLoaded) {
+      saveState();
+    }
+  }, [state, isLoaded]);
+
+  const loadPersistedState = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(PAYMENT_PROCESSING_KEY);
+      if (stored) {
+        const persistedState = JSON.parse(stored);
+        // Only restore if still pending
+        if (persistedState.status === 'pending') {
+          setState(persistedState);
+          console.log('💳 Restored payment processing state');
+          // Resume polling for this payment
+          if (persistedState.transactionId) {
+            startPolling(persistedState.transactionId, persistedState.planId, persistedState.scanPackId);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading payment processing state:', error);
+    } finally {
+      setIsLoaded(true);
+    }
+  };
+
+  const saveState = async () => {
+    try {
+      if (state.status === 'pending') {
+        await AsyncStorage.setItem(PAYMENT_PROCESSING_KEY, JSON.stringify(state));
+      } else {
+        await AsyncStorage.removeItem(PAYMENT_PROCESSING_KEY);
+      }
+    } catch (error) {
+      console.error('Error saving payment processing state:', error);
+    }
+  };
   
   const startPayment = useCallback((params: {
     transactionId: string;
@@ -114,21 +166,58 @@ export function PaymentProcessingProvider({children}: PaymentProcessingProviderP
     }));
   }, []);
   
-  const setSuccess = useCallback((message?: string) => {
+  const setSuccess = useCallback(async (message?: string) => {
+    const successMessage = message || 'Paiement réussi!';
     setState(prev => ({
       ...prev,
       status: 'success',
-      message: message || 'Paiement réussi!',
+      message: successMessage,
     }));
+
+    // Send local push notification
+    try {
+      if (Platform.OS === 'android') {
+        await notifee.displayNotification({
+          title: '✅ Paiement réussi',
+          body: successMessage,
+          android: {
+            channelId: 'payment-completion',
+            pressAction: {
+              id: 'default',
+            },
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error sending payment success notification:', error);
+    }
   }, []);
   
-  const setFailed = useCallback((error: string) => {
+  const setFailed = useCallback(async (error: string) => {
     setState(prev => ({
       ...prev,
       status: 'failed',
       message: error,
       error,
     }));
+
+    // Send local push notification for failure
+    try {
+      if (Platform.OS === 'android') {
+        await notifee.displayNotification({
+          title: '❌ Paiement échoué',
+          body: error,
+          android: {
+            channelId: 'payment-completion',
+            pressAction: {
+              id: 'default',
+            },
+          },
+        });
+      }
+    } catch (notifError) {
+      console.error('Error sending payment failure notification:', notifError);
+    }
   }, []);
   
   const dismiss = useCallback(() => {

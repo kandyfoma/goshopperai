@@ -22,8 +22,8 @@ export type FeatureName =
  * Feature availability by plan
  */
 const FEATURE_ACCESS: Record<FeatureName, string[]> = {
-  // Stats/Analytics - Standard+
-  stats: ['standard', 'premium'],
+  // Stats/Analytics - Premium only
+  stats: ['premium'],
   analytics: ['premium'],
   
   // Price features - Standard+
@@ -56,7 +56,7 @@ const FEATURE_DESCRIPTIONS: Record<FeatureName, {
   stats: {
     name: 'Statistiques',
     description: 'Visualisez vos dépenses mensuelles et tendances',
-    minPlan: 'Standard',
+    minPlan: 'Premium',
   },
   analytics: {
     name: 'Analytics Pro',

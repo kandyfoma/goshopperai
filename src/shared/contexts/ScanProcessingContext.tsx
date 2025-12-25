@@ -7,8 +7,15 @@ import React, {
   useCallback,
   ReactNode,
   useRef,
+  useEffect,
 } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {ReceiptScanResult, Receipt} from '@/shared/types';
+import {pushNotificationService} from '@/shared/services/firebase';
+import notifee from '@notifee/react-native';
+import {Platform} from 'react-native';
+
+const SCAN_PROCESSING_KEY = '@goshopperai/scan_processing_state';
 
 export type ScanStatus = 'idle' | 'processing' | 'success' | 'error';
 
@@ -67,9 +74,52 @@ interface ScanProcessingProviderProps {
 
 export function ScanProcessingProvider({children}: ScanProcessingProviderProps) {
   const [state, setState] = useState<ScanProcessingState>(defaultState);
+  const [isLoaded, setIsLoaded] = useState(false);
   
   // Callback ref for saving receipt (set by the scanner screen)
   const saveReceiptCallbackRef = useRef<(() => Promise<void>) | null>(null);
+
+  // Load persisted state on mount
+  useEffect(() => {
+    loadPersistedState();
+  }, []);
+
+  // Save state to AsyncStorage whenever it changes
+  useEffect(() => {
+    if (isLoaded) {
+      saveState();
+    }
+  }, [state, isLoaded]);
+
+  const loadPersistedState = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(SCAN_PROCESSING_KEY);
+      if (stored) {
+        const persistedState = JSON.parse(stored);
+        // Only restore if still processing
+        if (persistedState.status === 'processing') {
+          setState(persistedState);
+          console.log('📱 Restored scan processing state');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading scan processing state:', error);
+    } finally {
+      setIsLoaded(true);
+    }
+  };
+
+  const saveState = async () => {
+    try {
+      if (state.status === 'processing') {
+        await AsyncStorage.setItem(SCAN_PROCESSING_KEY, JSON.stringify(state));
+      } else {
+        await AsyncStorage.removeItem(SCAN_PROCESSING_KEY);
+      }
+    } catch (error) {
+      console.error('Error saving scan processing state:', error);
+    }
+  };
   
   const startProcessing = useCallback((photoCount: number) => {
     setState({
@@ -88,7 +138,7 @@ export function ScanProcessingProvider({children}: ScanProcessingProviderProps) 
     }));
   }, []);
   
-  const setSuccess = useCallback((receipt: Receipt, receiptId: string) => {
+  const setSuccess = useCallback(async (receipt: Receipt, receiptId: string) => {
     setState(prev => ({
       ...prev,
       status: 'success',
@@ -97,9 +147,27 @@ export function ScanProcessingProvider({children}: ScanProcessingProviderProps) 
       receipt,
       receiptId,
     }));
+
+    // Send local push notification
+    try {
+      if (Platform.OS === 'android') {
+        await notifee.displayNotification({
+          title: '✅ Analyse terminée',
+          body: `Votre reçu a été analysé avec succès. ${receipt.items?.length || 0} article(s) détecté(s).`,
+          android: {
+            channelId: 'scan-completion',
+            pressAction: {
+              id: 'default',
+            },
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error sending scan completion notification:', error);
+    }
   }, []);
   
-  const setError = useCallback((error: string) => {
+  const setError = useCallback(async (error: string) => {
     setState(prev => ({
       ...prev,
       status: 'error',
@@ -107,6 +175,24 @@ export function ScanProcessingProvider({children}: ScanProcessingProviderProps) 
       message: error,
       error,
     }));
+
+    // Send local push notification for error
+    try {
+      if (Platform.OS === 'android') {
+        await notifee.displayNotification({
+          title: '❌ Erreur d\'analyse',
+          body: error,
+          android: {
+            channelId: 'scan-completion',
+            pressAction: {
+              id: 'default',
+            },
+          },
+        });
+      }
+    } catch (notifError) {
+      console.error('Error sending scan error notification:', notifError);
+    }
   }, []);
   
   const confirmAndSave = useCallback(async () => {

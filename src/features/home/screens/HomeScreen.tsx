@@ -261,9 +261,9 @@ const QuickAction = ({
     white: Colors.cards.white,
   }[color];
 
-  // Use white text/icons on dark backgrounds (red, crimson, cosmos)
-  // Use dark text/icons on light backgrounds (blue, cream, yellow, white)
-  const isDarkBg = ['red', 'crimson', 'cosmos'].includes(color);
+  // Use white text/icons on dark backgrounds (red, crimson, cosmos, blue)
+  // Use dark text/icons on light backgrounds (cream, yellow, white)
+  const isDarkBg = ['red', 'crimson', 'cosmos', 'blue'].includes(color);
   const textColor = isDarkBg ? Colors.text.inverse : Colors.text.primary;
   const iconColor = isDarkBg ? Colors.text.inverse : Colors.text.primary;
 
@@ -798,7 +798,7 @@ export function HomeScreen() {
             icon="shopping-bag"
             label="Mes Magasins"
             onPress={() => navigation.push('Shops')}
-            color="blue"
+            color="cosmos"
           />
           <QuickAction
             icon="help"

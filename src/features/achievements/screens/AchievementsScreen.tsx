@@ -27,7 +27,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, Spinner} from '@/shared/components';
+import {Icon, Spinner, BackButton, FadeIn, SlideIn} from '@/shared/components';
 
 export function AchievementsScreen() {
   const navigation =
@@ -192,12 +192,7 @@ export function AchievementsScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}>
-          <Icon name="arrow-left" size="md" color={Colors.primary} />
-        </TouchableOpacity>
+        <BackButton />
         <Text style={styles.headerTitle}>Mes Succès</Text>
         <View style={styles.headerBadge}>
           <Icon name="trophy" size="sm" color={Colors.accent} />
@@ -534,22 +529,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.base,
+    paddingVertical: Spacing.md,
     backgroundColor: Colors.white,
-    shadowColor: Colors.black,
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
+    ...Shadows.sm,
   },
   headerTitle: {
-    fontSize: Typography.fontSize.lg,
+    fontSize: Typography.fontSize['2xl'],
     fontFamily: Typography.fontFamily.bold,
     color: Colors.text.primary,
     flex: 1,

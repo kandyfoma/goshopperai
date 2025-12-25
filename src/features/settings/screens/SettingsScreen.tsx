@@ -16,7 +16,7 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import LinearGradient from 'react-native-linear-gradient';
-import {useAuth, useUser, useSubscription, useTheme} from '@/shared/contexts';
+import {useAuth, useUser, useSubscription, useTheme, useToast} from '@/shared/contexts';
 import {RootStackParamList} from '@/shared/types';
 import {
   Colors,
@@ -25,10 +25,11 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, FadeIn, SlideIn, AppFooter, BackButton} from '@/shared/components';
+import {Icon, FadeIn, SlideIn, AppFooter, BackButton, Modal, Input, Button} from '@/shared/components';
 import {useDynamicType, useOffline} from '@/shared/hooks';
 import {SUBSCRIPTION_PLANS, TRIAL_SCAN_LIMIT} from '@/shared/utils/constants';
 import {formatDate} from '@/shared/utils/helpers';
+import {receiptStorageService} from '@/shared/services/firebase';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -116,7 +117,13 @@ function SettingSection({
 export function SettingsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const {user, signOut, isAuthenticated} = useAuth();
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isDeletingData, setIsDeletingData] = useState(false);
   const {profile, toggleNotifications, togglePriceAlerts} = useUser();
+  const {showToast} = useToast();
   const {subscription, trialScansUsed} = useSubscription();
   const {isOnline, isSyncing, pendingActions, lastSyncTime, syncNow, clearQueue} = useOffline();
   const {isDarkMode, toggleTheme, themeMode, setThemeMode} = useTheme();
@@ -187,12 +194,29 @@ export function SettingsScreen() {
         {
           text: 'Supprimer',
           style: 'destructive',
-          onPress: () => {
-            // TODO: Implement data deletion (receipts only)
-            Alert.alert(
-              'Données supprimées',
-              'Toutes vos factures ont été supprimées.',
-            );
+          onPress: async () => {
+            if (!user?.uid) {
+              showToast('Utilisateur non connecté', 'error');
+              return;
+            }
+
+            setIsDeletingData(true);
+            try {
+              const count = await receiptStorageService.deleteAllReceipts(user.uid);
+              showToast(
+                `${count} facture${count > 1 ? 's' : ''} supprimée${count > 1 ? 's' : ''} avec succès`,
+                'success',
+                3000,
+              );
+            } catch (error) {
+              console.error('Error deleting receipts:', error);
+              showToast(
+                'Impossible de supprimer les données. Veuillez réessayer.',
+                'error',
+              );
+            } finally {
+              setIsDeletingData(false);
+            }
           },
         },
       ],
@@ -200,29 +224,66 @@ export function SettingsScreen() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Supprimer mon compte',
-      'Cette action supprimera définitivement votre compte et toutes les données associées. Cette action est irréversible.',
-      [
-        {text: 'Annuler', style: 'cancel'},
-        {
-          text: 'Supprimer mon compte',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // TODO: Implement account deletion
-              await signOut();
-              Alert.alert(
-                'Compte supprimé',
-                'Votre compte a été supprimé définitivement.',
-              );
-            } catch (error) {
-              Alert.alert('Erreur', 'Impossible de supprimer le compte');
-            }
+    setShowDeleteAccountModal(true);
+  };
+
+  const handleConfirmDeleteAccount = async () => {
+    if (!deletePassword.trim()) {
+      Alert.alert('Erreur', 'Veuillez entrer votre mot de passe');
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    try {
+      // Re-authenticate user before deleting account
+      const auth = require('@react-native-firebase/auth').default;
+      const credential = auth.EmailAuthProvider.credential(
+        user?.email || '',
+        deletePassword
+      );
+      
+      await auth().currentUser?.reauthenticateWithCredential(credential);
+
+      // Delete user account from Firebase Auth
+      await auth().currentUser?.delete();
+
+      // Sign out and navigate
+      await signOut();
+      
+      setShowDeleteAccountModal(false);
+      setDeletePassword('');
+      
+      Alert.alert(
+        'Compte supprimé',
+        'Votre compte a été supprimé définitivement.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'Welcome' }],
+              });
+            },
           },
-        },
-      ],
-    );
+        ],
+      );
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      let errorMessage = 'Impossible de supprimer le compte';
+      
+      if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Mot de passe incorrect';
+      } else if (error.code === 'auth/invalid-credential') {
+        errorMessage = 'Identifiants invalides';
+      } else if (error.code === 'auth/requires-recent-login') {
+        errorMessage = 'Veuillez vous reconnecter avant de supprimer votre compte';
+      }
+      
+      Alert.alert('Erreur', errorMessage);
+    } finally {
+      setIsDeletingAccount(false);
+    }
   };
 
   const handleContactSupport = () => {
@@ -249,9 +310,9 @@ export function SettingsScreen() {
     
     try {
       await syncNow();
-      Alert.alert('Synchronisation', 'Synchronisation terminée avec succès !');
+      showToast('Synchronisation terminée avec succès', 'success', 3000);
     } catch (error) {
-      Alert.alert('Erreur', 'Impossible de synchroniser. Vérifiez votre connexion.');
+      showToast('Impossible de synchroniser. Vérifiez votre connexion.', 'error');
     }
   };
 
@@ -316,7 +377,7 @@ export function SettingsScreen() {
         <SlideIn delay={100}>
           <TouchableOpacity
             style={styles.profileCard}
-            onPress={() => navigation.navigate('Profile' as any)}
+            onPress={() => navigation.push('UpdateProfile')}
             activeOpacity={0.9}>
             <LinearGradient
               colors={[Colors.card.cream, '#FFFFFF']}
@@ -569,8 +630,8 @@ export function SettingsScreen() {
             <SettingItem
               icon="trash"
               title="Supprimer mes données"
-              subtitle="Supprimer factures (conserve articles et listes)"
-              onPress={handleDeleteData}
+              subtitle={isDeletingData ? 'Suppression en cours...' : 'Supprimer factures (conserve articles et listes)'}
+              onPress={isDeletingData ? undefined : handleDeleteData}
               danger
             />
             <SettingItem
@@ -594,6 +655,94 @@ export function SettingsScreen() {
           <AppFooter />
         </FadeIn>
       </ScrollView>
+
+      {/* Delete Account Modal */}
+      <Modal
+        visible={showDeleteAccountModal}
+        variant="bottom-sheet"
+        size="large"
+        title="Supprimer mon compte"
+        onClose={() => {
+          setShowDeleteAccountModal(false);
+          setDeletePassword('');
+          setShowPassword(false);
+        }}>
+        <ScrollView>
+          <View style={styles.deleteModalContent}>
+            <Icon name="alert-triangle" size="xl" color={Colors.status.error} />
+            
+            <Text style={styles.deleteModalTitle}>
+              Êtes-vous absolument sûr ?
+            </Text>
+            
+            <Text style={styles.deleteModalText}>
+              Cette action est <Text style={styles.deleteModalBold}>irréversible</Text>.
+              Toutes vos données seront définitivement supprimées :
+            </Text>
+            
+            <View style={styles.deleteModalList}>
+              <View style={styles.deleteModalListItem}>
+                <Icon name="check" size="sm" color={Colors.text.secondary} />
+                <Text style={styles.deleteModalListText}>Toutes vos factures</Text>
+              </View>
+              <View style={styles.deleteModalListItem}>
+                <Icon name="check" size="sm" color={Colors.text.secondary} />
+                <Text style={styles.deleteModalListText}>Vos listes de courses</Text>
+              </View>
+              <View style={styles.deleteModalListItem}>
+                <Icon name="check" size="sm" color={Colors.text.secondary} />
+                <Text style={styles.deleteModalListText}>Votre historique</Text>
+              </View>
+              <View style={styles.deleteModalListItem}>
+                <Icon name="check" size="sm" color={Colors.text.secondary} />
+                <Text style={styles.deleteModalListText}>Votre abonnement</Text>
+              </View>
+            </View>
+
+            <View style={styles.deleteModalInputContainer}>
+              <Text style={styles.deleteModalInputLabel}>
+                Pour confirmer, entrez votre mot de passe :
+              </Text>
+              <Input
+                value={deletePassword}
+                onChangeText={setDeletePassword}
+                placeholder="Mot de passe"
+                secureTextEntry={!showPassword}
+                leftIcon="lock"
+                rightIcon={showPassword ? "eye-off" : "eye"}
+                onRightIconPress={() => setShowPassword(!showPassword)}
+                autoFocus
+                editable={!isDeletingAccount}
+                keyboardType="default"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            <View style={styles.deleteModalActions}>
+              <Button
+                title="Annuler"
+                onPress={() => {
+                  setShowDeleteAccountModal(false);
+                  setDeletePassword('');
+                  setShowPassword(false);
+                }}
+                variant="secondary"
+                fullWidth
+                disabled={isDeletingAccount}
+              />
+              <Button
+                title="Supprimer définitivement"
+                onPress={handleConfirmDeleteAccount}
+                loading={isDeletingAccount}
+                disabled={!deletePassword.trim() || isDeletingAccount}
+                variant="danger"
+                fullWidth
+              />
+            </View>
+          </View>
+        </ScrollView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -857,5 +1006,64 @@ const styles = StyleSheet.create({
   appCopyright: {
     fontSize: Typography.fontSize.xs,
     color: Colors.text.tertiary,
+  },
+
+  // Delete Account Modal
+  deleteModalContent: {
+    padding: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    alignItems: 'center',
+  },
+  deleteModalTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
+    textAlign: 'center',
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  deleteModalText: {
+    fontSize: Typography.fontSize.md,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: Spacing.md,
+    lineHeight: 22,
+  },
+  deleteModalBold: {
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.status.error,
+  },
+  deleteModalList: {
+    width: '100%',
+    backgroundColor: Colors.background.secondary,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  deleteModalListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  deleteModalListText: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.secondary,
+  },
+  deleteModalInputContainer: {
+    width: '100%',
+    marginBottom: Spacing.lg,
+  },
+  deleteModalInputLabel: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.primary,
+    marginBottom: Spacing.sm,
+  },
+  deleteModalActions: {
+    width: '100%',
+    gap: Spacing.md,
   },
 });

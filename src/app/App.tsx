@@ -24,6 +24,7 @@ import {analyticsService} from '@/shared/services';
 import {pushNotificationService} from '@/shared/services/firebase';
 import {quickActionsService, inAppReviewService, spotlightSearchService, offlineService, widgetDataService} from '@/shared/services';
 import {cacheInitializer} from '@/shared/services/caching';
+import {initializeNotificationChannels} from '@/shared/utils/notificationChannels';
 
 // Ignore specific warnings in development
 LogBox.ignoreLogs([
@@ -100,6 +101,11 @@ function App(): React.JSX.Element {
         console.log('Initializing Push Notifications...');
         await pushNotificationService.init();
         console.log('Push Notifications initialized successfully');
+
+        // Initialize Notification Channels (Android only)
+        console.log('Initializing Notification Channels...');
+        await initializeNotificationChannels();
+        console.log('Notification Channels initialized successfully');
 
         // Initialize Quick Actions (App Icon Shortcuts)
         console.log('Initializing Quick Actions...');

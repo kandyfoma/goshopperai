@@ -409,6 +409,64 @@ class ReceiptStorageService {
   }
 
   /**
+   * Delete all receipts for a user
+   * Deletes all receipt documents and their associated data
+   */
+  async deleteAllReceipts(userId: string): Promise<number> {
+    try {
+      console.log('🗑️ Starting bulk deletion of all receipts...');
+
+      // Get all receipts
+      const receiptsSnapshot = await firestore()
+        .collection(RECEIPTS_COLLECTION(userId))
+        .get();
+
+      if (receiptsSnapshot.empty) {
+        console.log('🗑️ No receipts to delete');
+        return 0;
+      }
+
+      const totalReceipts = receiptsSnapshot.size;
+      console.log(`🗑️ Found ${totalReceipts} receipts to delete`);
+
+      // Delete in batches (Firestore batch limit is 500 operations)
+      const batchSize = 100;
+      let deletedCount = 0;
+
+      for (let i = 0; i < receiptsSnapshot.docs.length; i += batchSize) {
+        const batch = firestore().batch();
+        const batchDocs = receiptsSnapshot.docs.slice(i, i + batchSize);
+
+        for (const doc of batchDocs) {
+          batch.delete(doc.ref);
+        }
+
+        await batch.commit();
+        deletedCount += batchDocs.length;
+        console.log(`🗑️ Deleted ${deletedCount}/${totalReceipts} receipts`);
+      }
+
+      // Delete all shops (they'll be recreated when new receipts are added)
+      const shopsSnapshot = await firestore()
+        .collection(SHOPS_COLLECTION(userId))
+        .get();
+
+      if (!shopsSnapshot.empty) {
+        const shopBatch = firestore().batch();
+        shopsSnapshot.docs.forEach(doc => shopBatch.delete(doc.ref));
+        await shopBatch.commit();
+        console.log(`🗑️ Deleted ${shopsSnapshot.size} shops`);
+      }
+
+      console.log('🗑️ All receipts deleted successfully');
+      return deletedCount;
+    } catch (error) {
+      console.error('Error deleting all receipts:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Delete receipt images from storage
    */
   private async deleteReceiptImages(

@@ -21,6 +21,7 @@ export interface ShoppingListItem {
   estimatedPrice?: number;
   bestPrice?: number;
   bestStore?: string;
+  currency?: 'USD' | 'CDF';
   addedAt: Date;
   checkedAt?: Date;
 }

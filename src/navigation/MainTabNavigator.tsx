@@ -16,6 +16,9 @@ import {
 } from '@/shared/theme/theme';
 import {Icon} from '@/shared/components';
 import {ModernTabBar, TabBarIcon} from '@/shared/components/ModernTabBar';
+import {SubscriptionLimitModal} from '@/shared/components';
+import {useSubscription} from '@/shared/contexts';
+import {hasFeatureAccess} from '@/shared/utils/featureAccess';
 
 // Screens
 import {HomeScreen} from '@/features/home/screens';
@@ -35,6 +38,19 @@ function TabIcon({focused, icon, label, badge}: {focused: boolean; icon: string;
 // Custom Tab Bar Component with rounded design
 export function MainTabNavigator() {
   const navigation = useNavigation<RootNavigationProp>();
+  const {subscription} = useSubscription();
+  const [showStatsLimitModal, setShowStatsLimitModal] = React.useState(false);
+
+  // Check if user has access to stats
+  const hasStatsAccess = hasFeatureAccess('stats', subscription);
+
+  const handleStatsPress = () => {
+    if (!hasStatsAccess) {
+      setShowStatsLimitModal(true);
+      return false;
+    }
+    return true;
+  };
 
   // Handle quick actions (app shortcuts)
   useEffect(() => {
@@ -107,58 +123,76 @@ export function MainTabNavigator() {
   };
 
   return (
-    <Tab.Navigator
-      tabBar={(props) => <ModernTabBar {...props} badges={notificationBadges} />}
-      screenOptions={{
-        headerShown: false,
-        tabBarHideOnKeyboard: true,
-      }}>
-      <Tab.Screen
-        name="Home"
-        component={HomeScreen}
-        options={{
-          tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} icon="home" label="Accueil" badge={notificationBadges.Home} />
-          ),
-        }}
+    <>
+      <Tab.Navigator
+        tabBar={(props) => <ModernTabBar {...props} badges={notificationBadges} />}
+        screenOptions={{
+          headerShown: false,
+          tabBarHideOnKeyboard: true,
+        }}>
+        <Tab.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{
+            tabBarIcon: ({focused}) => (
+              <TabIcon focused={focused} icon="home" label="Accueil" badge={notificationBadges.Home} />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Items"
+          component={CityItemsScreen}
+          options={{
+            tabBarIcon: ({focused}) => (
+              <TabIcon focused={focused} icon="shopping-bag" label="Articles" badge={notificationBadges.Items} />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Scanner"
+          component={UnifiedScannerScreen}
+          options={{
+            tabBarIcon: ({focused}) => (
+              <TabIcon focused={focused} icon="camera" label="Scanner" badge={notificationBadges.Scanner} />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Stats"
+          component={StatsScreen}
+          listeners={{
+            tabPress: (e) => {
+              if (!handleStatsPress()) {
+                e.preventDefault();
+              }
+            },
+          }}
+          options={{
+            tabBarIcon: ({focused}) => (
+              <TabIcon focused={focused} icon="bar-chart-2" label="Stats" badge={notificationBadges.Stats} />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Profile"
+          component={ProfileScreen}
+          options={{
+            tabBarIcon: ({focused}) => (
+              <TabIcon focused={focused} icon="user" label="Profil" badge={notificationBadges.Profile} />
+            ),
+          }}
+        />
+      </Tab.Navigator>
+
+      {/* Subscription Limit Modal */}
+      <SubscriptionLimitModal
+        visible={showStatsLimitModal}
+        onClose={() => setShowStatsLimitModal(false)}
+        limitType="generic"
+        customTitle="Statistiques"
+        customMessage="Les statistiques sont réservées aux abonnés Premium. Mettez à niveau pour visualiser vos dépenses et tendances."
       />
-      <Tab.Screen
-        name="Scanner"
-        component={UnifiedScannerScreen}
-        options={{
-          tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} icon="camera" label="Scanner" badge={notificationBadges.Scanner} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Items"
-        component={CityItemsScreen}
-        options={{
-          tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} icon="shopping-bag" label="Articles" badge={notificationBadges.Items} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Stats"
-        component={StatsScreen}
-        options={{
-          tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} icon="bar-chart-2" label="Stats" badge={notificationBadges.Stats} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{
-          tabBarIcon: ({focused}) => (
-            <TabIcon focused={focused} icon="user" label="Profil" badge={notificationBadges.Profile} />
-          ),
-        }}
-      />
-    </Tab.Navigator>
+    </>
   );
 }
 

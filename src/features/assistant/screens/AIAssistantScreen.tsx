@@ -1,5 +1,5 @@
 // AI Assistant Screen - Natural language queries about spending
-import React, {useState, useRef, useEffect} from 'react';
+import React, {useState, useRef, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -12,11 +12,16 @@ import {
   StatusBar,
   Animated,
   Dimensions,
+  Share,
+  Alert,
+  Vibration,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
+import Voice, {SpeechResultsEvent, SpeechErrorEvent} from '@react-native-voice/voice';
+import Clipboard from '@react-native-clipboard/clipboard';
 import {RootStackParamList} from '@/shared/types';
 import {useAuth} from '@/shared/contexts';
 import {
@@ -32,6 +37,7 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon, Spinner} from '@/shared/components';
+import {useToast} from '@/shared/contexts/ToastContext';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
@@ -55,9 +61,17 @@ export function AIAssistantScreen() {
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState(
     naturalLanguageService.getSuggestedQueries(),
   );
+  const {showToast} = useToast();
+
+  // Typing indicator animation
+  const typingDot1 = useRef(new Animated.Value(0)).current;
+  const typingDot2 = useRef(new Animated.Value(0)).current;
+  const typingDot3 = useRef(new Animated.Value(0)).current;
   const flatListRef = useRef<FlatList>(null);
 
   // Animation refs
@@ -87,8 +101,118 @@ export function AIAssistantScreen() {
     setMessages(history);
   }, []);
 
+  // Voice recognition setup
+  useEffect(() => {
+    Voice.onSpeechStart = () => setIsListening(true);
+    Voice.onSpeechEnd = () => setIsListening(false);
+    Voice.onSpeechResults = (e: SpeechResultsEvent) => {
+      if (e.value && e.value[0]) {
+        setInputText(prev => prev + (prev ? ' ' : '') + e.value![0]);
+      }
+    };
+    Voice.onSpeechError = (e: SpeechErrorEvent) => {
+      console.error('Voice error:', e);
+      setIsListening(false);
+      showToast('error', 'Erreur de reconnaissance vocale');
+    };
+
+    return () => {
+      Voice.destroy().then(Voice.removeAllListeners);
+    };
+  }, [showToast]);
+
+  // Typing indicator animation
+  useEffect(() => {
+    if (isLoading) {
+      const createBounce = (anim: Animated.Value, delay: number) => {
+        return Animated.loop(
+          Animated.sequence([
+            Animated.delay(delay),
+            Animated.timing(anim, {
+              toValue: -8,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(anim, {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+          ])
+        );
+      };
+
+      const anim1 = createBounce(typingDot1, 0);
+      const anim2 = createBounce(typingDot2, 150);
+      const anim3 = createBounce(typingDot3, 300);
+
+      anim1.start();
+      anim2.start();
+      anim3.start();
+
+      return () => {
+        anim1.stop();
+        anim2.stop();
+        anim3.stop();
+        typingDot1.setValue(0);
+        typingDot2.setValue(0);
+        typingDot3.setValue(0);
+      };
+    }
+  }, [isLoading, typingDot1, typingDot2, typingDot3]);
+
+  // Voice input handlers
+  const startListening = useCallback(async () => {
+    try {
+      await Voice.start('fr-FR');
+      Vibration.vibrate(50);
+    } catch (e) {
+      console.error('Voice start error:', e);
+      showToast('error', 'Impossible de démarrer la reconnaissance vocale');
+    }
+  }, [showToast]);
+
+  const stopListening = useCallback(async () => {
+    try {
+      await Voice.stop();
+    } catch (e) {
+      console.error('Voice stop error:', e);
+    }
+  }, []);
+
+  // Copy message to clipboard
+  const handleCopyMessage = useCallback((content: string) => {
+    Clipboard.setString(content);
+    showToast('success', 'Message copié');
+    setSelectedMessageId(null);
+  }, [showToast]);
+
+  // Share message
+  const handleShareMessage = useCallback(async (content: string) => {
+    try {
+      await Share.share({
+        message: content,
+        title: 'GoShopper Assistant',
+      });
+    } catch (error) {
+      console.error('Share error:', error);
+    }
+    setSelectedMessageId(null);
+  }, []);
+
+  // Format timestamp
+  const formatTime = useCallback((date: Date) => {
+    return date.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }, []);
+
   const handleSend = async () => {
     if (!inputText.trim() || !user?.uid || isLoading) {return;}
+
+    // Haptic feedback on send
+    Vibration.vibrate(30);
 
     const query = inputText.trim();
     setInputText('');
@@ -157,6 +281,7 @@ export function AIAssistantScreen() {
   const renderMessage = ({item}: {item: ConversationMessage}) => {
     const isUser = item.role === 'user';
     const queryResult = item.data as QueryResult | undefined;
+    const isSelected = selectedMessageId === item.id;
 
     return (
       <Animated.View
@@ -177,10 +302,16 @@ export function AIAssistantScreen() {
           </View>
         )}
 
-        <View
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onLongPress={() => {
+            Vibration.vibrate(30);
+            setSelectedMessageId(isSelected ? null : item.id);
+          }}
           style={[
             styles.messageContent,
             isUser ? styles.userContent : styles.assistantContent,
+            isSelected && styles.messageSelected,
           ]}>
           <Text style={[styles.messageText, isUser && styles.userText]}>
             {item.content}
@@ -188,6 +319,29 @@ export function AIAssistantScreen() {
 
           {item.contentLingala && !isUser && (
             <Text style={styles.lingalaText}>{item.contentLingala}</Text>
+          )}
+
+          {/* Timestamp */}
+          <Text style={[styles.messageTimestamp, isUser && styles.userTimestamp]}>
+            {formatTime(item.timestamp instanceof Date ? item.timestamp : new Date(item.timestamp))}
+          </Text>
+
+          {/* Message actions (shown when selected) */}
+          {isSelected && (
+            <View style={styles.messageActions}>
+              <TouchableOpacity
+                style={styles.messageActionButton}
+                onPress={() => handleCopyMessage(item.content)}>
+                <Icon name="copy" size="xs" color={Colors.text.secondary} />
+                <Text style={styles.messageActionText}>Copier</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.messageActionButton}
+                onPress={() => handleShareMessage(item.content)}>
+                <Icon name="share" size="xs" color={Colors.text.secondary} />
+                <Text style={styles.messageActionText}>Partager</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {/* Chart data preview */}
@@ -225,7 +379,7 @@ export function AIAssistantScreen() {
               ))}
             </View>
           )}
-        </View>
+        </TouchableOpacity>
 
         {isUser && (
           <View style={styles.userAvatar}>
@@ -329,15 +483,37 @@ export function AIAssistantScreen() {
             </View>
           </Animated.View>
         ) : (
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            renderItem={renderMessage}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.messagesList}
-            showsVerticalScrollIndicator={false}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
-          />
+          <>
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              renderItem={renderMessage}
+              keyExtractor={item => item.id}
+              contentContainerStyle={styles.messagesList}
+              showsVerticalScrollIndicator={false}
+              onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
+              ListFooterComponent={
+                isLoading ? (
+                  <View style={styles.typingIndicator}>
+                    <View style={styles.assistantAvatar}>
+                      <LinearGradient
+                        colors={[Colors.card.crimson, Colors.card.red]}
+                        style={styles.avatarGradient}
+                        start={{x: 0, y: 0}}
+                        end={{x: 1, y: 1}}>
+                        <Icon name="bot" size="sm" color={Colors.white} />
+                      </LinearGradient>
+                    </View>
+                    <View style={styles.typingBubble}>
+                      <Animated.View style={[styles.typingDot, {transform: [{translateY: typingDot1}]}]} />
+                      <Animated.View style={[styles.typingDot, {transform: [{translateY: typingDot2}]}]} />
+                      <Animated.View style={[styles.typingDot, {transform: [{translateY: typingDot3}]}]} />
+                    </View>
+                  </View>
+                ) : null
+              }
+            />
+          </>
         )}
 
         {/* Quick Suggestions Bar */}
@@ -373,16 +549,33 @@ export function AIAssistantScreen() {
             styles.inputContainer,
             {paddingBottom: insets.bottom + Spacing.sm},
           ]}>
+          {/* Voice Button */}
+          <TouchableOpacity
+            style={[
+              styles.voiceButton,
+              isListening && styles.voiceButtonActive,
+            ]}
+            onPressIn={startListening}
+            onPressOut={stopListening}
+            disabled={isLoading}
+            activeOpacity={0.8}>
+            <Icon
+              name={isListening ? 'mic' : 'mic'}
+              size="sm"
+              color={isListening ? Colors.white : Colors.card.crimson}
+            />
+          </TouchableOpacity>
+
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.textInput}
               value={inputText}
               onChangeText={setInputText}
-              placeholder="Tapez votre question..."
+              placeholder={isListening ? "Je vous écoute..." : "Tapez votre question..."}
               placeholderTextColor={Colors.text.tertiary}
               multiline
               maxLength={500}
-              editable={!isLoading}
+              editable={!isLoading && !isListening}
             />
           </View>
 
@@ -713,5 +906,82 @@ const styles = StyleSheet.create({
     height: 48,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  // Voice button styles
+  voiceButton: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.card.cream,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  voiceButtonActive: {
+    backgroundColor: Colors.card.crimson,
+    borderColor: Colors.card.red,
+  },
+  // Typing indicator styles
+  typingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.lg,
+  },
+  typingBubble: {
+    flexDirection: 'row',
+    backgroundColor: Colors.white,
+    padding: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.xl,
+    borderBottomLeftRadius: BorderRadius.sm,
+    gap: Spacing.xs,
+    ...Shadows.sm,
+  },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.card.crimson,
+  },
+  // Message timestamp styles
+  messageTimestamp: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.tertiary,
+    marginTop: Spacing.xs,
+    alignSelf: 'flex-end',
+  },
+  userTimestamp: {
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  // Message selection styles
+  messageSelected: {
+    borderWidth: 2,
+    borderColor: Colors.card.crimson,
+  },
+  // Message actions styles
+  messageActions: {
+    flexDirection: 'row',
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border.light,
+    gap: Spacing.md,
+  },
+  messageActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    backgroundColor: Colors.card.cream,
+    borderRadius: BorderRadius.md,
+  },
+  messageActionText: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.text.secondary,
   },
 });
