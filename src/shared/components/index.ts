@@ -13,6 +13,7 @@ export {AppFooter} from './AppFooter';
 export {ModernTabBar, TabBarIcon} from './ModernTabBar';
 export {default as TabSelector} from './TabSelector';
 export {AppStateTracker} from './AppStateTracker';
+export {BackButton} from './BackButton';
 // Illustrations
 export {
   ScannerIllustration,

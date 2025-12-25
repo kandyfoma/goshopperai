@@ -54,7 +54,7 @@ export function ItemsScreen() {
   const {user, isAuthenticated} = useAuth();
   const {profile: userProfile} = useUser();
   const navigation = useNavigation();
-  const [items, setItems] = useState<ItemData[]>();
+  const [items, setItems] = useState<ItemData[]>([]);
   const [filteredItems, setFilteredItems] = useState<ItemData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -320,8 +320,8 @@ export function ItemsScreen() {
     
     // Use setTimeout to allow UI to update with loading state
     setTimeout(() => {
-      if (!searchQuery.trim()) {
-        setFilteredItems(items);
+      if (!searchQuery.trim() || !items) {
+        setFilteredItems(items || []);
         setIsSearching(false);
         return;
       }

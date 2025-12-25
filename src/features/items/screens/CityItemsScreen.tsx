@@ -97,17 +97,26 @@ export function CityItemsScreen() {
   useFocusEffect(
     useCallback(() => {
       console.log('📱 CityItemsScreen focused, reloading data');
+      console.log('📱 hasAccess:', hasAccess);
+      console.log('📱 profileLoading:', profileLoading);
+      console.log('📱 userProfile?.defaultCity:', userProfile?.defaultCity);
       
       // Guard: Re-check access when screen regains focus
       if (!hasAccess) {
+        console.log('🚫 No access to price comparison feature');
         setShowLimitModal(true);
+        setIsLoading(false); // Stop loading to show the modal
         return;
       }
       
       if (!profileLoading && userProfile?.defaultCity) {
+        console.log('✅ Starting loadCityItemsData...');
         loadCityItemsData();
       } else if (!profileLoading) {
+        console.log('⚠️ No default city, stopping loading');
         setIsLoading(false);
+      } else {
+        console.log('⏳ Profile still loading, waiting...');
       }
     }, [userProfile?.defaultCity, profileLoading, hasAccess])
   );
@@ -172,9 +181,24 @@ export function CityItemsScreen() {
     console.log('📡 Calling getCityItems for city:', city);
     try {
       const functionsInstance = firebase.app().functions('europe-west1');
-      const result = await functionsInstance.httpsCallable('getCityItems')({
-        city,
+      
+      // Set a timeout for the function call
+      const callFunction = functionsInstance.httpsCallable('getCityItems', {
+        timeout: 30000, // 30 seconds timeout
       });
+      
+      console.log('⏰ Starting Cloud Function call...');
+      
+      // Add a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Request timed out after 30 seconds'));
+        }, 30000);
+      });
+      
+      const functionPromise = callFunction({ city });
+      
+      const result = await Promise.race([functionPromise, timeoutPromise]) as any;
 
       console.log('✅ getCityItems result:', result);
       const data = result.data as {
@@ -212,6 +236,14 @@ export function CityItemsScreen() {
       }
     } catch (error: any) {
       console.error('❌ Error loading city items:', error);
+      console.error('❌ Error message:', error?.message);
+      console.error('❌ Error code:', error?.code);
+      console.error('❌ Error stack:', error?.stack);
+      
+      // Check if it's a timeout
+      if (error?.message?.includes('timed out')) {
+        console.log('⏱️ Request timed out - the city items collection may be too large');
+      }
       
       // Check if it's a INTERNAL error or network issue
       if (error.message?.includes('INTERNAL')) {
@@ -220,6 +252,7 @@ export function CityItemsScreen() {
       
       setItems([]);
     } finally {
+      console.log('🏁 loadCityItemsData finished');
       setIsLoading(false);
     }
   };

@@ -287,19 +287,21 @@ export function ReceiptDetailScreen() {
           <View style={styles.storeIconContainer}>
             <Icon name="store" size="xl" color={Colors.white} />
           </View>
-          <Text style={styles.storeName}>{receipt.storeName}</Text>
+          <Text style={styles.storeName}>
+            {receipt.storeName && receipt.storeName !== 'null' ? receipt.storeName : 'Magasin inconnu'}
+          </Text>
           <View style={styles.dateContainer}>
             <Icon name="calendar" size="sm" color={Colors.white} />
             <Text style={styles.receiptDate}>
-              {formatDate(receipt.date, 'long')}
+              {receipt.date ? formatDate(receipt.date, 'long') : 'Date inconnue'}
             </Text>
           </View>
-          {receipt.city && (
+          {receipt.city && receipt.city !== 'null' ? (
             <View style={styles.cityBadge}>
               <Icon name="map-pin" size="xs" color={Colors.white} />
               <Text style={styles.cityText}>{receipt.city}</Text>
             </View>
-          )}
+          ) : null}
         </View>
 
         {/* Tab Bar */}
@@ -322,28 +324,28 @@ export function ReceiptDetailScreen() {
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Articles</Text>
                 <View style={styles.itemCountBadge}>
-                  <Text style={styles.itemCountText}>{receipt.items.length}</Text>
+                  <Text style={styles.itemCountText}>{receipt.items?.length || 0}</Text>
                 </View>
               </View>
 
-              {receipt.items.map(item => (
+              {(receipt.items || []).map(item => (
             <View key={item.id} style={styles.itemCard}>
               <View style={styles.itemMain}>
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName} numberOfLines={2}>
-                    {item.name}
+                    {item.name || 'Article inconnu'}
                   </Text>
                   <Text style={styles.itemMeta}>
-                    {item.quantity} ×{' '}
-                    {formatCurrency(item.unitPrice, receipt.currency)}
+                    {item.quantity || 1} ×{' '}
+                    {formatCurrency(item.unitPrice || 0, receipt.currency)}
                   </Text>
                 </View>
                 <Text style={styles.itemPrice}>
-                  {formatCurrency(item.totalPrice, receipt.currency)}
+                  {formatCurrency(item.totalPrice || 0, receipt.currency)}
                 </Text>
               </View>
 
-              {item.category && (
+              {item.category && item.category !== 'null' ? (
                 <View
                   style={[
                     styles.categoryBadge,
@@ -362,7 +364,7 @@ export function ReceiptDetailScreen() {
                     {item.category}
                   </Text>
                 </View>
-              )}
+              ) : null}
 
               {/* Confidence indicator */}
               <View style={styles.confidenceContainer}>
@@ -371,11 +373,11 @@ export function ReceiptDetailScreen() {
                     style={[
                       styles.confidenceFill,
                       {
-                        width: `${item.confidence * 100}%`,
+                        width: `${(item.confidence || 0.85) * 100}%`,
                         backgroundColor:
-                          item.confidence > 0.8
+                          (item.confidence || 0.85) > 0.8
                             ? Colors.card.cosmos
-                            : item.confidence > 0.5
+                            : (item.confidence || 0.85) > 0.5
                             ? Colors.accent
                             : Colors.card.crimson,
                       },
@@ -383,7 +385,7 @@ export function ReceiptDetailScreen() {
                   />
                 </View>
                 <Text style={styles.confidenceText}>
-                  {Math.round(item.confidence * 100)}%
+                  {Math.round((item.confidence || 0.85) * 100)}%
                 </Text>
               </View>
             </View>
@@ -422,7 +424,7 @@ export function ReceiptDetailScreen() {
               )}
             </View>
           </View>
-          {receipt.subtotal && receipt.subtotal !== receipt.total && (
+          {receipt.subtotal && receipt.subtotal !== receipt.total ? (
             <>
               <View style={styles.divider} />
               <View style={styles.subtotalRow}>
@@ -431,16 +433,16 @@ export function ReceiptDetailScreen() {
                   {formatCurrency(receipt.subtotal, receipt.currency)}
                 </Text>
               </View>
-              {receipt.tax !== undefined && receipt.tax > 0 && (
+              {receipt.tax !== undefined && receipt.tax > 0 ? (
                 <View style={styles.subtotalRow}>
                   <Text style={styles.subtotalLabel}>TVA</Text>
                   <Text style={styles.subtotalAmount}>
                     {formatCurrency(receipt.tax, receipt.currency)}
                   </Text>
                 </View>
-              )}
+              ) : null}
             </>
-          )}
+          ) : null}
             </View>
           </>
         )}
@@ -462,21 +464,21 @@ export function ReceiptDetailScreen() {
                   {formatCurrency(receipt.total, receipt.currency)}
                 </Text>
                 {receipt.currency === 'USD' ? (
-                  receipt.totalCDF && (
+                  receipt.totalCDF ? (
                     <Text style={styles.totalSecondaryAmount}>
                       ≈ {formatCurrency(receipt.totalCDF, 'CDF')}
                     </Text>
-                  )
+                  ) : null
                 ) : (
-                  receipt.totalUSD && (
+                  receipt.totalUSD ? (
                     <Text style={styles.totalSecondaryAmount}>
                       ≈ {formatCurrency(receipt.totalUSD, 'USD')}
                     </Text>
-                  )
+                  ) : null
                 )}
               </View>
               
-              {receipt.subtotal !== undefined && (
+              {receipt.subtotal !== undefined ? (
                 <>
                   <View style={styles.separator} />
                   <View style={styles.subtotalRow}>
@@ -485,16 +487,16 @@ export function ReceiptDetailScreen() {
                       {formatCurrency(receipt.subtotal, receipt.currency)}
                     </Text>
                   </View>
-                  {receipt.tax !== undefined && receipt.tax > 0 && (
+                  {receipt.tax !== undefined && receipt.tax > 0 ? (
                     <View style={styles.subtotalRow}>
                       <Text style={styles.subtotalLabel}>TVA</Text>
                       <Text style={styles.subtotalAmount}>
                         {formatCurrency(receipt.tax, receipt.currency)}
                       </Text>
                     </View>
-                  )}
+                  ) : null}
                 </>
-              )}
+              ) : null}
             </View>
 
             {/* Statistics */}
@@ -505,7 +507,7 @@ export function ReceiptDetailScreen() {
                   <View style={styles.statIconContainer}>
                     <Icon name="shopping-bag" size="md" color={Colors.primary} />
                   </View>
-                  <Text style={styles.statValue}>{receipt.items.length}</Text>
+                  <Text style={styles.statValue}>{receipt.items?.length || 0}</Text>
                   <Text style={styles.statLabel}>Articles</Text>
                 </View>
                 
@@ -515,7 +517,9 @@ export function ReceiptDetailScreen() {
                   </View>
                   <Text style={styles.statValue}>
                     {formatCurrency(
-                      receipt.items.reduce((sum, item) => sum + item.totalPrice, 0) / receipt.items.length,
+                      receipt.items?.length > 0 
+                        ? receipt.items.reduce((sum, item) => sum + (item.totalPrice || 0), 0) / receipt.items.length
+                        : 0,
                       receipt.currency
                     )}
                   </Text>
@@ -527,7 +531,7 @@ export function ReceiptDetailScreen() {
                     <Icon name="tag" size="md" color={Colors.primary} />
                   </View>
                   <Text style={styles.statValue}>
-                    {[...new Set(receipt.items.map(item => item.category).filter(Boolean))].length}
+                    {[...new Set((receipt.items || []).map(item => item.category).filter(Boolean))].length}
                   </Text>
                   <Text style={styles.statLabel}>Catégories</Text>
                 </View>

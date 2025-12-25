@@ -26,7 +26,7 @@ import {
   Spacing,
   BorderRadius,
 } from '@/shared/theme/theme';
-import {Icon} from '@/shared/components';
+import {Icon, BackButton} from '@/shared/components';
 
 type PlanId = 'basic' | 'standard' | 'premium';
 

@@ -130,7 +130,7 @@ export function HistoryScreen() {
         return {
           id: doc.id,
           userId: data.userId,
-          storeName: data.storeName || 'Magasin inconnu',
+          storeName: data.storeName && data.storeName !== 'null' ? data.storeName : 'Magasin inconnu',
           storeNameNormalized: data.storeNameNormalized || '',
           storeAddress: data.storeAddress,
           storePhone: data.storePhone,
@@ -392,7 +392,9 @@ export function HistoryScreen() {
             </View>
 
             <View style={styles.receiptInfo}>
-              <Text style={styles.storeName} numberOfLines={1}>{item.storeName}</Text>
+              <Text style={styles.storeName} numberOfLines={1}>
+                {item.storeName && item.storeName !== 'null' ? item.storeName : 'Magasin inconnu'}
+              </Text>
               <View style={styles.metaRow}>
                 <View style={styles.itemCountBadge}>
                   <Icon name="package" size="xs" color={Colors.primary} />

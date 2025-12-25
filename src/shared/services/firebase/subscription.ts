@@ -322,7 +322,7 @@ class SubscriptionService {
   }
 
   /**
-   * Record a scan usage
+   * Record a scan usage - calls Cloud Function for security
    */
   async recordScanUsage(): Promise<void> {
     const user = authService.getCurrentUser();
@@ -330,117 +330,34 @@ class SubscriptionService {
       throw new Error('Not authenticated');
     }
 
-    let subscription = await this.getStatus();
-    
-    // Check if subscription exists and is not inactive
-    if (!subscription || subscription.status === 'inactive') {
-      throw new Error('Abonnement non trouvé. Veuillez compléter votre profil ou contacter le support.');
-    }
-
     console.log('📸 Recording scan usage for user:', user.uid);
-    console.log('📸 Current subscription before check:', {
-      isTrialActive: this.isTrialActive(subscription),
-      trialScansUsed: subscription.trialScansUsed,
-      monthlyScansUsed: subscription.monthlyScansUsed,
-      planId: subscription.planId,
-      status: subscription.status,
-      billingPeriodEnd: subscription.currentBillingPeriodEnd,
-    });
 
-    // Check and reset monthly usage if needed (for both trial and paid)
-    await this.checkAndResetMonthlyUsage(subscription, user.uid);
-    
-    // Reload subscription after potential reset
-    subscription = await this.getStatus();
+    try {
+      // Call Cloud Function to record scan usage (handles all validation and updates)
+      const recordScanUsageFunction = functions().httpsCallable('recordScanUsage');
+      const result = await recordScanUsageFunction({});
 
-    console.log('📸 Current subscription after check:', {
-      isTrialActive: this.isTrialActive(subscription),
-      trialScansUsed: subscription.trialScansUsed,
-      monthlyScansUsed: subscription.monthlyScansUsed,
-      planId: subscription.planId,
-      status: subscription.status,
-      billingPeriodEnd: subscription.currentBillingPeriodEnd,
-    });
+      console.log('📸 Scan recorded via Cloud Function:', result.data);
 
-    // Trial users have monthly scan limit
-    if (this.isTrialActive(subscription)) {
-      const trialLimit = TRIAL_SCAN_LIMIT;
-      const currentUsage = subscription.trialScansUsed || 0;
-
-      console.log('📸 Trial user - current usage:', currentUsage, '/', trialLimit);
-
-      if (currentUsage >= trialLimit) {
-        throw new Error(
-          `Limite de scans mensuelle atteinte (${trialLimit} scans/mois). Attendez le début du mois prochain ou passez à Premium.`,
-        );
+      if (!result.data.success) {
+        throw new Error(result.data.error || 'Échec de l\'enregistrement du scan');
       }
-
-      console.log('📸 Incrementing trial scan count for user:', user.uid);
-      await firestore()
-        .doc(COLLECTIONS.subscription(user.uid))
-        .update({
-          trialScansUsed: firestore.FieldValue.increment(1),
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-        });
-      console.log('📸 Trial scan recorded successfully, new count:', currentUsage + 1, '/', trialLimit);
-      return;
-    }
-
-    // Freemium users have 3 scans/month
-    if (subscription.status === 'freemium' || subscription.planId === 'freemium') {
-      const freemiumLimit = PLAN_SCAN_LIMITS.freemium || 3;
-      const currentUsage = subscription.monthlyScansUsed || 0;
-
-      console.log('📸 Freemium user - current usage:', currentUsage, '/', freemiumLimit);
-
-      if (currentUsage >= freemiumLimit) {
-        throw new Error(
-          `Limite de scans gratuits atteinte (${freemiumLimit} scans/mois). Passez à un abonnement pour plus de scans.`,
-        );
+    } catch (error: any) {
+      console.error('📸 Error recording scan:', error);
+      
+      // Handle specific Cloud Function errors
+      if (error.code === 'functions/resource-exhausted') {
+        throw new Error('Limite de scans atteinte. Passez à un plan supérieur pour plus de scans.');
       }
-
-      console.log('📸 Incrementing freemium scan count for user:', user.uid);
-      await firestore()
-        .doc(COLLECTIONS.subscription(user.uid))
-        .update({
-          monthlyScansUsed: firestore.FieldValue.increment(1),
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-        });
-      console.log('📸 Freemium scan recorded successfully, new count:', currentUsage + 1, '/', freemiumLimit);
-      return;
-    }
-
-    // Premium users have unlimited scans (including cancelled)
-    if (subscription.planId === 'premium' && (subscription.status === 'active' || subscription.status === 'cancelled')) {
-      return;
-    }
-
-    // Basic/Standard users have limited scans (including cancelled)
-    if (subscription.isSubscribed && (subscription.status === 'active' || subscription.status === 'cancelled')) {
-      const planLimit =
-        PLAN_SCAN_LIMITS[
-          subscription.planId as keyof typeof PLAN_SCAN_LIMITS
-        ] || 0;
-
-      if (
-        planLimit !== -1 &&
-        (subscription.monthlyScansUsed || 0) >= planLimit
-      ) {
-        throw new Error(
-          'Limite de scans atteinte. Passez à Premium pour des scans illimités.',
-        );
+      if (error.code === 'functions/failed-precondition') {
+        throw new Error('Abonnement non initialisé. Veuillez contacter le support.');
       }
-
-      await firestore()
-        .doc(COLLECTIONS.subscription(user.uid))
-        .update({
-          monthlyScansUsed: firestore.FieldValue.increment(1),
-          updatedAt: firestore.FieldValue.serverTimestamp(),
-        });
-      return;
+      if (error.code === 'functions/unauthenticated') {
+        throw new Error('Session expirée. Veuillez vous reconnecter.');
+      }
+      
+      throw error;
     }
-
-    throw new Error('Abonnement requis. Veuillez souscrire pour continuer.');
   }
 
   /**

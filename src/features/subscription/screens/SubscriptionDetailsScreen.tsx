@@ -11,7 +11,7 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import {useSubscription} from '@/shared/contexts/SubscriptionContext';
-import {Icon, FadeIn, Button} from '@/shared/components';
+import {Icon, FadeIn, Button, BackButton} from '@/shared/components';
 import {
   Colors,
   Typography,
@@ -28,14 +28,20 @@ export function SubscriptionDetailsScreen() {
     subscription,
     isTrialActive,
     trialDaysRemaining,
-    trialScansUsed,
     scansRemaining,
+    canScan,
+    daysUntilExpiration,
+    isExpiringSoon,
   } = useSubscription();
 
   const isPremium = subscription?.isSubscribed && subscription?.status === 'active' && subscription?.planId === 'premium';
+  const isActive = subscription?.isSubscribed && subscription?.status === 'active';
   const isTrial = isTrialActive;
-  const scansUsed = trialScansUsed;
-  const scanLimit = subscription?.trialScansLimit || 50;
+  const scansUsed = subscription?.monthlyScansUsed || subscription?.trialScansUsed || 0;
+  const scanLimit = subscription?.planId === 'premium' ? -1 : 
+                    subscription?.planId === 'standard' ? 100 :
+                    subscription?.planId === 'basic' ? 25 :
+                    subscription?.trialScansLimit || 10;
 
   // Format dates
   const formatDate = (date: Date | undefined) => {
@@ -50,19 +56,29 @@ export function SubscriptionDetailsScreen() {
 
   const getStatusColor = () => {
     if (isPremium) return Colors.status.success;
+    if (isActive) return Colors.card.cosmos;
     if (isTrial) return Colors.card.blue;
+    if (subscription?.status === 'grace') return Colors.card.yellow;
+    if (subscription?.status === 'freemium') return Colors.text.tertiary;
     return Colors.text.tertiary;
   };
 
   const getStatusText = () => {
     if (isPremium) return 'Abonnement Premium Actif';
+    if (isActive) {
+      const planName = subscription?.planId === 'basic' ? 'Basic' : subscription?.planId === 'standard' ? 'Standard' : 'Premium';
+      return `Abonnement ${planName} Actif`;
+    }
     if (isTrial) return `Essai Gratuit - ${trialDaysRemaining} jours restants`;
+    if (subscription?.status === 'grace') return `Période de grâce - ${daysUntilExpiration} jours restants`;
+    if (subscription?.status === 'freemium') return 'Plan Gratuit';
     return 'Aucun Abonnement';
   };
 
   const getStatusIcon = () => {
-    if (isPremium) return 'check-circle';
+    if (isPremium || isActive) return 'check-circle';
     if (isTrial) return 'clock';
+    if (subscription?.status === 'grace') return 'alert-circle';
     return 'x-circle';
   };
 
@@ -71,13 +87,8 @@ export function SubscriptionDetailsScreen() {
       {/* Modern Header */}
       <FadeIn>
         <View style={styles.header}>
+          <BackButton />
           <View style={styles.headerContent}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-              activeOpacity={0.7}>
-              <Icon name="arrow-left" size="sm" color={Colors.primary} />
-            </TouchableOpacity>
             <View style={styles.headerLeft}>
               <View style={styles.titleRow}>
                 <Icon name="zap" size="md" color={Colors.primary} />
@@ -86,8 +97,12 @@ export function SubscriptionDetailsScreen() {
               <Text style={styles.subtitle}>
                 {isPremium
                   ? 'Premium actif'
+                  : isActive
+                  ? `${subscription?.planId} actif`
                   : isTrial
                   ? `${trialDaysRemaining} jours restants`
+                  : subscription?.status === 'grace'
+                  ? 'Période de grâce'
                   : 'Aucun abonnement'}
               </Text>
             </View>
@@ -105,7 +120,7 @@ export function SubscriptionDetailsScreen() {
             <Icon name={getStatusIcon()} size="xl" color={getStatusColor()} />
           </View>
           <Text style={styles.statusTitle}>{getStatusText()}</Text>
-          {!isPremium && !isTrial && (
+          {!isPremium && !isActive && !isTrial && subscription?.status !== 'grace' && (
             <Text style={styles.statusSubtitle}>
               Passez à Premium pour des scans illimités
             </Text>
@@ -113,6 +128,16 @@ export function SubscriptionDetailsScreen() {
           {isTrial && (
             <Text style={styles.statusSubtitle}>
               Profitez de votre période d'essai gratuite
+            </Text>
+          )}
+          {isActive && !isPremium && (
+            <Text style={styles.statusSubtitle}>
+              Votre abonnement est actif jusqu'au {formatDate(subscription?.endDate)}
+            </Text>
+          )}
+          {subscription?.status === 'grace' && (
+            <Text style={styles.statusSubtitle}>
+              Renouvelez votre abonnement avant expiration
             </Text>
           )}
         </View>
@@ -164,7 +189,7 @@ export function SubscriptionDetailsScreen() {
         </View>
 
         {/* Subscription Details Card */}
-        {(isTrial || isPremium) && (
+        {(isTrial || isActive || isPremium) && (
           <View style={styles.infoCard}>
             <View style={styles.infoHeader}>
               <Icon name="calendar" size="md" color={Colors.card.red} />
@@ -202,15 +227,16 @@ export function SubscriptionDetailsScreen() {
                 </>
               )}
 
-              {isPremium && (
+              {(isActive || isPremium) && !isTrial && (
                 <>
                   <View style={styles.detailRow}>
                     <View style={styles.detailLeft}>
                       <Icon name="shopping-bag" size="sm" color={Colors.text.tertiary} />
-                      <Text style={styles.detailLabel}>Date d'achat</Text>
+                      <Text style={styles.detailLabel}>Plan actuel</Text>
                     </View>
                     <Text style={styles.detailValue}>
-                      {formatDate(subscription?.lastPaymentDate || subscription?.subscriptionStartDate)}
+                      {subscription?.planId === 'basic' ? 'Basic' : 
+                       subscription?.planId === 'standard' ? 'Standard' : 'Premium'}
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
@@ -225,18 +251,20 @@ export function SubscriptionDetailsScreen() {
                   <View style={styles.detailRow}>
                     <View style={styles.detailLeft}>
                       <Icon name="calendar" size="sm" color={Colors.text.tertiary} />
-                      <Text style={styles.detailLabel}>Renouvellement</Text>
+                      <Text style={styles.detailLabel}>{isExpiringSoon ? 'Expire le' : 'Valide jusqu\'au'}</Text>
                     </View>
-                    <Text style={[styles.detailValue, {color: Colors.card.blue, fontFamily: Typography.fontFamily.bold}]}>
-                      {formatDate(subscription?.subscriptionEndDate)}
+                    <Text style={[styles.detailValue, isExpiringSoon ? {color: Colors.card.red, fontFamily: Typography.fontFamily.bold} : {color: Colors.card.blue, fontFamily: Typography.fontFamily.bold}]}>
+                      {formatDate(subscription?.endDate)}
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
                     <View style={styles.detailLeft}>
                       <Icon name="zap" size="sm" color={Colors.text.tertiary} />
-                      <Text style={styles.detailLabel}>Type</Text>
+                      <Text style={styles.detailLabel}>Durée</Text>
                     </View>
-                    <Text style={styles.detailValue}>Premium - {subscription?.durationMonths} mois</Text>
+                    <Text style={styles.detailValue}>
+                      {subscription?.durationMonths || 1} mois
+                    </Text>
                   </View>
                   {subscription?.lastPaymentAmount && (
                     <View style={styles.detailRow}>
@@ -249,7 +277,69 @@ export function SubscriptionDetailsScreen() {
                       </Text>
                     </View>
                   )}
+                  {subscription?.bonusScans > 0 && (
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailLeft}>
+                        <Icon name="gift" size="sm" color={Colors.text.tertiary} />
+                        <Text style={styles.detailLabel}>Scans bonus</Text>
+                      </View>
+                      <Text style={[styles.detailValue, {color: Colors.card.blue}]}>
+                        +{subscription.bonusScans}
+                      </Text>
+                    </View>
+                  )}
                 </>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Subscription History Card */}
+        {subscription && (
+          <View style={styles.infoCard}>
+            <View style={styles.infoHeader}>
+              <Icon name="list" size="md" color={Colors.card.red} />
+              <Text style={styles.infoTitle}>Historique d'abonnement</Text>
+            </View>
+
+            <View style={styles.historyList}>
+              {subscription.lastPaymentDate && (
+                <View style={styles.historyItem}>
+                  <View style={styles.historyIcon}>
+                    <Icon name="check-circle" size="sm" color={Colors.status.success} />
+                  </View>
+                  <View style={styles.historyContent}>
+                    <Text style={styles.historyTitle}>Paiement reçu</Text>
+                    <Text style={styles.historyDate}>{formatDate(subscription.lastPaymentDate)}</Text>
+                    {subscription.lastPaymentAmount && (
+                      <Text style={styles.historyAmount}>{subscription.lastPaymentAmount} {subscription.currency || 'USD'}</Text>
+                    )}
+                  </View>
+                </View>
+              )}
+              
+              {subscription.subscriptionStartDate && (
+                <View style={styles.historyItem}>
+                  <View style={styles.historyIcon}>
+                    <Icon name="zap" size="sm" color={Colors.card.blue} />
+                  </View>
+                  <View style={styles.historyContent}>
+                    <Text style={styles.historyTitle}>Abonnement activé</Text>
+                    <Text style={styles.historyDate}>{formatDate(subscription.subscriptionStartDate)}</Text>
+                  </View>
+                </View>
+              )}
+
+              {isTrial && subscription.trialStartDate && (
+                <View style={styles.historyItem}>
+                  <View style={styles.historyIcon}>
+                    <Icon name="gift" size="sm" color={Colors.card.yellow} />
+                  </View>
+                  <View style={styles.historyContent}>
+                    <Text style={styles.historyTitle}>Essai gratuit démarré</Text>
+                    <Text style={styles.historyDate}>{formatDate(subscription.trialStartDate)}</Text>
+                  </View>
+                </View>
               )}
             </View>
           </View>
@@ -317,12 +407,22 @@ export function SubscriptionDetailsScreen() {
         </View>
 
         {/* Action Button */}
-        <Button
-          title="Voir plus d'abonnements"
-          onPress={() => navigation.push('Subscription')}
-          variant="primary"
-          icon={<Icon name="zap" size="sm" color={Colors.white} />}
-        />
+        {!isPremium && canScan && (
+          <Button
+            title="Voir les plans disponibles"
+            onPress={() => navigation.push('Subscription')}
+            variant="primary"
+            icon={<Icon name="zap" size="sm" color={Colors.white} />}
+          />
+        )}
+        {!canScan && (
+          <Button
+            title="Améliorer mon plan"
+            onPress={() => navigation.push('Subscription')}
+            variant="primary"
+            icon={<Icon name="zap" size="sm" color={Colors.white} />}
+          />
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -534,6 +634,48 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.sm,
     fontFamily: Typography.fontFamily.regular,
     color: Colors.text.primary,
+  },
+
+  // History List
+  historyList: {
+    gap: Spacing.sm,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    backgroundColor: Colors.background.primary,
+    borderRadius: BorderRadius.md,
+  },
+  historyIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
+  },
+  historyContent: {
+    flex: 1,
+  },
+  historyTitle: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.primary,
+    marginBottom: 2,
+  },
+  historyDate: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.tertiary,
+  },
+  historyAmount: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.status.success,
+    marginTop: 2,
   },
 });
 

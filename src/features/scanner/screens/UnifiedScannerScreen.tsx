@@ -1,12 +1,11 @@
 // Unified Scanner Screen - Animated & Interactive Receipt Scanner
-// Combines single and multi-photo scanning with entertaining UX
+// Single photo + video scanning with entertaining UX
 import React, {useState, useCallback, useRef, useEffect} from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ScrollView,
   Alert,
   Animated,
@@ -25,7 +24,6 @@ import {cameraService, imageCompressionService} from '@/shared/services/camera';
 import {geminiService} from '@/shared/services/ai/gemini';
 import {hybridReceiptProcessor} from '@/shared/services/ai/hybridReceiptProcessor';
 import {analyticsService} from '@/shared/services/analytics';
-import {duplicateDetectionService} from '@/shared/services/duplicateDetection';
 import {hapticService} from '@/shared/services/hapticService';
 import {inAppReviewService} from '@/shared/services/inAppReviewService';
 import {offlineQueueService, receiptStorageService, userBehaviorService} from '@/shared/services/firebase';
@@ -37,25 +35,15 @@ import {
   Shadows,
 } from '@/shared/theme/theme';
 import {Icon, ScanProgressIndicator, ConfirmationModal, SubscriptionLimitModal} from '@/shared/components';
-import functions from '@react-native-firebase/functions';
 import firestore from '@react-native-firebase/firestore';
 import {APP_ID} from '@/shared/services/firebase/config';
-import {Receipt} from '@/shared/types';
 
 const {width: SCREEN_WIDTH, height: SCREEN_HEIGHT} = Dimensions.get('window');
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-interface CapturedPhoto {
-  id: string;
-  uri: string;
-  // base64 removed from state to prevent memory leaks
-  // Generated on-demand during processing
-}
+type ScanState = 'idle' | 'capturing' | 'processing' | 'success' | 'error';
 
-type ScanState = 'idle' | 'capturing' | 'reviewing' | 'processing' | 'success' | 'error';
-
-const MAX_PHOTOS = 5;
 const MAX_RETRY_ATTEMPTS = 3;
 
 // Fun loading messages
@@ -191,7 +179,6 @@ export function UnifiedScannerScreen() {
   const scanProcessing = useScanProcessing();
 
   // State
-  const [photos, setPhotos] = useState<CapturedPhoto[]>([]);
   const [state, setState] = useState<ScanState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
@@ -264,7 +251,6 @@ export function UnifiedScannerScreen() {
       // Reset to idle state when returning to scanner
       if (state === 'success' || state === 'error') {
         setState('idle');
-        setPhotos([]);
         setError(null);
         setLoadingMessageIndex(0);
         setProcessingStep(0);
@@ -430,17 +416,26 @@ export function UnifiedScannerScreen() {
     }
   }, [state]);
 
-  // Add photo handler
-  const handleAddPhoto = useCallback(async (fromGallery: boolean = false) => {
-    if (photos.length >= MAX_PHOTOS) {
-      showToast(`Maximum ${MAX_PHOTOS} photos par facture`, 'warning');
-      return;
-    }
-
+  // Capture and process single photo
+  const handlePhotoCapture = useCallback(async (fromGallery: boolean = false) => {
     // Check scan permission
     if (!canScan) {
       analyticsService.logCustomEvent('scan_blocked_subscription');
       setShowLimitModal(true);
+      return;
+    }
+
+    // Validate user has a city set
+    if (!profile?.defaultCity) {
+      analyticsService.logCustomEvent('scan_blocked_no_city');
+      Alert.alert(
+        'Ville requise',
+        'Veuillez configurer votre ville dans les paramètres avant de scanner.',
+        [
+          {text: 'Annuler', style: 'cancel'},
+          {text: 'Configurer', onPress: () => navigation.push('Settings')},
+        ]
+      );
       return;
     }
 
@@ -451,215 +446,222 @@ export function UnifiedScannerScreen() {
       : await cameraService.captureFromCamera();
 
     if (!result.success || !result.uri) {
-      setState(photos.length > 0 ? 'reviewing' : 'idle');
+      setState('idle');
       if (result.error && result.error !== 'Capture annulée') {
         showToast(result.error, 'error');
       }
       return;
     }
 
-    // Store only URI - base64 will be generated during processing
-    const newPhoto: CapturedPhoto = {
-      id: `photo_${Date.now()}`,
-      uri: result.uri,
-    };
-
-    setPhotos(prev => [...prev, newPhoto]);
-    setState('reviewing');
-
-    // Haptic feedback for successful capture
-    hapticService.success();
-
-    // Animate new photo entrance
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      friction: 8,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
+    // Start background processing immediately
+    scanProcessing.startProcessing(1);
+    setState('idle');
+    
+    // Navigate away - user can browse the app
+    navigation.goBack();
+    
+    // Process in background
+    processPhotoInBackground(result.uri);
 
     analyticsService.logCustomEvent('photo_captured', {
-      photo_count: photos.length + 1,
       from_gallery: fromGallery,
     });
-  }, [photos.length, canScan, isTrialActive, navigation, showToast]);
+  }, [canScan, profile?.defaultCity, navigation, showToast, scanProcessing]);
 
-  // Remove photo
-  const handleRemovePhoto = useCallback((photoId: string) => {
-    setPhotos(prev => {
-      const newPhotos = prev.filter(p => p.id !== photoId);
-      if (newPhotos.length === 0) {
-        setState('idle');
-        setProcessingStep(0);
+  // Handle video recording for long receipts
+  const handleVideoScan = useCallback(async () => {
+    // Check scan permission
+    if (!canScan) {
+      analyticsService.logCustomEvent('video_scan_blocked_subscription');
+      setShowLimitModal(true);
+      return;
+    }
+
+    // Validate user has a city set
+    if (!profile?.defaultCity) {
+      analyticsService.logCustomEvent('scan_blocked_no_city');
+      Alert.alert(
+        'Ville requise',
+        'Veuillez configurer votre ville dans les paramètres avant de scanner.',
+        [
+          {text: 'Annuler', style: 'cancel'},
+          {text: 'Configurer', onPress: () => navigation.push('Settings')},
+        ]
+      );
+      return;
+    }
+
+    setState('capturing');
+    showToast('Scannez lentement du haut vers le bas (max 10s)', 'info');
+
+    const result = await cameraService.recordVideo();
+
+    if (!result.success || !result.base64) {
+      setState('idle');
+      if (result.error && result.error !== 'Capture annulée') {
+        showToast(result.error, 'error');
       }
-      return newPhotos;
-    });
-  }, []);
+      return;
+    }
 
-  // Background process photos - runs in background while user can navigate away
-  const processInBackground = useCallback(async (photosToProcess: CapturedPhoto[]): Promise<void> => {
+    // Use background processing for video
+    scanProcessing.startProcessing(1);
+    scanProcessing.updateProgress(10, 'Analyse de la vidéo...');
+    setState('idle'); // Go back to idle, processing happens in background
+
+    analyticsService.logCustomEvent('video_scan_started', {
+      duration: result.duration,
+    });
+
+    try {
+      scanProcessing.updateProgress(30, 'Extraction des articles...');
+      
+      const parseResult = await geminiService.parseReceiptVideo(
+        result.base64,
+        user?.uid || '',
+        profile?.defaultCity,
+      );
+
+      if (!parseResult.success || !parseResult.receipt) {
+        throw new Error(parseResult.error || 'Échec de l\'analyse de la vidéo');
+      }
+
+      scanProcessing.updateProgress(70, 'Vérification des données...');
+
+      // Validate receipt
+      const total = parseResult.receipt.total;
+      if (total === null || total === undefined || total === 0) {
+        scanProcessing.setError('Reçu invalide: Aucun montant détecté.\nScannez plus lentement.');
+        return;
+      }
+
+      if (!parseResult.receipt.items || parseResult.receipt.items.length === 0) {
+        scanProcessing.setError('Aucun article détecté.\nScannez plus lentement.');
+        return;
+      }
+
+      // Record scan usage
+      await recordScan();
+
+      scanProcessing.updateProgress(90, 'Finalisation...');
+
+      // Success!
+      scanProcessing.updateProgress(100, 'Presque terminé !');
+      hapticService.success();
+      scanProcessing.setSuccess(parseResult.receipt, parseResult.receipt.id || '');
+
+      analyticsService.logCustomEvent('video_scan_success', {
+        duration: result.duration,
+        items_count: parseResult.receipt.items.length,
+        total: parseResult.receipt.total,
+      });
+
+      // Track for in-app review
+      inAppReviewService.incrementScanCount().then(() => {
+        inAppReviewService.requestReviewIfAppropriate();
+      });
+
+    } catch (error: any) {
+      console.error('Video scan error:', error);
+      scanProcessing.setError(error.message || 'Erreur lors de l\'analyse de la vidéo');
+      hapticService.error();
+
+      analyticsService.logCustomEvent('video_scan_error', {
+        error: error.message,
+      });
+    }
+  }, [canScan, user?.uid, profile?.defaultCity, showToast, scanProcessing, recordScan]);
+
+  // Background process single photo - runs in background while user can navigate away
+  const processPhotoInBackground = useCallback(async (photoUri: string): Promise<void> => {
     try {
       // Step 1: Compression
       scanProcessing.updateProgress(10, 'Préparation de l\'analyse...');
       
-      const images = await Promise.all(
-        photosToProcess.map(p => imageCompressionService.compressToBase64(p.uri))
-      );
+      const imageBase64 = await imageCompressionService.compressToBase64(photoUri);
 
       // Step 2: Detection
       scanProcessing.updateProgress(25, 'Compression et optimisation...');
+      scanProcessing.updateProgress(45, 'Extraction des données...');
+      
+      const response = await hybridReceiptProcessor.processReceipt(
+        imageBase64,
+        user?.uid || 'unknown-user',
+        profile?.defaultCity
+      );
 
-      interface ParseReceiptV2Result {
-        success: boolean;
-        receiptId?: string;
-        receipt?: any;
-        error?: string;
-      }
-
-      let result: ParseReceiptV2Result | undefined;
-
-      if (images.length === 1) {
-        // Single photo - use hybrid processing
-        scanProcessing.updateProgress(45, 'Extraction des données...');
+      if (response.success && response.receipt) {
+        // Validation checks
+        const total = response.receipt.total;
+        if (total === null || total === undefined || total === 0) {
+          scanProcessing.setError('Reçu invalide: Aucun montant détecté.\nVeuillez scanner un reçu valide avec des prix.');
+          return;
+        }
         
-        const response = await hybridReceiptProcessor.processReceipt(
-          images[0],
-          user?.uid || 'unknown-user',
-          profile?.defaultCity
+        if (!response.receipt.items || response.receipt.items.length === 0) {
+          scanProcessing.setError('Image invalide: Ceci n\'est pas un reçu.\nVeuillez scanner un reçu valide.');
+          return;
+        }
+        
+        if (!response.receipt.storeName && !response.receipt.date) {
+          scanProcessing.setError('Image invalide: Ceci ne semble pas être un reçu.');
+          return;
+        }
+        
+        // Step 4: Validation
+        scanProcessing.updateProgress(70, 'Vérification des informations...');
+        
+        // Add user's default city if receipt doesn't have a city
+        if (!response.receipt.city && profile?.defaultCity) {
+          response.receipt.city = profile.defaultCity;
+          if (response.receipt.items) {
+            response.receipt.items = response.receipt.items.map(item => ({
+              ...item,
+              city: profile.defaultCity
+            }));
+          }
+        }
+        
+        // Step 5: Finalization - Save to Firestore
+        scanProcessing.updateProgress(90, 'Finalisation...');
+        
+        const savedReceiptId = await receiptStorageService.saveReceipt(
+          response.receipt,
+          user?.uid || 'unknown-user'
         );
 
-        if (response.success && response.receipt) {
-          // Validation checks
-          const total = response.receipt.total;
-          if (total === null || total === undefined || total === 0) {
-            scanProcessing.setError('Reçu invalide: Aucun montant détecté.\nVeuillez scanner un reçu valide avec des prix.');
-            return;
-          }
-          
-          if (!response.receipt.items || response.receipt.items.length === 0) {
-            scanProcessing.setError('Image invalide: Ceci n\'est pas un reçu.\nVeuillez scanner un reçu valide.');
-            return;
-          }
-          
-          if (!response.receipt.storeName && !response.receipt.date) {
-            scanProcessing.setError('Image invalide: Ceci ne semble pas être un reçu.');
-            return;
-          }
-          
-          // Step 4: Validation
-          scanProcessing.updateProgress(70, 'Vérification des informations...');
-          
-          // Add user's default city if receipt doesn't have a city
-          if (!response.receipt.city && profile?.defaultCity) {
-            response.receipt.city = profile.defaultCity;
-            if (response.receipt.items) {
-              response.receipt.items = response.receipt.items.map(item => ({
-                ...item,
-                city: profile.defaultCity
-              }));
-            }
-          }
-          
-          // Step 5: Finalization - Save to Firestore
-          scanProcessing.updateProgress(90, 'Finalisation...');
-          
-          const savedReceiptId = await receiptStorageService.saveReceipt(
-            response.receipt,
-            user?.uid || 'unknown-user'
-          );
-
-          // Track shopping patterns for ML
-          if (user?.uid) {
-            await userBehaviorService.updateShoppingPatterns(user.uid, {
-              total: response.receipt.total || 0,
-              itemCount: response.receipt.items?.length || 0,
-              storeName: response.receipt.storeName || '',
-              categories: [...new Set(response.receipt.items?.map(item => item.category).filter(Boolean) || [])] as string[],
-              date: new Date(),
-            }).catch(err => console.log('Failed to track shopping patterns:', err));
-          }
-
-          // Record scan usage
-          await recordScan();
-
-          analyticsService.logCustomEvent('scan_completed_background', {
-            success: true,
-            photo_count: 1,
-            items_count: response.receipt.items?.length || 0,
-          });
-
-          // Success!
-          scanProcessing.updateProgress(100, 'Presque terminé !');
-          hapticService.success();
-          scanProcessing.setSuccess(response.receipt, savedReceiptId);
-          
-          // Track for in-app review
-          inAppReviewService.incrementScanCount().then(() => {
-            inAppReviewService.requestReviewIfAppropriate();
-          });
-          
-          return;
-        } else {
-          throw new Error(response.error || 'Échec de l\'analyse');
+        // Track shopping patterns for ML
+        if (user?.uid) {
+          await userBehaviorService.updateShoppingPatterns(user.uid, {
+            total: response.receipt.total || 0,
+            itemCount: response.receipt.items?.length || 0,
+            storeName: response.receipt.storeName || '',
+            categories: [...new Set(response.receipt.items?.map(item => item.category).filter(Boolean) || [])] as string[],
+            date: new Date(),
+          }).catch(err => console.log('Failed to track shopping patterns:', err));
         }
-      } else {
-        // Multiple photos - use parseReceiptMulti callable function
-        scanProcessing.updateProgress(45, 'Extraction des données...');
-        
-        const parseReceiptMulti = functions().httpsCallable('parseReceiptMulti');
-        const response = await parseReceiptMulti({
-          images,
-          mimeType: 'image/jpeg',
+
+        // Record scan usage
+        await recordScan();
+
+        analyticsService.logCustomEvent('scan_completed_background', {
+          success: true,
+          items_count: response.receipt.items?.length || 0,
         });
 
-        result = response.data as ParseReceiptV2Result;
-
-        if (result.receipt) {
-          const total = result.receipt.total;
-          if (total === null || total === undefined || total === 0) {
-            scanProcessing.setError('Reçu invalide: Aucun montant détecté.');
-            return;
-          }
-          
-          if (!result.receipt.items || result.receipt.items.length === 0) {
-            scanProcessing.setError('Image invalide: Ceci n\'est pas un reçu.');
-            return;
-          }
-        }
-
-        if (result.success && result.receiptId) {
-          scanProcessing.updateProgress(90, 'Finalisation...');
-          await recordScan();
-
-          analyticsService.logCustomEvent('scan_completed_background', {
-            success: true,
-            photo_count: images.length,
-          });
-
-          scanProcessing.updateProgress(100, 'Presque terminé !');
-          hapticService.success();
-          
-          // Fetch the saved receipt for the modal
-          const savedReceipt = await receiptStorageService.getReceipt(user?.uid || 'unknown-user', result.receiptId);
-          if (savedReceipt) {
-            scanProcessing.setSuccess(savedReceipt, result.receiptId);
-          } else {
-            scanProcessing.setSuccess({
-              storeName: 'Reçu enregistré',
-              items: [],
-              total: 0,
-              currency: 'USD',
-            } as any, result.receiptId);
-          }
-          
-          inAppReviewService.incrementScanCount().then(() => {
-            inAppReviewService.requestReviewIfAppropriate();
-          });
-          
-          return;
-        } else {
-          throw new Error(result?.error || 'Échec du traitement');
-        }
+        // Success!
+        scanProcessing.updateProgress(100, 'Presque terminé !');
+        hapticService.success();
+        scanProcessing.setSuccess(response.receipt, savedReceiptId);
+        
+        // Track for in-app review
+        inAppReviewService.incrementScanCount().then(() => {
+          inAppReviewService.requestReviewIfAppropriate();
+        });
+        
+        return;
+      } else {
+        throw new Error(response.error || 'Échec de l\'analyse');
       }
     } catch (err: any) {
       console.error('Background processing error:', err);
@@ -709,60 +711,8 @@ export function UnifiedScannerScreen() {
     }
   }, [user?.uid, profile?.defaultCity, recordScan, scanProcessing]);
 
-  // Process photos - now with background option
-  const handleProcess = useCallback(async (): Promise<void> => {
-    if (photos.length === 0) {
-      showToast('Prenez au moins une photo', 'error');
-      return;
-    }
-
-    // Validate subscription before processing (double-check)
-    if (!canScan) {
-      analyticsService.logCustomEvent('scan_blocked_no_scans');
-      setShowLimitModal(true);
-      setState('idle');
-      setPhotos([]);
-      return;
-    }
-
-    // Validate user has a city set
-    if (!profile?.defaultCity) {
-      analyticsService.logCustomEvent('scan_blocked_no_city');
-      Alert.alert(
-        'Ville requise',
-        'Veuillez configurer votre ville dans les paramètres avant de scanner.',
-        [
-          {text: 'Annuler', style: 'cancel'},
-          {text: 'Configurer', onPress: () => navigation.push('Settings')},
-        ]
-      );
-      setState('idle');
-      setPhotos([]);
-      return;
-    }
-
-    // Start background processing
-    const photosToProcess = [...photos];
-    
-    // Reset local state and allow navigation away
-    setState('idle');
-    setPhotos([]);
-    setError(null);
-    
-    // Start the global processing state
-    scanProcessing.startProcessing(photosToProcess.length);
-    
-    // Navigate away - user can browse the app
-    navigation.goBack();
-    
-    // Process in background (non-blocking)
-    processInBackground(photosToProcess);
-    
-  }, [photos, canScan, isTrialActive, profile?.defaultCity, navigation, showToast, scanProcessing, processInBackground]);
-
   // Reset
   const handleReset = useCallback(() => {
-    setPhotos([]);
     setState('idle');
     setError(null);
     setLoadingMessageIndex(0);
@@ -809,7 +759,7 @@ export function UnifiedScannerScreen() {
           <TouchableOpacity
             onPress={() => Alert.alert(
               'Conseils',
-              '• Photo nette et bien éclairée\n• Ticket complet visible\n• Évitez reflets et ombres\n• Max 5 photos pour longs tickets'
+              '• Photo nette et bien éclairée\n• Ticket complet visible\n• Évitez reflets et ombres\n• Mode vidéo pour longs tickets'
             )}
             hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
           >
@@ -894,21 +844,33 @@ export function UnifiedScannerScreen() {
             <View style={styles.actionButtonsContainer}>
               <TouchableOpacity
                 style={styles.primaryActionButton}
-                onPress={() => handleAddPhoto(false)}
+                onPress={() => handlePhotoCapture(false)}
                 activeOpacity={0.9}
               >
                 <Icon name="camera" size="md" color={Colors.white} />
                 <Text style={styles.primaryActionText}>Prendre une photo</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.secondaryActionButton}
-                onPress={() => handleAddPhoto(true)}
-                activeOpacity={0.9}
-              >
-                <Icon name="image" size="sm" color={Colors.primary} />
-                <Text style={styles.secondaryActionText}>Galerie</Text>
-              </TouchableOpacity>
+              <View style={styles.secondaryButtonsRow}>
+                <TouchableOpacity
+                  style={styles.secondaryActionButton}
+                  onPress={() => handlePhotoCapture(true)}
+                  activeOpacity={0.9}
+                >
+                  <Icon name="image" size="sm" color={Colors.primary} />
+                  <Text style={styles.secondaryActionText}>Galerie</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.secondaryActionButton, styles.videoButton]}
+                  onPress={handleVideoScan}
+                  activeOpacity={0.9}
+                >
+                  <Icon name="video" size="sm" color={Colors.accent} />
+                  <Text style={[styles.secondaryActionText, {color: Colors.accent}]}>Vidéo</Text>
+                  <Text style={styles.videoHint}>(longs reçus)</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Feature Cards */}
@@ -932,111 +894,6 @@ export function UnifiedScannerScreen() {
           </Animated.View>
         )}
 
-        {/* Reviewing State - Modern Photo Preview */}
-        {(state === 'reviewing' || state === 'capturing') && (
-          <Animated.View 
-            style={[
-              styles.reviewContainer,
-              {
-                opacity: fadeAnim,
-                transform: [{scale: scaleAnim}],
-              }
-            ]}
-          >
-            {/* Review Header */}
-            <View style={styles.reviewHeader}>
-              <View style={styles.reviewHeaderLeft}>
-                <View style={styles.reviewBadge}>
-                  <Text style={styles.reviewBadgeText}>{photos.length}/{MAX_PHOTOS}</Text>
-                </View>
-                <View>
-                  <Text style={styles.reviewTitle}>
-                    {photos.length} photo{photos.length > 1 ? 's' : ''}
-                  </Text>
-                  <Text style={styles.reviewSubtitle}>
-                    {photos.length < MAX_PHOTOS ? 'Ajoutez plus ou analysez' : 'Limite atteinte'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Photo Grid */}
-            <View style={styles.photosGridContainer}>
-              <View style={styles.photosGrid}>
-                {photos.map((photo, index) => (
-                  <Animated.View 
-                    key={photo.id} 
-                    style={[
-                      styles.photoCardModern,
-                      {transform: [{scale: scaleAnim}]}
-                    ]}
-                  >
-                    <Image source={{uri: photo.uri}} style={styles.photoImageModern} />
-                    <View style={styles.photoOverlay}>
-                      <View style={styles.photoNumber}>
-                        <Text style={styles.photoNumberText}>{index + 1}</Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.photoDeleteButton}
-                        onPress={() => handleRemovePhoto(photo.id)}
-                        hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}
-                      >
-                        <Icon name="trash-2" size="xs" color={Colors.white} />
-                      </TouchableOpacity>
-                    </View>
-                  </Animated.View>
-                ))}
-
-                {photos.length < MAX_PHOTOS && (
-                  <TouchableOpacity
-                    style={styles.addPhotoCardModern}
-                    onPress={() => handleAddPhoto(false)}
-                    activeOpacity={0.9}
-                  >
-                    <View style={styles.addPhotoIconContainer}>
-                      <Icon name="plus" size="md" color={Colors.primary} />
-                    </View>
-                    <Text style={styles.addPhotoTextModern}>Ajouter</Text>
-                    <Text style={styles.addPhotoSubtext}>une photo</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-
-            {/* Review Actions */}
-            <View style={styles.reviewActionsModern}>
-              <TouchableOpacity
-                style={styles.analyzeButton}
-                onPress={handleProcess}
-                activeOpacity={0.9}
-              >
-                <View style={styles.analyzeButtonContent}>
-                  <View style={styles.analyzeButtonIcon}>
-                    <Icon name="zap" size="md" color={Colors.white} />
-                  </View>
-                  <View style={styles.analyzeButtonTexts}>
-                    <Text style={styles.analyzeButtonText}>Analyser</Text>
-                    <Text style={styles.analyzeButtonSubtext}>
-                      {photos.length} {photos.length > 1 ? 'photos' : 'photo'}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => {
-                  setPhotos([]);
-                  setState('idle');
-                }}
-                activeOpacity={0.9}
-              >
-                <Text style={styles.cancelButtonText}>Recommencer</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        )}
-
         {/* Processing State - Progress Stepper */}
         {state === 'processing' && (
           <View style={styles.processingContainer}>
@@ -1044,14 +901,6 @@ export function UnifiedScannerScreen() {
               steps={PROCESSING_STEPS}
               currentStep={processingStep}
             />
-            
-            {/* Photo Count Badge */}
-            <View style={styles.photoCountBadge}>
-              <Icon name="image" size="sm" color={Colors.primary} />
-              <Text style={styles.photoCountBadgeText}>
-                {photos.length} photo{photos.length > 1 ? 's' : ''}
-              </Text>
-            </View>
           </View>
         )}
 
@@ -1091,9 +940,9 @@ export function UnifiedScannerScreen() {
             <View style={styles.errorActions}>
               <TouchableOpacity
                 style={styles.retryButton}
-                onPress={handleProcess}
+                onPress={() => handlePhotoCapture(false)}
               >
-                <Icon name="refresh" size="sm" color={Colors.white} />
+                <Icon name="camera" size="sm" color={Colors.white} />
                 <Text style={styles.retryButtonText}>Réessayer</Text>
               </TouchableOpacity>
 
@@ -1101,8 +950,8 @@ export function UnifiedScannerScreen() {
                 style={styles.newScanButton}
                 onPress={handleReset}
               >
-                <Icon name="camera" size="sm" color={Colors.primary} />
-                <Text style={styles.newScanButtonText}>Nouveau scan</Text>
+                <Icon name="refresh" size="sm" color={Colors.primary} />
+                <Text style={styles.newScanButtonText}>Recommencer</Text>
               </TouchableOpacity>
             </View>
 
@@ -1110,7 +959,7 @@ export function UnifiedScannerScreen() {
               style={styles.helpButton}
               onPress={() => Alert.alert(
                 'Aide',
-                '• Assurez-vous que la photo est bien éclairée\n• Le ticket doit être entièrement visible\n• Évitez les reflets et les ombres\n• Pour les longs tickets, prenez plusieurs photos'
+                '• Assurez-vous que la photo est bien éclairée\n• Le ticket doit être entièrement visible\n• Évitez les reflets et les ombres\n• Pour les longs tickets, utilisez le mode vidéo'
               )}
             >
               <Text style={styles.helpButtonText}>💡 Conseils pour un meilleur scan</Text>
@@ -1373,6 +1222,20 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.08,
     shadowRadius: 8,
+    flex: 1,
+  },
+  secondaryButtonsRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  videoButton: {
+    borderWidth: 1,
+    borderColor: Colors.accentLight,
+    backgroundColor: Colors.white,
+  },
+  videoHint: {
+    fontSize: Typography.fontSize.xs,
+    color: Colors.text.tertiary,
   },
   secondaryActionText: {
     fontSize: Typography.fontSize.base,
@@ -1408,179 +1271,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Modern Review State (Blue Theme)
-  reviewContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-  },
-  reviewHeader: {
-    marginBottom: Spacing.xl,
-  },
-  reviewHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  reviewBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: BorderRadius.lg,
-    backgroundColor: Colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  reviewBadgeText: {
-    fontSize: Typography.fontSize.lg,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.white,
-  },
-  reviewTitle: {
-    fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.accent,
-  },
-  reviewSubtitle: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.text.secondary,
-    marginTop: 2,
-  },
-  photosGridContainer: {
-    marginBottom: Spacing.lg,
-  },
-  photosGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    gap: Spacing.xs,
-  },
-  photoCardModern: {
-    width: (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.xs) / 2,
-    height: (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.xs) / 2 * 1.2,
-    borderRadius: BorderRadius.xl,
-    overflow: 'hidden',
-    backgroundColor: Colors.background.secondary,
-    ...Shadows.sm,
-  },
-  photoImageModern: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  photoOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    padding: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  photoNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Shadows.sm,
-  },
-  photoNumberText: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.white,
-  },
-  photoDeleteButton: {
-    width: 28,
-    height: 28,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.status.error,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Shadows.sm,
-  },
-  addPhotoCardModern: {
-    width: (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.xs) / 2,
-    height: (SCREEN_WIDTH - Spacing.lg * 2 - Spacing.xs) / 2 * 1.2,
-    borderRadius: BorderRadius.xl,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: Colors.accentLight,
-    backgroundColor: '#E5F2F8',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-  },
-  addPhotoIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 6,
-    ...Shadows.sm,
-  },
-  addPhotoTextModern: {
-    fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.accent,
-    textAlign: 'center',
-  },
-  addPhotoSubtext: {
-    fontSize: Typography.fontSize.sm,
-    color: Colors.accentLight,
-    textAlign: 'center',
-  },
-  reviewActionsModern: {
-    marginTop: Spacing.xl,
-    gap: Spacing.md,
-  },
-  analyzeButton: {
-    backgroundColor: Colors.accent,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    ...Shadows.lg,
-  },
-  analyzeButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.md,
-  },
-  analyzeButtonIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: BorderRadius.full,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  analyzeButtonTexts: {
-    alignItems: 'center',
-  },
-  analyzeButtonText: {
-    fontSize: Typography.fontSize.xl,
-    fontWeight: Typography.fontWeight.bold,
-    color: Colors.white,
-  },
-  analyzeButtonSubtext: {
-    fontSize: Typography.fontSize.sm,
-    color: 'rgba(255,255,255,0.9)',
-  },
-  cancelButton: {
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    borderWidth: 2,
-    borderColor: Colors.accentLight,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: Typography.fontSize.md,
-    fontWeight: Typography.fontWeight.semiBold,
-    color: Colors.accent,
-  },
-
   // Processing State
   processingContainer: {
     flex: 1,
@@ -1588,23 +1278,6 @@ const styles = StyleSheet.create({
     paddingTop: Spacing['2xl'],
     paddingBottom: Spacing.xl,
     justifyContent: 'center',
-  },
-  photoCountBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    backgroundColor: Colors.white,
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.lg,
-    borderRadius: BorderRadius.full,
-    marginTop: Spacing.xl,
-    gap: Spacing.sm,
-    ...Shadows.sm,
-  },
-  photoCountBadgeText: {
-    fontSize: Typography.fontSize.sm,
-    fontWeight: Typography.fontWeight.medium,
-    color: Colors.text.primary,
   },
   processingCard: {
     width: '100%',

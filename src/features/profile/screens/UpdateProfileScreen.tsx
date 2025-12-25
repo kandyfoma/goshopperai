@@ -30,7 +30,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, Spinner, Button} from '@/shared/components';
+import {Icon, Spinner, Button, BackButton} from '@/shared/components';
 import {APP_ID} from '@/shared/services/firebase/config';
 import firestore from '@react-native-firebase/firestore';
 import {analyticsService} from '@/shared/services/analytics';

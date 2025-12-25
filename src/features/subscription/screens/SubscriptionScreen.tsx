@@ -24,7 +24,7 @@ import {
   Spacing,
   BorderRadius,
 } from '@/shared/theme/theme';
-import {Icon, Spinner} from '@/shared/components';
+import {Icon, Spinner, BackButton} from '@/shared/components';
 
 type PlanId = 'freemium' | 'free' | 'basic' | 'standard' | 'premium';
 
@@ -33,7 +33,7 @@ export function SubscriptionScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const {user, isAuthenticated} = useAuth();
-  const {subscription, isTrialActive, trialDaysRemaining} = useSubscription();
+  const {subscription, isTrialActive, trialDaysRemaining, scansRemaining, canScan} = useSubscription();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -87,6 +87,9 @@ export function SubscriptionScreen() {
     // Only allow subscribing to paid plans
     if (planId === 'freemium' || planId === 'free') return;
     
+    // Don't allow selecting the current active plan
+    if (isCurrentPlan(planId)) return;
+    
     setSelectedPlan(planId);
     
     analyticsService.logCustomEvent('subscription_plan_selected', {
@@ -132,12 +135,7 @@ export function SubscriptionScreen() {
         showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
-            <Icon name="chevron-left" size="md" color={Colors.text.primary} />
-          </TouchableOpacity>
+          <BackButton />
           <Text style={styles.headerTitle}>Choisir un abonnement</Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -148,6 +146,83 @@ export function SubscriptionScreen() {
             <Text style={styles.trialTitle}>
               Essai: {trialDaysRemaining}j restants
             </Text>
+          </View>
+        )}
+
+        {/* Current Subscription Details */}
+        {subscription && (
+          <View style={styles.currentSubscriptionCard}>
+            <View style={styles.currentSubscriptionHeader}>
+              <Text style={styles.currentSubscriptionTitle}>
+                Abonnement actuel
+              </Text>
+              <View style={[
+                styles.statusBadge,
+                {backgroundColor: subscription.status === 'active' ? '#10B981' : subscription.status === 'trial' ? '#F59E0B' : '#6B7280'}
+              ]}>
+                <Text style={styles.statusBadgeText}>
+                  {subscription.status === 'active' ? 'Actif' : 
+                   subscription.status === 'trial' ? 'Essai' :
+                   subscription.status === 'grace' ? 'Période de grâce' :
+                   subscription.status === 'freemium' ? 'Gratuit' : 'Inactif'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.subscriptionDetails}>
+              <View style={styles.detailRow}>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Plan</Text>
+                  <Text style={styles.detailValue}>
+                    {subscription.planId === 'freemium' ? 'Gratuit' :
+                     subscription.planId === 'basic' ? 'Basic' :
+                     subscription.planId === 'standard' ? 'Standard' :
+                     subscription.planId === 'premium' ? 'Premium' : 'Aucun'}
+                  </Text>
+                </View>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Scans restants</Text>
+                  <Text style={styles.detailValue}>
+                    {scansRemaining === -1 ? 'Illimité' : scansRemaining}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.detailRow}>
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Utilisés ce mois</Text>
+                  <Text style={styles.detailValue}>
+                    {subscription.monthlyScansUsed || 0}
+                  </Text>
+                </View>
+                {subscription.subscriptionEndDate && (
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Expire le</Text>
+                    <Text style={styles.detailValue}>
+                      {new Date(subscription.subscriptionEndDate).toLocaleDateString('fr-FR')}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {subscription.bonusScans > 0 && (
+                <View style={styles.bonusScansContainer}>
+                  <Icon name="gift" size="sm" color={Colors.primary} />
+                  <Text style={styles.bonusScansText}>
+                    {subscription.bonusScans} scans bonus disponibles
+                  </Text>
+                </View>
+              )}
+
+              {!canScan && scansRemaining === 0 && (
+                <View style={styles.warningContainer}>
+                  <Icon name="alert-circle" size="sm" color="#F59E0B" />
+                  <Text style={styles.warningText}>
+                    Limite de scans atteinte. Passez à un plan supérieur.
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
         )}
 
@@ -172,9 +247,11 @@ export function SubscriptionScreen() {
                   styles.planStackCard,
                   {backgroundColor: cardColor},
                   isSelected && styles.planStackCardSelected,
+                  isCurrent && styles.planStackCardDisabled,
                 ]}
                 onPress={() => handlePlanSelect(planId)}
-                activeOpacity={0.9}>
+                activeOpacity={0.9}
+                disabled={isCurrent}>
                 <View style={styles.planStackContent}>
                   <View style={{flex: 1}}>
                     <Text style={[styles.planStackLabel, {color: textColor}]}>{plan.name.toUpperCase()}</Text>
@@ -259,19 +336,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: Spacing.md,
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.full,
-    backgroundColor: Colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
   headerTitle: {
     fontSize: Typography.fontSize.xl,
     fontFamily: Typography.fontFamily.bold,
@@ -301,6 +365,95 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
+  // Current Subscription Card
+  currentSubscriptionCard: {
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    marginBottom: Spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  currentSubscriptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  currentSubscriptionTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
+  },
+  statusBadge: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.md,
+  },
+  statusBadgeText: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.white,
+  },
+  subscriptionDetails: {
+    gap: Spacing.sm,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: Spacing.md,
+  },
+  detailItem: {
+    flex: 1,
+    backgroundColor: Colors.background.secondary,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+  },
+  detailLabel: {
+    fontSize: Typography.fontSize.xs,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.secondary,
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: Typography.fontSize.base,
+    fontFamily: Typography.fontFamily.bold,
+    color: Colors.text.primary,
+  },
+  bonusScansContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primaryLight,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.xs,
+    marginTop: Spacing.xs,
+  },
+  bonusScansText: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
+    color: Colors.primary,
+    flex: 1,
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    gap: Spacing.xs,
+    marginTop: Spacing.xs,
+  },
+  warningText: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.medium,
+    color: '#92400E',
+    flex: 1,
+  },
+
   // Section Title
   sectionTitle: {
     fontSize: Typography.fontSize.lg,
@@ -321,6 +474,9 @@ const styles = StyleSheet.create({
   },
   planStackCardSelected: {
     opacity: 0.95,
+  },
+  planStackCardDisabled: {
+    opacity: 0.6,
   },
   planStackContent: {
     flexDirection: 'row',

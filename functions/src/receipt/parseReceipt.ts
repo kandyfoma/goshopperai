@@ -474,6 +474,50 @@ EXTRACTION RULES:
 ⚠️ IMPORTANT: Return ONLY the JSON object with ACTUAL data from the MACHINE-PRINTED receipt text. Use double quotes for all strings. No markdown formatting, no explanations, no placeholder data.`;
 
 /**
+ * Check if user can perform a scan based on subscription status
+ */
+function canUserScan(subscription: {
+  isSubscribed?: boolean;
+  status?: string;
+  trialScansUsed?: number;
+  trialScansLimit?: number;
+  monthlyScansUsed?: number;
+  monthlyScansLimit?: number;
+}): {canScan: boolean; reason?: string} {
+  // If subscribed, can always scan (subject to monthly limit if applicable)
+  if (subscription.isSubscribed || subscription.status === 'active') {
+    const monthlyLimit = subscription.monthlyScansLimit || -1;
+    const monthlyUsed = subscription.monthlyScansUsed || 0;
+    
+    if (monthlyLimit === -1 || monthlyUsed < monthlyLimit) {
+      return {canScan: true};
+    }
+    return {
+      canScan: false, 
+      reason: `Limite mensuelle atteinte (${monthlyUsed}/${monthlyLimit}). Attendez le renouvellement.`
+    };
+  }
+
+  // Check trial limits
+  const trialLimit = subscription.trialScansLimit ?? config.app.trialScanLimit;
+  const trialUsed = subscription.trialScansUsed || 0;
+  
+  // Unlimited trial
+  if (trialLimit === -1) {
+    return {canScan: true};
+  }
+
+  if (trialUsed < trialLimit) {
+    return {canScan: true};
+  }
+
+  return {
+    canScan: false,
+    reason: `Limite d'essai atteinte (${trialUsed}/${trialLimit}). Abonnez-vous pour continuer.`
+  };
+}
+
+/**
  * Generate unique ID for items
  */
 function generateItemId(): string {
@@ -588,7 +632,7 @@ async function parseVideoWithGemini(
   videoBase64: string,
   mimeType: string,
 ): Promise<ParsedReceipt> {
-  const MAX_RETRIES = 2;
+  const MAX_RETRIES = 3; // Increased retries for video
   let lastError: Error | null = null;
 
   // Video-specific prompt for receipt extraction
@@ -628,11 +672,14 @@ Return a JSON object with this EXACT structure:
   "rawText": "any text you couldn't parse"
 }
 
-CRITICAL:
-- Return ONLY valid JSON, no markdown
+CRITICAL RULES:
+- Return ONLY the raw JSON object, no markdown code blocks
+- Do NOT wrap JSON in \`\`\`json or \`\`\` tags
+- Start your response directly with { and end with }
 - All prices must be numbers, not strings
 - Confidence should reflect how clearly you saw the item in the video
-- Include ALL items from start to end of the receipt`;
+- Include ALL items from start to end of the receipt
+- Make sure the JSON is complete and valid`;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -640,7 +687,7 @@ CRITICAL:
         model: config.gemini.model,
         generationConfig: {
           temperature: 0.1,
-          maxOutputTokens: 4096, // More tokens for potentially longer receipts
+          maxOutputTokens: 8192, // More tokens to avoid truncation
         },
       });
 
@@ -663,16 +710,39 @@ CRITICAL:
       const response = result.response;
       const text = response.text();
 
+      console.log('Gemini video response length:', text.length);
       console.log('Gemini video response:', text.substring(0, 500));
+
+      // Check if response appears truncated (incomplete JSON)
+      const trimmedText = text.trim();
+      if (!trimmedText.endsWith('}') && !trimmedText.endsWith('```')) {
+        console.error('Video response appears truncated:', text.substring(text.length - 100));
+        throw new Error('Response truncated - retrying');
+      }
 
       // Extract JSON from response
       let jsonStr = text;
+      
+      // Try to extract JSON from markdown code blocks first
       const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (jsonMatch) {
         jsonStr = jsonMatch[1];
+      } else {
+        // Try to find JSON object directly
+        const jsonStartIndex = text.indexOf('{');
+        const jsonEndIndex = text.lastIndexOf('}');
+        if (jsonStartIndex !== -1 && jsonEndIndex > jsonStartIndex) {
+          jsonStr = text.substring(jsonStartIndex, jsonEndIndex + 1);
+        }
       }
 
       jsonStr = jsonStr.trim();
+
+      // Check if extracted JSON is complete
+      if (!jsonStr.endsWith('}')) {
+        console.error('Extracted JSON is incomplete:', jsonStr.substring(jsonStr.length - 50));
+        throw new Error('Incomplete JSON extracted - retrying');
+      }
 
       // Fix common JSON issues
       jsonStr = jsonStr
@@ -697,13 +767,20 @@ CRITICAL:
         parsed = JSON.parse(jsonStr);
       } catch (parseError) {
         console.error('Video JSON parse error:', parseError);
-        throw new Error(`Failed to parse video response: ${text.substring(0, 200)}`);
+        console.error('Failed JSON string:', jsonStr.substring(0, 500));
+        throw new Error(`Failed to parse video response: ${jsonStr.substring(0, 200)}`);
       }
 
       // Transform and validate the result
+      // Handle cases where Gemini returns "null" as a string
+      const storeNameRaw = parsed.storeName;
+      const storeName = storeNameRaw && storeNameRaw !== 'null' && storeNameRaw !== 'undefined' 
+        ? storeNameRaw 
+        : 'Magasin inconnu';
+      
       const receipt: ParsedReceipt = {
-        storeName: parsed.storeName || 'Magasin inconnu',
-        storeNameNormalized: normalizeStoreName(parsed.storeName),
+        storeName: storeName,
+        storeNameNormalized: normalizeStoreName(storeName),
         storeAddress: parsed.storeAddress,
         storePhone: parsed.storePhone,
         receiptNumber: parsed.receiptNumber,
@@ -740,12 +817,20 @@ CRITICAL:
       console.error(`Video parse attempt ${attempt + 1} failed:`, lastError.message);
 
       if (attempt < MAX_RETRIES) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Exponential backoff for retries
+        const delay = Math.min(2000 * Math.pow(2, attempt), 8000);
+        console.log(`Retrying video parse in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
     }
   }
 
+  // Provide a more user-friendly error message
+  const errorMsg = lastError?.message || 'Erreur inconnue';
+  if (errorMsg.includes('truncated') || errorMsg.includes('Incomplete')) {
+    throw new Error('La vidéo est trop longue ou complexe. Essayez de scanner plus lentement ou prenez une photo.');
+  }
   throw lastError || new Error('Erreur lors de l\'analyse de la vidéo');
 }
 
@@ -899,9 +984,15 @@ async function parseWithGemini(
       );
 
       // Build parsed receipt - exclude undefined fields for Firestore compatibility
+      // Handle cases where Gemini returns "null" as a string
+      const storeNameRaw = parsed.storeName;
+      const storeName = storeNameRaw && storeNameRaw !== 'null' && storeNameRaw !== 'undefined' && storeNameRaw !== 'Unknown Store'
+        ? storeNameRaw 
+        : 'Magasin inconnu';
+        
       const receipt: ParsedReceipt = {
-        storeName: parsed.storeName || 'Unknown Store',
-        storeNameNormalized: normalizeStoreName(parsed.storeName || ''),
+        storeName: storeName,
+        storeNameNormalized: normalizeStoreName(storeName),
         storeAddress: parsed.storeAddress || null,
         storePhone: parsed.storePhone || null,
         receiptNumber: parsed.receiptNumber || null,

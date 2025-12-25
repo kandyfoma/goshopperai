@@ -76,7 +76,22 @@ service cloud.firestore {
       match /subscription/{document=**} {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && request.resource.data.status == 'trial';
-        allow update, delete: if false;
+        // Allow users to update scan counts and billing period fields only
+        // Sensitive fields like isSubscribed, planId, etc. are protected by Cloud Functions
+        allow update: if isOwner(userId) && (
+          // Allow updating scan usage counts
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'trialScansUsed', 
+            'monthlyScansUsed', 
+            'currentBillingPeriodStart',
+            'currentBillingPeriodEnd',
+            'updatedAt',
+            'status', // Allow status change for freemium transition
+            'planId', // Allow planId change for freemium transition
+            'isSubscribed' // Allow isSubscribed for freemium transition
+          ])
+        );
+        allow delete: if false;
       }
       
       // Payment records

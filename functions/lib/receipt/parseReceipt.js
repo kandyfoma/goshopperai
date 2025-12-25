@@ -40,7 +40,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseReceiptMulti = exports.parseReceiptV2 = exports.parseReceipt = void 0;
+exports.parseReceiptVideo = exports.parseReceiptMulti = exports.parseReceiptV2 = exports.parseReceipt = void 0;
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const generative_ai_1 = require("@google/generative-ai");
@@ -410,6 +410,38 @@ EXTRACTION RULES:
 
 ⚠️ IMPORTANT: Return ONLY the JSON object with ACTUAL data from the MACHINE-PRINTED receipt text. Use double quotes for all strings. No markdown formatting, no explanations, no placeholder data.`;
 /**
+ * Check if user can perform a scan based on subscription status
+ */
+function canUserScan(subscription) {
+    var _a;
+    // If subscribed, can always scan (subject to monthly limit if applicable)
+    if (subscription.isSubscribed || subscription.status === 'active') {
+        const monthlyLimit = subscription.monthlyScansLimit || -1;
+        const monthlyUsed = subscription.monthlyScansUsed || 0;
+        if (monthlyLimit === -1 || monthlyUsed < monthlyLimit) {
+            return { canScan: true };
+        }
+        return {
+            canScan: false,
+            reason: `Limite mensuelle atteinte (${monthlyUsed}/${monthlyLimit}). Attendez le renouvellement.`
+        };
+    }
+    // Check trial limits
+    const trialLimit = (_a = subscription.trialScansLimit) !== null && _a !== void 0 ? _a : config_1.config.app.trialScanLimit;
+    const trialUsed = subscription.trialScansUsed || 0;
+    // Unlimited trial
+    if (trialLimit === -1) {
+        return { canScan: true };
+    }
+    if (trialUsed < trialLimit) {
+        return { canScan: true };
+    }
+    return {
+        canScan: false,
+        reason: `Limite d'essai atteinte (${trialUsed}/${trialLimit}). Abonnez-vous pour continuer.`
+    };
+}
+/**
  * Generate unique ID for items
  */
 function generateItemId() {
@@ -457,6 +489,194 @@ function normalizeStoreName(name) {
         }
     }
     return normalized.replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+}
+/**
+ * Validate video data before processing
+ */
+function validateVideoData(videoBase64, mimeType) {
+    // 1. Check MIME type
+    const validVideoMimeTypes = [
+        'video/mp4',
+        'video/mpeg',
+        'video/mov',
+        'video/quicktime',
+        'video/webm',
+        'video/3gpp',
+    ];
+    if (!validVideoMimeTypes.includes(mimeType.toLowerCase())) {
+        return {
+            valid: false,
+            error: "Format vidéo non supporté. Utilisez MP4, MOV ou WebM.",
+        };
+    }
+    // 2. Validate base64 format
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    if (!base64Regex.test(videoBase64)) {
+        return { valid: false, error: 'Vidéo corrompue. Veuillez réessayer.' };
+    }
+    // 3. Check file size (base64 is ~33% larger than binary)
+    const sizeInBytes = (videoBase64.length * 3) / 4;
+    const MAX_VIDEO_SIZE_MB = 20; // 20MB max for video
+    const MAX_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024;
+    if (sizeInBytes > MAX_SIZE_BYTES) {
+        return {
+            valid: false,
+            error: `Vidéo trop grande (max ${MAX_VIDEO_SIZE_MB}MB). Utilisez une vidéo plus courte.`,
+        };
+    }
+    const MIN_SIZE_KB = 50; // Minimum 50KB for a valid video
+    const MIN_SIZE_BYTES = MIN_SIZE_KB * 1024;
+    if (sizeInBytes < MIN_SIZE_BYTES) {
+        return { valid: false, error: 'Vidéo trop petite pour être lisible.' };
+    }
+    return { valid: true };
+}
+/**
+ * Parse receipt video using Gemini AI
+ * Uses video understanding to extract receipt data from a video scan
+ */
+async function parseVideoWithGemini(videoBase64, mimeType) {
+    const MAX_RETRIES = 2;
+    let lastError = null;
+    // Video-specific prompt for receipt extraction
+    const VIDEO_PARSING_PROMPT = `You are an expert receipt scanner analyzing a video of a receipt.
+The user has slowly scanned down the entire receipt. Extract ALL items visible throughout the video.
+
+IMPORTANT INSTRUCTIONS:
+1. Watch the ENTIRE video carefully - receipts are often long and may scroll
+2. Extract EVERY item you see, even if it appears briefly
+3. Pay attention to prices - they're usually on the right side
+4. Look for the store name at the TOP of the receipt
+5. Look for the TOTAL at the BOTTOM of the receipt
+6. Currency is likely CDF (Congolese Franc) unless you see $ or USD
+
+Return a JSON object with this EXACT structure:
+{
+  "storeName": "store name or null",
+  "storeAddress": "address or null",
+  "storePhone": "phone or null",
+  "receiptNumber": "receipt number or null",
+  "date": "YYYY-MM-DD format or null",
+  "currency": "CDF" or "USD",
+  "items": [
+    {
+      "name": "item name",
+      "quantity": 1,
+      "unitPrice": 0.00,
+      "totalPrice": 0.00,
+      "unit": "pièce" or "kg" etc,
+      "category": "category name",
+      "confidence": 0.0-1.0
+    }
+  ],
+  "subtotal": 0.00 or null,
+  "tax": 0.00 or null,
+  "total": 0.00,
+  "rawText": "any text you couldn't parse"
+}
+
+CRITICAL:
+- Return ONLY valid JSON, no markdown
+- All prices must be numbers, not strings
+- Confidence should reflect how clearly you saw the item in the video
+- Include ALL items from start to end of the receipt`;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            const model = getGeminiAI().getGenerativeModel({
+                model: config_1.config.gemini.model,
+                generationConfig: {
+                    temperature: 0.1,
+                    maxOutputTokens: 4096, // More tokens for potentially longer receipts
+                },
+            });
+            // Longer timeout for video processing
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Gemini video API timeout')), 90000)); // 90s for video
+            const resultPromise = model.generateContent([
+                VIDEO_PARSING_PROMPT,
+                {
+                    inlineData: {
+                        mimeType,
+                        data: videoBase64,
+                    },
+                },
+            ]);
+            const result = await Promise.race([resultPromise, timeoutPromise]);
+            const response = result.response;
+            const text = response.text();
+            console.log('Gemini video response:', text.substring(0, 500));
+            // Extract JSON from response
+            let jsonStr = text;
+            const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+            if (jsonMatch) {
+                jsonStr = jsonMatch[1];
+            }
+            jsonStr = jsonStr.trim();
+            // Fix common JSON issues
+            jsonStr = jsonStr
+                .replace(/'/g, '"')
+                .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":')
+                .replace(/:\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*([,}\]])/g, ':"$1"$2')
+                .replace(/,\s*}/g, '}')
+                .replace(/,\s*]/g, ']');
+            // Fix thousand separators
+            jsonStr = jsonStr.replace(/:\s*(\d{1,3})[\s,.](\d{3})(?=\s*[,}\]])/g, ':$1$2');
+            jsonStr = jsonStr.replace(/:\s*(\d{1,3})[\s,.](\d{3})[\s,.](\d{3})(?=\s*[,}\]])/g, ':$1$2$3');
+            let parsed;
+            try {
+                parsed = JSON.parse(jsonStr);
+            }
+            catch (parseError) {
+                console.error('Video JSON parse error:', parseError);
+                throw new Error(`Failed to parse video response: ${text.substring(0, 200)}`);
+            }
+            // Transform and validate the result
+            // Handle cases where Gemini returns "null" as a string
+            const storeNameRaw = parsed.storeName;
+            const storeName = storeNameRaw && storeNameRaw !== 'null' && storeNameRaw !== 'undefined'
+                ? storeNameRaw
+                : 'Magasin inconnu';
+            const receipt = {
+                storeName: storeName,
+                storeNameNormalized: normalizeStoreName(storeName),
+                storeAddress: parsed.storeAddress,
+                storePhone: parsed.storePhone,
+                receiptNumber: parsed.receiptNumber,
+                date: parsed.date || new Date().toISOString().split('T')[0],
+                currency: parsed.currency === 'USD' ? 'USD' : 'CDF',
+                items: (parsed.items || []).map((item, index) => ({
+                    id: `item_${index}`,
+                    name: item.name || 'Article inconnu',
+                    nameNormalized: (item.name || '').toLowerCase().trim(),
+                    quantity: Number(item.quantity) || 1,
+                    unitPrice: Number(item.unitPrice) || 0,
+                    totalPrice: Number(item.totalPrice) || 0,
+                    unit: item.unit || 'pièce',
+                    category: item.category,
+                    confidence: Number(item.confidence) || 0.8,
+                })),
+                subtotal: parsed.subtotal ? Number(parsed.subtotal) : undefined,
+                tax: parsed.tax ? Number(parsed.tax) : undefined,
+                total: Number(parsed.total) || 0,
+                rawText: parsed.rawText,
+                isVideoScan: true, // Mark as video scan for analytics
+            };
+            // Validate we got meaningful data
+            if (receipt.items.length === 0 && receipt.total === 0) {
+                throw new Error('Aucun article détecté dans la vidéo. Scannez plus lentement.');
+            }
+            console.log(`Video scan extracted ${receipt.items.length} items, total: ${receipt.total}`);
+            return receipt;
+        }
+        catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+            console.error(`Video parse attempt ${attempt + 1} failed:`, lastError.message);
+            if (attempt < MAX_RETRIES) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                continue;
+            }
+        }
+    }
+    throw lastError || new Error('Erreur lors de l\'analyse de la vidéo');
 }
 /**
  * Parse receipt image using Gemini AI
@@ -577,9 +797,14 @@ async function parseWithGemini(imageBase64, mimeType) {
                 };
             });
             // Build parsed receipt - exclude undefined fields for Firestore compatibility
+            // Handle cases where Gemini returns "null" as a string
+            const storeNameRaw = parsed.storeName;
+            const storeName = storeNameRaw && storeNameRaw !== 'null' && storeNameRaw !== 'undefined' && storeNameRaw !== 'Unknown Store'
+                ? storeNameRaw
+                : 'Magasin inconnu';
             const receipt = {
-                storeName: parsed.storeName || 'Unknown Store',
-                storeNameNormalized: normalizeStoreName(parsed.storeName || ''),
+                storeName: storeName,
+                storeNameNormalized: normalizeStoreName(storeName),
                 storeAddress: parsed.storeAddress || null,
                 storePhone: parsed.storePhone || null,
                 receiptNumber: parsed.receiptNumber || null,
@@ -1067,6 +1292,119 @@ exports.parseReceiptMulti = functions
             throw error;
         }
         throw new functions.https.HttpsError('internal', error.message || 'Failed to parse receipt');
+    }
+});
+/**
+ * Parse receipt from video scan
+ * Ideal for long receipts - user scans slowly down the receipt
+ */
+exports.parseReceiptVideo = functions
+    .region(config_1.config.app.region)
+    .runWith({
+    timeoutSeconds: 180, // 3 minutes for video processing
+    memory: '2GB', // More memory for video
+    secrets: ['GEMINI_API_KEY'],
+})
+    .https.onRequest(async (req, res) => {
+    // Set CORS headers
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') {
+        res.status(204).send('');
+        return;
+    }
+    if (req.method !== 'POST') {
+        res.status(405).send('Method not allowed');
+        return;
+    }
+    try {
+        // Verify Firebase Auth token
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            res.status(401).json({ error: 'Non autorisé. Token manquant.' });
+            return;
+        }
+        const idToken = authHeader.split('Bearer ')[1];
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const userId = decodedToken.uid;
+        // Parse request body
+        const data = req.body.data || req.body;
+        const { videoBase64, mimeType = 'video/mp4' } = data || {};
+        if (!videoBase64) {
+            res.status(400).json({ error: 'Vidéo requise.' });
+            return;
+        }
+        // Validate video data
+        const validation = validateVideoData(videoBase64, mimeType);
+        if (!validation.valid) {
+            res.status(400).json({ error: validation.error });
+            return;
+        }
+        // Check subscription and scan limits
+        const subscriptionRef = db.doc(config_1.collections.subscription(userId));
+        const subscriptionDoc = await subscriptionRef.get();
+        if (!subscriptionDoc.exists) {
+            res.status(403).json({ error: 'Abonnement non initialisé.' });
+            return;
+        }
+        const subscription = subscriptionDoc.data();
+        const canScanResult = canUserScan(subscription);
+        if (!canScanResult.canScan) {
+            res.status(403).json({
+                error: canScanResult.reason,
+                subscriptionStatus: subscription.status,
+                scansUsed: subscription.trialScansUsed || subscription.monthlyScansUsed || 0,
+            });
+            return;
+        }
+        console.log(`[Video] Processing video scan for user ${userId}`);
+        // Parse video with Gemini
+        const parsedReceipt = await parseVideoWithGemini(videoBase64, mimeType);
+        // Get user profile for city
+        const userProfileRef = db.doc(config_1.collections.userDoc(userId));
+        const userProfileDoc = await userProfileRef.get();
+        const userProfile = userProfileDoc.data();
+        // Save receipt
+        const receiptRef = db.collection(config_1.collections.receipts(userId)).doc();
+        const now = admin.firestore.FieldValue.serverTimestamp();
+        await receiptRef.set({
+            ...parsedReceipt,
+            id: receiptRef.id,
+            userId,
+            city: (userProfile === null || userProfile === void 0 ? void 0 : userProfile.defaultCity) || null,
+            processingStatus: 'completed',
+            isVideoScan: true,
+            createdAt: now,
+            updatedAt: now,
+            scannedAt: now,
+        });
+        // Update scan count
+        await subscriptionRef.update({
+            trialScansUsed: admin.firestore.FieldValue.increment(1),
+            updatedAt: now,
+        });
+        // Update user stats
+        try {
+            await updateUserStats(userId, parsedReceipt);
+        }
+        catch (statsError) {
+            console.warn('Failed to update user stats:', statsError);
+        }
+        console.log(`[Video] Successfully parsed video scan: ${receiptRef.id}, ${parsedReceipt.items.length} items`);
+        res.json({
+            success: true,
+            receiptId: receiptRef.id,
+            receipt: parsedReceipt,
+            isVideoScan: true,
+            itemCount: parsedReceipt.items.length,
+        });
+    }
+    catch (error) {
+        console.error('Video receipt parsing error:', error);
+        res.status(500).json({
+            error: error.message || 'Erreur lors de l\'analyse de la vidéo',
+        });
     }
 });
 /**

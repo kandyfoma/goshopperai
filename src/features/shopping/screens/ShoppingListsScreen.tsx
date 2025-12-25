@@ -409,12 +409,7 @@ export function ShoppingListsScreen() {
       {/* Modern Header */}
       <FadeIn duration={400}>
         <View style={[styles.header, {paddingTop: insets.top + Spacing.md}]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
-            <Icon name="chevron-left" size="md" color={Colors.text.primary} />
-          </TouchableOpacity>
+          <BackButton />
           
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Mes Listes</Text>
