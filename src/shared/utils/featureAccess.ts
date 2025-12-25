@@ -117,15 +117,41 @@ export function hasFeatureAccess(
   const planId = subscription.planId || 'freemium';
   const allowedPlans = FEATURE_ACCESS[feature];
 
-  // During trial, user has access to all features
-  if (subscription.status === 'trial' && subscription.trialScansUsed !== undefined && subscription.trialEndDate) {
-    const now = new Date();
-    const trialEnd = subscription.trialEndDate instanceof Date 
-      ? subscription.trialEndDate 
-      : new Date(subscription.trialEndDate);
-    if (now < trialEnd) {
-      return true;
+  // During trial, user has access to all features (full Premium access)
+  if (subscription.status === 'trial') {
+    // Verify trial is still valid
+    if (subscription.trialEndDate) {
+      const now = new Date();
+      const trialEnd = subscription.trialEndDate instanceof Date 
+        ? subscription.trialEndDate 
+        : new Date(subscription.trialEndDate);
+      if (now < trialEnd) {
+        return true;
+      }
     }
+  }
+  
+  // Cancelled but still in paid period - maintain access
+  if (subscription.status === 'cancelled' && subscription.subscriptionEndDate) {
+    const now = new Date();
+    const endDate = subscription.subscriptionEndDate instanceof Date
+      ? subscription.subscriptionEndDate
+      : new Date(subscription.subscriptionEndDate);
+    if (now < endDate) {
+      return allowedPlans.includes(planId);
+    }
+    // Cancelled and expired - no access
+    return false;
+  }
+  
+  // Grace period - maintain limited access
+  if (subscription.status === 'grace') {
+    return allowedPlans.includes(planId);
+  }
+  
+  // Expired or pending - no premium features
+  if (subscription.status === 'expired' || subscription.status === 'pending') {
+    return false;
   }
 
   return allowedPlans.includes(planId);
@@ -174,14 +200,35 @@ export function canCreateShoppingList(
     return {canCreate: false, reason: 'Aucun abonnement'};
   }
 
+  // Trial users have full access
+  if (subscription.status === 'trial' && subscription.trialEndDate) {
+    const now = new Date();
+    const trialEnd = subscription.trialEndDate instanceof Date
+      ? subscription.trialEndDate
+      : new Date(subscription.trialEndDate);
+    if (now < trialEnd) {
+      return {canCreate: true};
+    }
+  }
+
   const planId = subscription.planId || 'freemium';
 
   // Freemium: 1 list only
-  if (planId === 'freemium') {
+  if (planId === 'freemium' || subscription.status === 'freemium') {
     if (currentListCount >= 1) {
       return {
         canCreate: false,
         reason: 'Passez à Basic pour créer plusieurs listes',
+      };
+    }
+  }
+  
+  // Expired or pending - restrict to 1 list
+  if (subscription.status === 'expired' || subscription.status === 'pending') {
+    if (currentListCount >= 1) {
+      return {
+        canCreate: false,
+        reason: 'Renouvelez votre abonnement pour créer plus de listes',
       };
     }
   }

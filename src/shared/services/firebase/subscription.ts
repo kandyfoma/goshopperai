@@ -81,7 +81,11 @@ class SubscriptionService {
       const doc = await firestore()
         .doc(COLLECTIONS.subscription(userId))
         .get();
-      return this.mapSubscription(doc.data()!);
+      if (!doc.exists || !doc.data()) {
+        console.warn('📦 Document missing after freemium reset, returning original subscription');
+        return subscription;
+      }
+      return this.mapSubscription(doc.data());
     }
     
     // Trial has expired and no active subscription - assign freemium
@@ -125,23 +129,38 @@ class SubscriptionService {
   /**
    * Calculate billing period based on user's join date
    * The billing period resets on the same day of the month as the join date
+   * Handles edge case where join day doesn't exist in current month (e.g., 31st)
    */
   private calculateFreemiumBillingPeriod(joinDate: Date): { billingStart: Date; billingEnd: Date } {
     const now = new Date();
     const joinDay = joinDate.getDate();
     
+    // Get the last day of the current and previous month
+    const lastDayOfCurrentMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const lastDayOfPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+    
+    // Use the join day or the last day of month if join day doesn't exist
+    const effectiveJoinDayThisMonth = Math.min(joinDay, lastDayOfCurrentMonth);
+    const effectiveJoinDayPrevMonth = Math.min(joinDay, lastDayOfPrevMonth);
+    
     // Find the current billing period start
-    let billingStart = new Date(now.getFullYear(), now.getMonth(), joinDay);
+    let billingStart: Date;
     
     // If we've passed the join day this month, billing started this month
     // If we haven't reached the join day yet, billing started last month
-    if (now.getDate() < joinDay) {
-      billingStart.setMonth(billingStart.getMonth() - 1);
+    if (now.getDate() >= effectiveJoinDayThisMonth) {
+      billingStart = new Date(now.getFullYear(), now.getMonth(), effectiveJoinDayThisMonth);
+    } else {
+      billingStart = new Date(now.getFullYear(), now.getMonth() - 1, effectiveJoinDayPrevMonth);
     }
     
     // Billing end is one month after billing start
-    const billingEnd = new Date(billingStart);
-    billingEnd.setMonth(billingEnd.getMonth() + 1);
+    // Handle end-of-month edge cases
+    const nextMonth = new Date(billingStart);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const lastDayOfNextMonth = new Date(nextMonth.getFullYear(), nextMonth.getMonth() + 1, 0).getDate();
+    const billingEndDay = Math.min(joinDay, lastDayOfNextMonth);
+    const billingEnd = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), billingEndDay);
     
     return { billingStart, billingEnd };
   }
@@ -336,11 +355,12 @@ class SubscriptionService {
       // Call Cloud Function to record scan usage (handles all validation and updates)
       const recordScanUsageFunction = functions().httpsCallable('recordScanUsage');
       const result = await recordScanUsageFunction({});
+      const data = result.data as { success: boolean; error?: string };
 
-      console.log('📸 Scan recorded via Cloud Function:', result.data);
+      console.log('📸 Scan recorded via Cloud Function:', data);
 
-      if (!result.data.success) {
-        throw new Error(result.data.error || 'Échec de l\'enregistrement du scan');
+      if (!data.success) {
+        throw new Error(data.error || 'Échec de l\'enregistrement du scan');
       }
     } catch (error: any) {
       console.error('📸 Error recording scan:', error);
@@ -407,6 +427,7 @@ class SubscriptionService {
    */
   subscribeToStatus(
     callback: (subscription: Subscription) => void,
+    onError?: (error: Error) => void,
   ): () => void {
     const user = authService.getCurrentUser();
     if (!user) {
@@ -441,6 +462,12 @@ class SubscriptionService {
         },
         error => {
           console.error('❌ Subscription snapshot error:', error);
+          // Notify caller of error
+          if (onError) {
+            onError(error);
+          }
+          // Provide fallback subscription to prevent UI from being stuck
+          callback(this.getDefaultSubscription(user.uid));
         },
       );
   }

@@ -25,7 +25,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, FadeIn, SlideIn, AppFooter} from '@/shared/components';
+import {Icon, FadeIn, SlideIn, AppFooter, BackButton} from '@/shared/components';
 import {useDynamicType, useOffline} from '@/shared/hooks';
 import {SUBSCRIPTION_PLANS, TRIAL_SCAN_LIMIT} from '@/shared/utils/constants';
 import {formatDate} from '@/shared/utils/helpers';
@@ -302,11 +302,7 @@ export function SettingsScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size="md" color={Colors.primary} />
-        </TouchableOpacity>
+        <BackButton />
         <Text style={styles.headerTitle}>Paramètres</Text>
         <View style={styles.headerSpacer} />
       </View>

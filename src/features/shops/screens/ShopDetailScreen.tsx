@@ -20,7 +20,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, EmptyState} from '@/shared/components';
+import {Icon, EmptyState, BackButton} from '@/shared/components';
 import {formatCurrency, formatDate, safeToDate, convertCurrency} from '@/shared/utils/helpers';
 import {useAuth} from '@/shared/contexts';
 import {APP_ID} from '@/shared/services/firebase/config';
@@ -172,11 +172,7 @@ export function ShopDetailScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}>
-            <Icon name="arrow-left" size="md" color={Colors.primary} />
-          </TouchableOpacity>
+          <BackButton />
           <Text style={styles.title} numberOfLines={1}>
             {shopName}
           </Text>
@@ -194,11 +190,7 @@ export function ShopDetailScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size="md" color={Colors.primary} />
-        </TouchableOpacity>
+        <BackButton />
         <Text style={styles.title} numberOfLines={1}>
           {shopName}
         </Text>

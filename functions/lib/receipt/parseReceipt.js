@@ -536,7 +536,7 @@ function validateVideoData(videoBase64, mimeType) {
  * Uses video understanding to extract receipt data from a video scan
  */
 async function parseVideoWithGemini(videoBase64, mimeType) {
-    const MAX_RETRIES = 2;
+    const MAX_RETRIES = 3; // Increased retries for video
     let lastError = null;
     // Video-specific prompt for receipt extraction
     const VIDEO_PARSING_PROMPT = `You are an expert receipt scanner analyzing a video of a receipt.
@@ -575,18 +575,22 @@ Return a JSON object with this EXACT structure:
   "rawText": "any text you couldn't parse"
 }
 
-CRITICAL:
-- Return ONLY valid JSON, no markdown
+CRITICAL RULES:
+- Return ONLY the raw JSON object, no markdown code blocks
+- Do NOT wrap JSON in \`\`\`json or \`\`\` tags
+- Start your response directly with { and end with }
 - All prices must be numbers, not strings
 - Confidence should reflect how clearly you saw the item in the video
-- Include ALL items from start to end of the receipt`;
+- Include ALL items from start to end of the receipt
+- Make sure the JSON is complete and valid`;
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
             const model = getGeminiAI().getGenerativeModel({
                 model: config_1.config.gemini.model,
                 generationConfig: {
                     temperature: 0.1,
-                    maxOutputTokens: 4096, // More tokens for potentially longer receipts
+                    maxOutputTokens: 16384, // Increased to avoid truncation
+                    responseMimeType: 'application/json', // Force JSON response
                 },
             });
             // Longer timeout for video processing
@@ -603,14 +607,64 @@ CRITICAL:
             const result = await Promise.race([resultPromise, timeoutPromise]);
             const response = result.response;
             const text = response.text();
+            console.log('Gemini video response length:', text.length);
             console.log('Gemini video response:', text.substring(0, 500));
+            // Check if response appears truncated (incomplete JSON)
+            const trimmedText = text.trim();
+            if (!trimmedText.endsWith('}') && !trimmedText.endsWith('```')) {
+                console.error('Video response appears truncated:', text.substring(text.length - 100));
+                throw new Error('Response truncated - retrying');
+            }
             // Extract JSON from response
             let jsonStr = text;
-            const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-            if (jsonMatch) {
+            // Try to extract JSON from markdown code blocks first (with non-greedy match)
+            const jsonMatch = text.match(/```(?:json)?\s*([\s\S]+?)\s*```/);
+            if (jsonMatch && jsonMatch[1].includes('{')) {
                 jsonStr = jsonMatch[1];
             }
+            else {
+                // Try to find JSON object directly - find balanced braces
+                const jsonStartIndex = text.indexOf('{');
+                if (jsonStartIndex !== -1) {
+                    // Find the matching closing brace
+                    let braceCount = 0;
+                    let endIndex = -1;
+                    for (let i = jsonStartIndex; i < text.length; i++) {
+                        if (text[i] === '{')
+                            braceCount++;
+                        if (text[i] === '}')
+                            braceCount--;
+                        if (braceCount === 0) {
+                            endIndex = i;
+                            break;
+                        }
+                    }
+                    if (endIndex !== -1) {
+                        jsonStr = text.substring(jsonStartIndex, endIndex + 1);
+                    }
+                    else {
+                        // JSON is incomplete - find last closing brace
+                        const lastBrace = text.lastIndexOf('}');
+                        if (lastBrace > jsonStartIndex) {
+                            jsonStr = text.substring(jsonStartIndex, lastBrace + 1);
+                            console.warn('JSON appears truncated, using partial extraction');
+                        }
+                    }
+                }
+            }
             jsonStr = jsonStr.trim();
+            // Check if extracted JSON is complete
+            if (!jsonStr.endsWith('}')) {
+                console.error('Extracted JSON is incomplete:', jsonStr.substring(Math.max(0, jsonStr.length - 100)));
+                throw new Error('Incomplete JSON extracted - retrying');
+            }
+            // Additional validation: check for balanced braces
+            const openBraces = (jsonStr.match(/{/g) || []).length;
+            const closeBraces = (jsonStr.match(/}/g) || []).length;
+            if (openBraces !== closeBraces) {
+                console.error(`Unbalanced braces: ${openBraces} open, ${closeBraces} close`);
+                throw new Error('Malformed JSON - unbalanced braces');
+            }
             // Fix common JSON issues
             jsonStr = jsonStr
                 .replace(/'/g, '"')
@@ -627,7 +681,8 @@ CRITICAL:
             }
             catch (parseError) {
                 console.error('Video JSON parse error:', parseError);
-                throw new Error(`Failed to parse video response: ${text.substring(0, 200)}`);
+                console.error('Failed JSON string:', jsonStr.substring(0, 500));
+                throw new Error(`Failed to parse video response: ${jsonStr.substring(0, 200)}`);
             }
             // Transform and validate the result
             // Handle cases where Gemini returns "null" as a string
@@ -671,10 +726,18 @@ CRITICAL:
             lastError = error instanceof Error ? error : new Error(String(error));
             console.error(`Video parse attempt ${attempt + 1} failed:`, lastError.message);
             if (attempt < MAX_RETRIES) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                // Exponential backoff for retries
+                const delay = Math.min(2000 * Math.pow(2, attempt), 8000);
+                console.log(`Retrying video parse in ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
                 continue;
             }
         }
+    }
+    // Provide a more user-friendly error message
+    const errorMsg = (lastError === null || lastError === void 0 ? void 0 : lastError.message) || 'Erreur inconnue';
+    if (errorMsg.includes('truncated') || errorMsg.includes('Incomplete')) {
+        throw new Error('La vidéo est trop longue ou complexe. Essayez de scanner plus lentement ou prenez une photo.');
     }
     throw lastError || new Error('Erreur lors de l\'analyse de la vidéo');
 }

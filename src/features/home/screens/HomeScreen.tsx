@@ -795,18 +795,6 @@ export function HomeScreen() {
         <Text style={styles.sectionTitle}>Actions rapides</Text>
         <View style={styles.quickActionsGrid}>
           <QuickAction
-            icon="stats"
-            label="Statistiques"
-            onPress={() => {
-              if (hasFeatureAccess('stats', subscription)) {
-                navigation.push('Stats');
-              } else {
-                setShowLimitModal(true);
-              }
-            }}
-            color="cosmos"
-          />
-          <QuickAction
             icon="shopping-bag"
             label="Mes Magasins"
             onPress={() => navigation.push('Shops')}
@@ -828,12 +816,6 @@ export function HomeScreen() {
             icon="cart"
             label="Mes listes"
             onPress={() => navigation.push('ShoppingLists')}
-            color="crimson"
-          />
-          <QuickAction
-            icon="settings"
-            label="Paramètres"
-            onPress={() => navigation.push('Settings')}
             color="crimson"
           />
         </View>

@@ -132,7 +132,7 @@ export function SubscriptionDetailsScreen() {
           )}
           {isActive && !isPremium && (
             <Text style={styles.statusSubtitle}>
-              Votre abonnement est actif jusqu'au {formatDate(subscription?.endDate)}
+              Votre abonnement est actif jusqu'au {formatDate(subscription?.subscriptionEndDate)}
             </Text>
           )}
           {subscription?.status === 'grace' && (
@@ -170,7 +170,7 @@ export function SubscriptionDetailsScreen() {
                   style={[
                     styles.progressBar,
                     {
-                      width: `${Math.min(100, (scansUsed / scanLimit) * 100).toFixed(0)}%` as any,
+                      width: `${Math.min(100, scanLimit > 0 ? (scansUsed / scanLimit) * 100 : 0).toFixed(0)}%` as any,
                     },
                   ]}
                 />
@@ -254,7 +254,7 @@ export function SubscriptionDetailsScreen() {
                       <Text style={styles.detailLabel}>{isExpiringSoon ? 'Expire le' : 'Valide jusqu\'au'}</Text>
                     </View>
                     <Text style={[styles.detailValue, isExpiringSoon ? {color: Colors.card.red, fontFamily: Typography.fontFamily.bold} : {color: Colors.card.blue, fontFamily: Typography.fontFamily.bold}]}>
-                      {formatDate(subscription?.endDate)}
+                      {formatDate(subscription?.subscriptionEndDate)}
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
@@ -277,14 +277,14 @@ export function SubscriptionDetailsScreen() {
                       </Text>
                     </View>
                   )}
-                  {subscription?.bonusScans > 0 && (
+                  {(subscription?.bonusScans ?? 0) > 0 && (
                     <View style={styles.detailRow}>
                       <View style={styles.detailLeft}>
                         <Icon name="gift" size="sm" color={Colors.text.tertiary} />
                         <Text style={styles.detailLabel}>Scans bonus</Text>
                       </View>
                       <Text style={[styles.detailValue, {color: Colors.card.blue}]}>
-                        +{subscription.bonusScans}
+                        +{subscription?.bonusScans}
                       </Text>
                     </View>
                   )}

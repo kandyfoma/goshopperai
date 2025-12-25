@@ -687,7 +687,8 @@ CRITICAL RULES:
         model: config.gemini.model,
         generationConfig: {
           temperature: 0.1,
-          maxOutputTokens: 8192, // More tokens to avoid truncation
+          maxOutputTokens: 16384, // Increased to avoid truncation
+          responseMimeType: 'application/json', // Force JSON response
         },
       });
 
@@ -723,16 +724,35 @@ CRITICAL RULES:
       // Extract JSON from response
       let jsonStr = text;
       
-      // Try to extract JSON from markdown code blocks first
-      const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
+      // Try to extract JSON from markdown code blocks first (with non-greedy match)
+      const jsonMatch = text.match(/```(?:json)?\s*([\s\S]+?)\s*```/);
+      if (jsonMatch && jsonMatch[1].includes('{')) {
         jsonStr = jsonMatch[1];
       } else {
-        // Try to find JSON object directly
+        // Try to find JSON object directly - find balanced braces
         const jsonStartIndex = text.indexOf('{');
-        const jsonEndIndex = text.lastIndexOf('}');
-        if (jsonStartIndex !== -1 && jsonEndIndex > jsonStartIndex) {
-          jsonStr = text.substring(jsonStartIndex, jsonEndIndex + 1);
+        if (jsonStartIndex !== -1) {
+          // Find the matching closing brace
+          let braceCount = 0;
+          let endIndex = -1;
+          for (let i = jsonStartIndex; i < text.length; i++) {
+            if (text[i] === '{') braceCount++;
+            if (text[i] === '}') braceCount--;
+            if (braceCount === 0) {
+              endIndex = i;
+              break;
+            }
+          }
+          if (endIndex !== -1) {
+            jsonStr = text.substring(jsonStartIndex, endIndex + 1);
+          } else {
+            // JSON is incomplete - find last closing brace
+            const lastBrace = text.lastIndexOf('}');
+            if (lastBrace > jsonStartIndex) {
+              jsonStr = text.substring(jsonStartIndex, lastBrace + 1);
+              console.warn('JSON appears truncated, using partial extraction');
+            }
+          }
         }
       }
 
@@ -740,8 +760,16 @@ CRITICAL RULES:
 
       // Check if extracted JSON is complete
       if (!jsonStr.endsWith('}')) {
-        console.error('Extracted JSON is incomplete:', jsonStr.substring(jsonStr.length - 50));
+        console.error('Extracted JSON is incomplete:', jsonStr.substring(Math.max(0, jsonStr.length - 100)));
         throw new Error('Incomplete JSON extracted - retrying');
+      }
+
+      // Additional validation: check for balanced braces
+      const openBraces = (jsonStr.match(/{/g) || []).length;
+      const closeBraces = (jsonStr.match(/}/g) || []).length;
+      if (openBraces !== closeBraces) {
+        console.error(`Unbalanced braces: ${openBraces} open, ${closeBraces} close`);
+        throw new Error('Malformed JSON - unbalanced braces');
       }
 
       // Fix common JSON issues

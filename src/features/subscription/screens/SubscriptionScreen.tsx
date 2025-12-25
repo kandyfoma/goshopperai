@@ -35,23 +35,20 @@ export function SubscriptionScreen() {
   const {user, isAuthenticated} = useAuth();
   const {subscription, isTrialActive, trialDaysRemaining, scansRemaining, canScan} = useSubscription();
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigation.navigate('Login');
-    }
-  }, [isAuthenticated, navigation]);
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
+  // Hooks must be called unconditionally
   const [selectedPlan, setSelectedPlan] = useState<PlanId | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(true);
 
   useEffect(() => {
     analyticsService.logScreenView('Subscription', 'SubscriptionScreen');
   }, []);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigation.navigate('Login');
+    }
+  }, [isAuthenticated, navigation]);
 
   useEffect(() => {
     let isMounted = true;
@@ -205,7 +202,7 @@ export function SubscriptionScreen() {
                 )}
               </View>
 
-              {subscription.bonusScans > 0 && (
+              {(subscription.bonusScans ?? 0) > 0 && (
                 <View style={styles.bonusScansContainer}>
                   <Icon name="gift" size="sm" color={Colors.primary} />
                   <Text style={styles.bonusScansText}>

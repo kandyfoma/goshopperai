@@ -32,7 +32,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, Spinner, Modal, SwipeToDelete, FadeIn, SlideIn, Input, Button} from '@/shared/components';
+import {Icon, Spinner, Modal, SwipeToDelete, FadeIn, SlideIn, Input, Button, BackButton} from '@/shared/components';
 import {formatCurrency} from '@/shared/utils/helpers';
 
 type RouteParams = RouteProp<RootStackParamList, 'ShoppingListDetail'>;
@@ -482,12 +482,7 @@ export function ShoppingListDetailScreen() {
       {/* Modern Header */}
       <FadeIn duration={300}>
         <View style={[styles.header, {paddingTop: insets.top + Spacing.md}]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
-            <Icon name="chevron-left" size="md" color={Colors.text.primary} />
-          </TouchableOpacity>
+          <BackButton />
           
           <TouchableOpacity 
             style={styles.headerTitleContainer}
@@ -1009,7 +1004,7 @@ const styles = StyleSheet.create({
   itemQuantity: {
     fontSize: Typography.fontSize.xs,
     fontFamily: Typography.fontFamily.medium,
-    color: Colors.text.secondary,
+    color: Colors.white,
     minWidth: 24,
     textAlign: 'center',
   },
@@ -1122,7 +1117,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     fontSize: Typography.fontSize.md,
     fontFamily: Typography.fontFamily.medium,
-    color: Colors.text.primary,
+    color: Colors.white,
   },
   // Add Item Modal
   addItemModalContent: {
@@ -1149,12 +1144,12 @@ const styles = StyleSheet.create({
   searchingText: {
     fontSize: Typography.fontSize.sm,
     fontFamily: Typography.fontFamily.medium,
-    color: Colors.text.secondary,
+    color: Colors.white,
   },
   searchResultsTitle: {
     fontSize: Typography.fontSize.sm,
     fontFamily: Typography.fontFamily.semiBold,
-    color: Colors.text.secondary,
+    color: Colors.white,
     marginBottom: Spacing.sm,
   },
   searchResultItem: {
@@ -1296,7 +1291,7 @@ const styles = StyleSheet.create({
   modalCancelText: {
     fontSize: Typography.fontSize.md,
     fontFamily: Typography.fontFamily.semiBold,
-    color: Colors.text.secondary,
+    color: Colors.white,
   },
   modalCreateButton: {
     flex: 1,

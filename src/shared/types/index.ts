@@ -62,6 +62,7 @@ export type MainTabParamList = {
   Home: undefined;
   Scanner: undefined;
   Items: undefined;
+  Stats: undefined;
   Profile: undefined;
 };
 

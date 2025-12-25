@@ -31,7 +31,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, Spinner, Modal, FadeIn, SlideIn, Input, Button, SubscriptionLimitModal} from '@/shared/components';
+import {Icon, Spinner, Modal, FadeIn, SlideIn, Input, Button, SubscriptionLimitModal, BackButton} from '@/shared/components';
 import {formatDate} from '@/shared/utils/helpers';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');

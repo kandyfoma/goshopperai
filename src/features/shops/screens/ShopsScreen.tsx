@@ -20,7 +20,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, EmptyState, AppFooter} from '@/shared/components';
+import {Icon, EmptyState, AppFooter, BackButton} from '@/shared/components';
 import {formatCurrency, safeToDate} from '@/shared/utils/helpers';
 import {useAuth} from '@/shared/contexts';
 import {analyticsService} from '@/shared/services/analytics';
@@ -197,11 +197,7 @@ export function ShopsScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}>
-            <Icon name="arrow-left" size="md" color={Colors.primary} />
-          </TouchableOpacity>
+          <BackButton />
           <Text style={styles.title}>Mes Magasins</Text>
           <View style={styles.headerSpacer} />
         </View>
@@ -217,11 +213,7 @@ export function ShopsScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}>
-          <Icon name="arrow-left" size="md" color={Colors.primary} />
-        </TouchableOpacity>
+        <BackButton />
         <Text style={styles.title}>Mes Magasins</Text>
         <View style={styles.headerSpacer} />
       </View>

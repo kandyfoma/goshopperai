@@ -772,8 +772,8 @@ export function ShoppingListScreen() {
           <TouchableOpacity
             style={[styles.quickAction, {backgroundColor: Colors.card.blue}]}
             onPress={() => navigation.push('Shops')}>
-            <Icon name="shopping-bag" size="md" color={Colors.text.primary} />
-            <Text style={[styles.quickActionLabel, {color: Colors.text.primary}]}>Mes Magasins</Text>
+            <Icon name="shopping-bag" size="md" color={Colors.white} />
+            <Text style={[styles.quickActionLabel, {color: Colors.white}]}>Mes Magasins</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.quickAction, {backgroundColor: Colors.card.yellow}]}
@@ -784,8 +784,8 @@ export function ShoppingListScreen() {
           <TouchableOpacity
             style={[styles.quickAction, {backgroundColor: Colors.card.blue}]}
             onPress={() => navigation.push('Achievements')}>
-            <Icon name="trophy" size="md" color={Colors.text.primary} />
-            <Text style={[styles.quickActionLabel, {color: Colors.text.primary}]}>Mes succès</Text>
+            <Icon name="trophy" size="md" color={Colors.white} />
+            <Text style={[styles.quickActionLabel, {color: Colors.white}]}>Mes succès</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.quickAction, {backgroundColor: Colors.card.crimson}]}
@@ -1055,7 +1055,7 @@ const styles = StyleSheet.create({
   listTabText: {
     fontSize: Typography.fontSize.sm,
     fontFamily: Typography.fontFamily.semiBold,
-    color: Colors.text.secondary,
+    color: Colors.white,
   },
   listTabTextActive: {
     fontSize: Typography.fontSize.sm,
@@ -1065,7 +1065,7 @@ const styles = StyleSheet.create({
   listTabCount: {
     fontSize: Typography.fontSize.xs,
     fontFamily: Typography.fontFamily.regular,
-    color: Colors.text.tertiary,
+    color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
   },
   listTabCountActive: {
@@ -1270,7 +1270,7 @@ const styles = StyleSheet.create({
   itemQuantity: {
     fontSize: Typography.fontSize.xs,
     fontFamily: Typography.fontFamily.medium,
-    color: Colors.text.secondary,
+    color: Colors.white,
   },
   priceBadge: {
     flexDirection: 'row',

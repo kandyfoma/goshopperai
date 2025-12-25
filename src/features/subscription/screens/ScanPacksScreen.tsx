@@ -18,6 +18,7 @@ import {useSubscription, usePaymentProcessing} from '@/shared/contexts';
 import {RootStackParamList} from '@/shared/types';
 import {SCAN_PACKS} from '@/shared/types/scanPacks.types';
 import Icon from '@/shared/components/Icon';
+import {BackButton} from '@/shared/components';
 
 type ScanPacksScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ScanPacks'>;
 type ScanPacksScreenRouteProp = RouteProp<RootStackParamList, 'ScanPacks'>;
@@ -51,9 +52,7 @@ export default function ScanPacksScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Icon name="arrow-left" size="md" color="#000" />
-        </TouchableOpacity>
+        <BackButton />
         <Text style={styles.title}>Acheter des Scans</Text>
       </View>
 

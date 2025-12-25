@@ -22,7 +22,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon} from '@/shared/components';
+import {Icon, BackButton} from '@/shared/components';
 import {useAuth} from '@/shared/contexts';
 import {itemsService, migrateItemsAggregation} from '@/shared/services/firebase';
 
@@ -97,12 +97,7 @@ export function DeveloperToolsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}>
-          <Icon name="arrow-left" size="sm" color={Colors.text.primary} />
-        </TouchableOpacity>
+        <BackButton />
         <Text style={styles.title}>Developer Tools</Text>
         <View style={styles.placeholder} />
       </View>

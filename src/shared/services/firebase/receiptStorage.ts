@@ -120,10 +120,22 @@ class ReceiptStorageService {
         dateValue: receipt.date,
       });
 
+      // Validate and fix receipt date
+      let validDate: Date;
+      if (receipt.date instanceof Date && !isNaN(receipt.date.getTime())) {
+        validDate = receipt.date;
+      } else if (typeof receipt.date === 'string' && receipt.date && receipt.date !== 'null') {
+        const parsedDate = new Date(receipt.date);
+        validDate = !isNaN(parsedDate.getTime()) ? parsedDate : new Date();
+      } else {
+        console.warn('Invalid receipt date, using current date:', receipt.date);
+        validDate = new Date();
+      }
+
       // Filter out undefined values to prevent Firestore errors
       const cleanedReceipt = this.removeUndefinedFields({
         ...receipt,
-        date: firestore.Timestamp.fromDate(receipt.date),
+        date: firestore.Timestamp.fromDate(validDate),
         createdAt: firestore.FieldValue.serverTimestamp(),
         updatedAt: firestore.FieldValue.serverTimestamp(),
         scannedAt: firestore.FieldValue.serverTimestamp(),
@@ -147,10 +159,21 @@ class ReceiptStorageService {
         .collection(RECEIPTS_COLLECTION(userId))
         .doc();
 
+      // Validate and fix receipt date for retry
+      let validRetryDate: Date;
+      if (receipt.date instanceof Date && !isNaN(receipt.date.getTime())) {
+        validRetryDate = receipt.date;
+      } else if (typeof receipt.date === 'string' && receipt.date && receipt.date !== 'null') {
+        const parsedDate = new Date(receipt.date);
+        validRetryDate = !isNaN(parsedDate.getTime()) ? parsedDate : new Date();
+      } else {
+        validRetryDate = new Date();
+      }
+
       const cleanedRetryReceipt = this.removeUndefinedFields({
         ...receipt,
         id: newReceiptRef.id,
-        date: firestore.Timestamp.fromDate(receipt.date),
+        date: firestore.Timestamp.fromDate(validRetryDate),
         createdAt: firestore.FieldValue.serverTimestamp(),
         updatedAt: firestore.FieldValue.serverTimestamp(),
         scannedAt: firestore.FieldValue.serverTimestamp(),

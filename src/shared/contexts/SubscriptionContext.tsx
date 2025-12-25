@@ -7,6 +7,7 @@ import React, {
   useCallback,
   ReactNode,
 } from 'react';
+import NetInfo from '@react-native-community/netinfo';
 import {Subscription, SubscriptionState} from '@/shared/types';
 import {subscriptionService} from '@/shared/services/firebase';
 import {useAuth} from './AuthContext';
@@ -108,6 +109,35 @@ export function SubscriptionProvider({children}: SubscriptionProviderProps) {
           ] || 0;
         scansRemaining = calculateScansWithBonus(planLimit, subscription.monthlyScansUsed || 0);
         canScan = scansRemaining > 0;
+      } else if (subscription.status === 'cancelled') {
+        // Cancelled but still within paid period - allow scanning until end date
+        if (subscription.subscriptionEndDate && new Date(subscription.subscriptionEndDate) > new Date()) {
+          if (subscription.planId === 'premium') {
+            scansRemaining = -1;
+            canScan = true;
+          } else {
+            const planLimit = PLAN_SCAN_LIMITS[subscription.planId as keyof typeof PLAN_SCAN_LIMITS] || 0;
+            if (planLimit === -1) {
+              scansRemaining = -1;
+              canScan = true;
+            } else {
+              scansRemaining = calculateScansWithBonus(planLimit, subscription.monthlyScansUsed || 0);
+              canScan = scansRemaining > 0;
+            }
+          }
+        } else {
+          // Cancelled and expired - treat as freemium
+          scansRemaining = 0;
+          canScan = false;
+        }
+      } else if (subscription.status === 'expired') {
+        // Expired subscription - no scans allowed, prompt to renew
+        scansRemaining = 0;
+        canScan = false;
+      } else if (subscription.status === 'pending') {
+        // Payment pending - allow limited access
+        scansRemaining = 0;
+        canScan = false;
       } else if (
         subscription.isSubscribed &&
         subscription.status === 'active'
@@ -158,36 +188,51 @@ export function SubscriptionProvider({children}: SubscriptionProviderProps) {
 
   // Subscribe to subscription changes
   useEffect(() => {
+    let isMounted = true;
+    let unsubscribe: (() => void) | null = null;
+
     if (!isAuthenticated || !user) {
       // Don't immediately clear state - wait a bit in case auth is just refreshing
       const timeout = setTimeout(() => {
-        setState({
-          subscription: null,
-          isLoading: false,
-          canScan: false,
-          scansRemaining: 0,
-          isTrialActive: false,
-          trialDaysRemaining: 0,
-          isExpiringSoon: false,
-          daysUntilExpiration: 0,
-          error: null,
-        });
+        if (isMounted) {
+          setState({
+            subscription: null,
+            isLoading: false,
+            canScan: false,
+            scansRemaining: 0,
+            isTrialActive: false,
+            trialDaysRemaining: 0,
+            isExpiringSoon: false,
+            daysUntilExpiration: 0,
+            error: null,
+          });
+        }
       }, 500); // Wait 500ms before clearing state
       
-      return () => clearTimeout(timeout);
+      return () => {
+        isMounted = false;
+        clearTimeout(timeout);
+      };
     }
 
     console.log('📊 Subscribing to subscription status for user:', user.uid);
-    const unsubscribe = subscriptionService.subscribeToStatus(subscription => {
-      console.log('📊 Subscription updated:', {
-        status: subscription.status,
-        isSubscribed: subscription.isSubscribed,
-        planId: subscription.planId,
-      });
-      setState(calculateState(subscription));
+    unsubscribe = subscriptionService.subscribeToStatus(subscription => {
+      if (isMounted) {
+        console.log('📊 Subscription updated:', {
+          status: subscription.status,
+          isSubscribed: subscription.isSubscribed,
+          planId: subscription.planId,
+        });
+        setState(calculateState(subscription));
+      }
     });
 
-    return unsubscribe;
+    return () => {
+      isMounted = false;
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [isAuthenticated, user, calculateState]);
 
   const refreshSubscription = useCallback(async () => {
@@ -206,6 +251,14 @@ export function SubscriptionProvider({children}: SubscriptionProviderProps) {
 
   const recordScan = useCallback(async (): Promise<boolean> => {
     try {
+      // Check network connectivity first
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        console.warn('📡 SubscriptionContext: No network connection, cannot record scan');
+        setState(prev => ({...prev, error: 'No internet connection. Please try again when connected.'}));
+        return false;
+      }
+
       console.log('📸 SubscriptionContext: Calling recordScanUsage...');
       await subscriptionService.recordScanUsage();
       console.log('📸 SubscriptionContext: Refreshing subscription...');
@@ -214,13 +267,23 @@ export function SubscriptionProvider({children}: SubscriptionProviderProps) {
       return true;
     } catch (error: any) {
       console.error('❌ SubscriptionContext: Error recording scan:', error);
-      setState(prev => ({...prev, error: error.message}));
+      // Provide user-friendly error messages
+      const errorMessage = error.code === 'unavailable' 
+        ? 'Server unavailable. Please check your connection.'
+        : error.message;
+      setState(prev => ({...prev, error: errorMessage}));
       return false;
     }
   }, [refreshSubscription]);
 
   const checkCanScan = useCallback(async (): Promise<boolean> => {
     try {
+      // Check network connectivity first
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        console.warn('📡 SubscriptionContext: No network connection for checkCanScan');
+        return false;
+      }
       return await subscriptionService.canScan();
     } catch {
       return false;
@@ -229,11 +292,21 @@ export function SubscriptionProvider({children}: SubscriptionProviderProps) {
 
   const extendTrial = useCallback(async (): Promise<boolean> => {
     try {
+      // Check network connectivity first
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        setState(prev => ({...prev, error: 'No internet connection. Please try again when connected.'}));
+        return false;
+      }
+
       await subscriptionService.extendTrial();
       await refreshSubscription();
       return true;
     } catch (error: any) {
-      setState(prev => ({...prev, error: error.message}));
+      const errorMessage = error.code === 'unavailable' 
+        ? 'Server unavailable. Please check your connection.'
+        : error.message;
+      setState(prev => ({...prev, error: errorMessage}));
       return false;
     }
   }, [refreshSubscription]);

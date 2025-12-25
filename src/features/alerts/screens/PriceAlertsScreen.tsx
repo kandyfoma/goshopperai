@@ -26,7 +26,7 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, Spinner, Modal, Button} from '@/shared/components';
+import {Icon, Spinner, Modal, Button, BackButton} from '@/shared/components';
 
 export function PriceAlertsScreen() {
   const navigation = useNavigation();
@@ -271,12 +271,7 @@ export function PriceAlertsScreen() {
 
       {/* Header */}
       <View style={[styles.header, {paddingTop: insets.top + Spacing.md}]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
-          <Icon name="chevron-left" size="md" color={Colors.text.primary} />
-        </TouchableOpacity>
+        <BackButton />
         <Text style={styles.headerTitle}>Alertes de Prix</Text>
         <View style={styles.headerRight} />
       </View>

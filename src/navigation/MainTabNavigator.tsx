@@ -21,6 +21,7 @@ import {ModernTabBar, TabBarIcon} from '@/shared/components/ModernTabBar';
 import {HomeScreen} from '@/features/home/screens';
 import {UnifiedScannerScreen} from '@/features/scanner/screens';
 import {ItemsScreen, CityItemsScreen} from '@/features/items';
+import {StatsScreen} from '@/features/stats/screens';
 import {ProfileScreen} from '@/features/profile/screens';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -101,6 +102,7 @@ export function MainTabNavigator() {
     Home: 0,
     Scanner: 0,
     Items: 0,
+    Stats: 0,
     Profile: 0,
   };
 
@@ -135,6 +137,15 @@ export function MainTabNavigator() {
         options={{
           tabBarIcon: ({focused}) => (
             <TabIcon focused={focused} icon="shopping-bag" label="Articles" badge={notificationBadges.Items} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Stats"
+        component={StatsScreen}
+        options={{
+          tabBarIcon: ({focused}) => (
+            <TabIcon focused={focused} icon="bar-chart-2" label="Stats" badge={notificationBadges.Stats} />
           ),
         }}
       />
