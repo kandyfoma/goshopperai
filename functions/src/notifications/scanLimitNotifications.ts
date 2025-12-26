@@ -58,11 +58,9 @@ async function sendScanLimitWarning(
     let message: string;
     let messageFr: string;
     let priority: 'high' | 'normal';
-    let emoji: string;
     let notificationType: string;
 
     if (percentUsed >= 100) {
-      emoji = '🚫';
       title = 'Monthly Scan Limit Reached';
       titleFr = 'Limite de Scans Atteinte';
       message = `You've used all ${scanLimit} scans this month. Upgrade to continue scanning or wait until next month.`;
@@ -70,7 +68,6 @@ async function sendScanLimitWarning(
       priority = 'high';
       notificationType = 'scan_limit_reached';
     } else if (percentUsed >= 90) {
-      emoji = '⚠️';
       title = 'Almost Out of Scans!';
       titleFr = 'Presque Plus de Scans!';
       message = `Only ${scansRemaining} scans left out of ${scanLimit}. Upgrade now for more scans!`;
@@ -78,7 +75,6 @@ async function sendScanLimitWarning(
       priority = 'high';
       notificationType = 'scan_limit_90';
     } else {
-      emoji = '📊';
       title = 'Scan Usage Update';
       titleFr = 'Mise à Jour Utilisation';
       message = `You've used ${scansUsed}/${scanLimit} scans this month (${Math.round(percentUsed)}%). ${scansRemaining} scans remaining.`;
@@ -91,7 +87,7 @@ async function sendScanLimitWarning(
     await messaging.send({
       token: fcmToken,
       notification: {
-        title: language === 'fr' ? `${emoji} ${titleFr}` : `${emoji} ${title}`,
+        title: language === 'fr' ? titleFr : title,
         body: language === 'fr' ? messageFr : message,
       },
       data: {

@@ -105,8 +105,8 @@ async function sendFeatureUnlockNotification(
     const featureList =
       language === 'fr' ? features.fr.join(', ') : features.en.join(', ');
 
-    const title = `🎉 Bienvenue à ${newPlan.fr}!`;
-    const titleEn = `🎉 Welcome to ${newPlan.en}!`;
+    const title = `Bienvenue à ${newPlan.fr}!`;
+    const titleEn = `Welcome to ${newPlan.en}!`;
 
     const message = `Vous avez maintenant accès à: ${featureList}`;
     const messageEn = `You now have access to: ${featureList}`;
@@ -203,8 +203,8 @@ async function sendPlanDowngradeNotification(
 
     const newPlan = planNames[newPlanId] || {en: newPlanId, fr: newPlanId};
 
-    const title = `📉 Plan Changé vers ${newPlan.fr}`;
-    const titleEn = `📉 Plan Changed to ${newPlan.en}`;
+    const title = `Plan Changé vers ${newPlan.fr}`;
+    const titleEn = `Plan Changed to ${newPlan.en}`;
 
     const message = `Votre abonnement est maintenant ${newPlan.fr}. Certaines fonctionnalités peuvent ne plus être disponibles.`;
     const messageEn = `Your subscription is now ${newPlan.en}. Some features may no longer be available.`;

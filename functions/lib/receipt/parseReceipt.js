@@ -536,27 +536,40 @@ function validateVideoData(videoBase64, mimeType) {
  * Uses video understanding to extract receipt data from a video scan
  */
 async function parseVideoWithGemini(videoBase64, mimeType) {
-    const MAX_RETRIES = 3; // Increased retries for video
+    const MAX_RETRIES = 2; // Reduced from 3 to speed up failures
     let lastError = null;
-    // Video-specific prompt for receipt extraction - enhanced for better total extraction
+    // Video-specific prompt for receipt extraction - enhanced with photo prompt's total extraction rules
     const VIDEO_PARSING_PROMPT = `You are an expert receipt scanner analyzing a video of a receipt from the Democratic Republic of Congo.
 The user has slowly scanned down the entire receipt. Extract ALL items visible throughout the video.
 
 CRITICAL VIDEO SCANNING INSTRUCTIONS:
-1. Watch the ENTIRE video from START to END - the total is usually at the VERY END
+1. Watch the ENTIRE video from START to END
 2. PAUSE mentally at each frame to read all text clearly
-3. Pay SPECIAL attention to the LAST frames - that's where TOTAL, MONTANT, NET A PAYER appears
+3. Pay SPECIAL attention to the LAST frames - that's where the TOTAL appears
 4. Extract EVERY item, even if blurry - estimate the price if partially visible
 5. Prices are on the RIGHT side of each line
+6. ONLY read MACHINE-PRINTED text - IGNORE any handwritten text
 
-TOTAL EXTRACTION RULES (VERY IMPORTANT):
-- Look for: "TOTAL", "TOTAL TTC", "MONTANT", "NET A PAYER", "A PAYER", "MONTANT A PAYER"
-- The TOTAL is the LARGEST number near the BOTTOM of the receipt
-- If you see multiple totals, use the FINAL/LAST one
-- The total should be approximately the SUM of all item prices
-- If items sum to ~50000 but you see 500, multiply by 100 (missing zeros)
-- Common DRC totals: thousands to hundreds of thousands in CDF
-- If total seems too low compared to items, RECALCULATE from items
+⚠️ CRITICAL: FINDING THE CORRECT TOTAL AMOUNT:
+- DO NOT just take the last number at the bottom of the receipt
+- LOOK FOR TEXT LABELS that indicate the total amount:
+  * "TOTAL" or "Total" or "total"
+  * "MONTANT A PAYER" or "Montant à payer" 
+  * "TOTAL A PAYER" or "Total à payer"
+  * "NET A PAYER" or "Net à payer"
+  * "AMOUNT DUE" or "Amount Due"
+  * "GRAND TOTAL" or "TOTAL TTC"
+- The number NEXT TO or BELOW these labels is the ACTUAL TOTAL
+- ⚠️ IGNORE these numbers at the bottom (they are NOT the total):
+  * Customer numbers
+  * Transaction IDs / Receipt numbers
+  * Payment reference numbers
+  * Change given ("Monnaie", "Rendu")
+  * Amount tendered ("Montant reçu", "Espèces")
+  * Phone numbers
+  * Dates/times in numeric format
+- The total MUST approximately match the SUM of all item prices
+- If your calculated sum of items is CLOSE to a number labeled "TOTAL", use the labeled number
 
 STORE NAME DETECTION:
 - Look at the TOP of the receipt in the FIRST frames
@@ -568,6 +581,11 @@ CURRENCY RULES:
 - Only use USD if you clearly see $ or "USD" or "dollars"
 - CDF prices: 500, 1000, 5000, 10000, 50000, 100000...
 - USD prices: 1.00, 5.00, 10.00, 50.00...
+
+VALIDATION BEFORE RESPONDING:
+1. Sum all item prices - does it roughly match your "total" field?
+2. Is the total next to a label like "TOTAL" or "MONTANT A PAYER"?
+3. Did you accidentally use a receipt number or customer ID as the total?
 
 Return a JSON object with this EXACT structure:
 {
@@ -594,11 +612,6 @@ Return a JSON object with this EXACT structure:
   "rawText": "unclear text you couldn't fully parse"
 }
 
-VALIDATION BEFORE RESPONDING:
-1. Check: Does your total roughly match the sum of item prices? If not, fix it.
-2. Check: Are prices realistic for the currency? CDF should be 100+, USD under 1000.
-3. Check: Did you capture the FINAL total from the LAST frames?
-
 CRITICAL OUTPUT RULES:
 - Return ONLY the raw JSON object, NO markdown code blocks
 - Start with { and end with }
@@ -610,12 +623,12 @@ CRITICAL OUTPUT RULES:
                 model: config_1.config.gemini.model,
                 generationConfig: {
                     temperature: 0.1,
-                    maxOutputTokens: 16384, // Increased to avoid truncation
+                    maxOutputTokens: 8192, // Reduced from 16384 - faster response
                     responseMimeType: 'application/json', // Force JSON response
                 },
             });
-            // Longer timeout for video processing
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Gemini video API timeout')), 90000)); // 90s for video
+            // Reduced timeout for video processing - fail fast
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Gemini video API timeout')), 60000)); // 60s timeout (reduced from 90s)
             const resultPromise = model.generateContent([
                 VIDEO_PARSING_PROMPT,
                 {
@@ -736,41 +749,55 @@ CRITICAL OUTPUT RULES:
                 rawText: parsed.rawText,
                 isVideoScan: true, // Mark as video scan for analytics
             };
-            // VIDEO TOTAL VALIDATION: Recalculate if total seems wrong
+            // VIDEO TOTAL VALIDATION: Smart validation to catch wrong totals
             const calculatedTotal = receipt.items.reduce((sum, item) => {
                 const itemTotal = item.totalPrice || (item.unitPrice * item.quantity);
                 return sum + itemTotal;
             }, 0);
-            console.log(`Video total validation: parsed=${receipt.total}, calculated=${calculatedTotal}`);
-            // If parsed total is 0 or significantly lower than calculated, use calculated
+            console.log(`Video total validation: parsed=${receipt.total}, calculated=${calculatedTotal}, items=${receipt.items.length}`);
+            // Case 1: Parsed total is 0 but we have items - use calculated
             if (receipt.total === 0 && calculatedTotal > 0) {
                 console.log('⚠️ Video: Using calculated total (parsed was 0)');
                 receipt.total = calculatedTotal;
             }
-            else if (calculatedTotal > 0 && receipt.total < calculatedTotal * 0.5) {
-                // If parsed total is less than half of calculated, might be missing zeros
-                console.log('⚠️ Video: Parsed total seems too low, using calculated');
-                receipt.total = calculatedTotal;
-            }
-            else if (receipt.total > calculatedTotal * 10 && calculatedTotal > 0) {
-                // If parsed total is 10x higher, might have extra zeros
-                console.log('⚠️ Video: Parsed total seems too high, keeping but flagging');
-                // Keep the parsed total but flag it in raw text
-                receipt.rawText = (receipt.rawText || '') + ' [Total vérifié manuellement]';
+            // Case 2: Parsed total is WAY too high (might be receipt number/customer ID)
+            // A realistic total should be within 2x of calculated for small receipts, 1.5x for large
+            else if (calculatedTotal > 0) {
+                const tolerance = calculatedTotal > 100000 ? 1.5 : 2.0; // Stricter for large amounts
+                if (receipt.total > calculatedTotal * 10) {
+                    // Parsed total is 10x higher - definitely wrong (probably receipt number)
+                    console.log('⚠️ Video: Parsed total is WAY too high (likely receipt number), using calculated');
+                    receipt.total = calculatedTotal;
+                }
+                else if (receipt.total > calculatedTotal * tolerance && receipt.total > 1000000) {
+                    // Large number that's much higher than items - suspicious
+                    console.log('⚠️ Video: Parsed total suspiciously high, using calculated');
+                    receipt.total = calculatedTotal;
+                }
+                else if (receipt.total < calculatedTotal * 0.5) {
+                    // Parsed total is less than half - might be partial or missing zeros
+                    console.log('⚠️ Video: Parsed total seems too low, using calculated');
+                    receipt.total = calculatedTotal;
+                }
+                // Case 3: Totals are reasonably close - keep the parsed one
+                else if (Math.abs(receipt.total - calculatedTotal) / calculatedTotal < 0.15) {
+                    // Within 15% - totals match well, keep parsed (it includes tax, fees, etc.)
+                    console.log('✅ Video: Total validated - parsed and calculated match within 15%');
+                }
             }
             // Validate we got meaningful data
             if (receipt.items.length === 0 && receipt.total === 0) {
                 throw new Error('Aucun article détecté dans la vidéo. Scannez plus lentement.');
             }
-            console.log(`Video scan extracted ${receipt.items.length} items, total: ${receipt.total}`);
+            console.log(`Video scan extracted ${receipt.items.length} items, final total: ${receipt.total}`);
             return receipt;
         }
         catch (error) {
             lastError = error instanceof Error ? error : new Error(String(error));
             console.error(`Video parse attempt ${attempt + 1} failed:`, lastError.message);
             if (attempt < MAX_RETRIES) {
-                // Exponential backoff for retries
-                const delay = Math.min(2000 * Math.pow(2, attempt), 8000);
+                // Shorter backoff for faster retries
+                const delay = Math.min(1000 * (attempt + 1), 3000);
                 console.log(`Retrying video parse in ${delay}ms...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 continue;

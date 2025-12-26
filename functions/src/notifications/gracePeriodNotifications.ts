@@ -43,31 +43,26 @@ async function sendGracePeriodReminder(
     let message: string;
     let messageFr: string;
     let priority: 'high' | 'normal';
-    let emoji: string;
 
     if (daysRemaining === 7) {
-      emoji = '⏳';
       title = 'Grace Period Active';
       titleFr = 'Période de Grâce Active';
       message = `You have 7 days to use your ${scansRemaining} remaining scans. After that, you'll switch to the free plan (3 scans/month).`;
       messageFr = `Vous avez 7 jours pour utiliser vos ${scansRemaining} scans restants. Après, vous passerez au plan gratuit (3 scans/mois).`;
       priority = 'normal';
     } else if (daysRemaining === 5) {
-      emoji = '⏰';
       title = '5 Days Left in Grace Period';
       titleFr = '5 Jours Restants en Période de Grâce';
       message = `Don't forget to use your ${scansRemaining} scans! Grace period ends in 5 days. Renew anytime to keep your plan.`;
       messageFr = `N'oubliez pas d'utiliser vos ${scansRemaining} scans! La période de grâce se termine dans 5 jours. Renouvelez pour garder votre plan.`;
       priority = 'normal';
     } else if (daysRemaining === 3) {
-      emoji = '⚠️';
       title = '3 Days Left - Use Your Scans!';
       titleFr = '3 Jours Restants - Utilisez Vos Scans!';
       message = `Only 3 days left to use your ${scansRemaining} scans! Renew now to get ${subscription.planId === 'premium' ? '1,000' : subscription.planId === 'standard' ? '100' : '25'} new scans.`;
       messageFr = `Plus que 3 jours pour utiliser vos ${scansRemaining} scans! Renouvelez maintenant pour obtenir ${subscription.planId === 'premium' ? '1 000' : subscription.planId === 'standard' ? '100' : '25'} nouveaux scans.`;
       priority = 'high';
     } else {
-      emoji = '🚨';
       title = 'Last Day of Grace Period!';
       titleFr = 'Dernier Jour de Période de Grâce!';
       message = `This is your last day to use ${scansRemaining} remaining scans! Tomorrow you'll move to the free plan. Renew now to keep your benefits.`;
@@ -79,7 +74,7 @@ async function sendGracePeriodReminder(
     await messaging.send({
       token: fcmToken,
       notification: {
-        title: language === 'fr' ? `${emoji} ${titleFr}` : `${emoji} ${title}`,
+        title: language === 'fr' ? titleFr : title,
         body: language === 'fr' ? messageFr : message,
       },
       data: {

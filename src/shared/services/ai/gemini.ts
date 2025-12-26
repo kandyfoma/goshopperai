@@ -407,7 +407,7 @@ class GeminiService {
 
       // Call video parsing Cloud Function with timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 280000); // 4min 40s timeout (before Cloud Function's 5min)
+      const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 min timeout (reduced from 4min 40s)
 
       let response: Response;
       try {

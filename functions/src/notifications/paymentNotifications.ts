@@ -54,8 +54,8 @@ export async function sendPaymentSuccessNotification(
 
     const scans = scanLimits[planId] || 0;
 
-    const title = '✅ Paiement Réussi!';
-    const titleEn = '✅ Payment Successful!';
+    const title = 'Paiement Réussi!';
+    const titleEn = 'Payment Successful!';
     const message = `Votre abonnement ${planName.fr} est maintenant actif (${scans} scans/mois). Merci pour votre confiance!`;
     const messageEn = `Your ${planName.en} subscription is now active (${scans} scans/month). Thank you for your trust!`;
 
@@ -147,8 +147,8 @@ export async function sendPaymentFailedNotification(
       return;
     }
 
-    const title = '❌ Paiement Échoué';
-    const titleEn = '❌ Payment Failed';
+    const title = 'Paiement Échoué';
+    const titleEn = 'Payment Failed';
     const message = `Le paiement de $${amount} pour l'abonnement ${planId} a échoué. Veuillez réessayer.`;
     const messageEn = `Payment of $${amount} for ${planId} subscription failed. Please try again.`;
 
@@ -241,8 +241,8 @@ export async function sendAutoRenewalNotification(
       language === 'fr' ? 'fr-FR' : 'en-US',
     );
 
-    const title = '🔄 Abonnement Renouvelé';
-    const titleEn = '🔄 Subscription Renewed';
+    const title = 'Abonnement Renouvelé';
+    const titleEn = 'Subscription Renewed';
     const message = `Votre abonnement ${planId} a été renouvelé automatiquement ($${amount}). Prochain renouvellement: ${renewalDateStr}`;
     const messageEn = `Your ${planId} subscription has been auto-renewed ($${amount}). Next renewal: ${renewalDateStr}`;
 

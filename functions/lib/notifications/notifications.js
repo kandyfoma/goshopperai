@@ -346,7 +346,7 @@ Top store: ${topStore ? `${topStore[0]} ($${topStore[1].toFixed(2)})` : 'None'}
  * Send savings tip notification
  */
 async function sendSavingsTipNotification(fcmToken, tip, language, userId) {
-    const title = language === 'fr' ? "💡 Conseil d'Économie" : '💡 Savings Tip';
+    const title = language === 'fr' ? "Conseil d'Économie" : 'Savings Tip';
     await messaging.send({
         token: fcmToken,
         notification: {
@@ -390,7 +390,7 @@ async function sendSavingsTipNotification(fcmToken, tip, language, userId) {
  * Send achievement notification
  */
 async function sendAchievementNotificationToUser(fcmToken, achievementTitle, language, userId) {
-    const title = language === 'fr' ? '🏆 Achievement Débloqué!' : '🏆 Achievement Unlocked!';
+    const title = language === 'fr' ? 'Achievement Débloqué!' : 'Achievement Unlocked!';
     const body = language === 'fr'
         ? `Félicitations! Vous avez débloqué: ${achievementTitle}`
         : `Congratulations! You unlocked: ${achievementTitle}`;
@@ -439,7 +439,7 @@ async function sendAchievementNotificationToUser(fcmToken, achievementTitle, lan
  * Send sync complete notification
  */
 async function sendSyncCompleteNotificationToUser(fcmToken, syncedCount, language, userId) {
-    const title = language === 'fr' ? '🔄 Synchronisation Terminée' : '🔄 Sync Complete';
+    const title = language === 'fr' ? 'Synchronisation Terminée' : 'Sync Complete';
     const body = language === 'fr'
         ? `${syncedCount} facture(s) synchronisée(s) avec succès!`
         : `${syncedCount} receipt(s) synced successfully!`;
@@ -535,15 +535,15 @@ exports.checkSubscriptionExpiration = functions
             let title;
             let body;
             if (daysUntilExpiration <= 1) {
-                title = language === 'fr' ? '⚠️ Abonnement Expire Demain!' : '⚠️ Subscription Expires Tomorrow!';
+                title = language === 'fr' ? 'Abonnement Expire Demain!' : 'Subscription Expires Tomorrow!';
                 body = language === 'fr' ? "Renouvelez maintenant pour ne pas perdre vos fonctionnalités premium." : 'Renew now to keep your premium features.';
             }
             else if (daysUntilExpiration <= 3) {
-                title = language === 'fr' ? `⏰ ${daysUntilExpiration} Jours Restants!` : `⏰ ${daysUntilExpiration} Days Left!`;
+                title = language === 'fr' ? `${daysUntilExpiration} Jours Restants!` : `${daysUntilExpiration} Days Left!`;
                 body = language === 'fr' ? 'Votre abonnement expire bientôt.' : 'Your subscription expires soon.';
             }
             else {
-                title = language === 'fr' ? "📅 Rappel d'Abonnement" : '📅 Subscription Reminder';
+                title = language === 'fr' ? "Rappel d'Abonnement" : 'Subscription Reminder';
                 body = language === 'fr' ? `Votre abonnement expire dans ${daysUntilExpiration} jours.` : `Your subscription expires in ${daysUntilExpiration} days.`;
             }
             await saveSubscriptionNotification(userId, title, body, daysUntilExpiration, subscription.planId || 'standard');
@@ -585,15 +585,15 @@ exports.checkSubscriptionExpiration = functions
             let title;
             let body;
             if (daysUntilExpiration <= 1) {
-                title = language === 'fr' ? '⚠️ Essai Gratuit Termine Demain!' : '⚠️ Free Trial Ends Tomorrow!';
+                title = language === 'fr' ? 'Essai Gratuit Termine Demain!' : 'Free Trial Ends Tomorrow!';
                 body = language === 'fr' ? 'Passez à un abonnement premium pour continuer.' : 'Upgrade to premium to continue.';
             }
             else if (daysUntilExpiration <= 3) {
-                title = language === 'fr' ? `⏰ ${daysUntilExpiration} Jours d'Essai Restants` : `⏰ ${daysUntilExpiration} Trial Days Left`;
+                title = language === 'fr' ? `${daysUntilExpiration} Jours d'Essai Restants` : `${daysUntilExpiration} Trial Days Left`;
                 body = language === 'fr' ? 'Votre essai gratuit se termine bientôt.' : 'Your free trial ends soon.';
             }
             else {
-                title = language === 'fr' ? '📅 Rappel Essai Gratuit' : '📅 Trial Reminder';
+                title = language === 'fr' ? 'Rappel Essai Gratuit' : 'Trial Reminder';
                 body = language === 'fr' ? `Plus que ${daysUntilExpiration} jours d'essai gratuit.` : `${daysUntilExpiration} days left in your free trial.`;
             }
             await saveTrialNotification(userId, title, body, daysUntilExpiration);
@@ -624,8 +624,8 @@ async function sendSubscriptionExpirationNotification(fcmToken, daysRemaining, p
         urgency = 'high';
         title =
             language === 'fr'
-                ? '⚠️ Abonnement Expire Demain!'
-                : '⚠️ Subscription Expires Tomorrow!';
+                ? 'Abonnement Expire Demain!'
+                : 'Subscription Expires Tomorrow!';
         body =
             language === 'fr'
                 ? "Renouvelez maintenant pour ne pas perdre vos fonctionnalités premium. Profitez de -30% sur l'abonnement annuel!"
@@ -635,8 +635,8 @@ async function sendSubscriptionExpirationNotification(fcmToken, daysRemaining, p
         urgency = 'high';
         title =
             language === 'fr'
-                ? `⏰ ${daysRemaining} Jours Restants!`
-                : `⏰ ${daysRemaining} Days Left!`;
+                ? `${daysRemaining} Jours Restants!`
+                : `${daysRemaining} Days Left!`;
         body =
             language === 'fr'
                 ? 'Votre abonnement expire bientôt. Renouvelez maintenant pour profiter de nos offres exclusives!'
@@ -644,7 +644,7 @@ async function sendSubscriptionExpirationNotification(fcmToken, daysRemaining, p
     }
     else {
         title =
-            language === 'fr' ? "📅 Rappel d'Abonnement" : '📅 Subscription Reminder';
+            language === 'fr' ? "Rappel d'Abonnement" : 'Subscription Reminder';
         body =
             language === 'fr'
                 ? `Votre abonnement expire dans ${daysRemaining} jours. Économisez jusqu'à 30% avec nos offres longue durée!`
@@ -709,8 +709,8 @@ async function sendTrialExpirationNotification(fcmToken, daysRemaining, language
     if (daysRemaining <= 1) {
         title =
             language === 'fr'
-                ? '⚠️ Essai Gratuit Termine Demain!'
-                : '⚠️ Free Trial Ends Tomorrow!';
+                ? 'Essai Gratuit Termine Demain!'
+                : 'Free Trial Ends Tomorrow!';
         body =
             language === 'fr'
                 ? "Passez à un abonnement premium pour continuer à profiter de toutes les fonctionnalités. -30% sur l'annuel!"
@@ -719,15 +719,15 @@ async function sendTrialExpirationNotification(fcmToken, daysRemaining, language
     else if (daysRemaining <= 3) {
         title =
             language === 'fr'
-                ? `⏰ ${daysRemaining} Jours d'Essai Restants`
-                : `⏰ ${daysRemaining} Trial Days Left`;
+                ? `${daysRemaining} Jours d'Essai Restants`
+                : `${daysRemaining} Trial Days Left`;
         body =
             language === 'fr'
                 ? 'Votre essai gratuit se termine bientôt. Choisissez un plan qui vous convient!'
                 : 'Your free trial ends soon. Choose a plan that works for you!';
     }
     else {
-        title = language === 'fr' ? '📅 Rappel Essai Gratuit' : '📅 Trial Reminder';
+        title = language === 'fr' ? 'Rappel Essai Gratuit' : 'Trial Reminder';
         body =
             language === 'fr'
                 ? `Plus que ${daysRemaining} jours d'essai gratuit. Explorez toutes nos fonctionnalités!`
