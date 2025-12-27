@@ -2,12 +2,15 @@
 import auth, {FirebaseAuthTypes} from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import firebase from '@react-native-firebase/app';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import {appleAuth} from '@invertase/react-native-apple-authentication';
 import {LoginManager, AccessToken, Settings} from 'react-native-fbsdk-next';
 import {User, UserProfile} from '@/shared/types';
 import {COLLECTIONS, APP_ID} from './config';
 import {safeToDate} from '@/shared/utils/helpers';
+
+const PHONE_USER_KEY = '@goshopperai_phone_user';
 
 class AuthService {
   private currentUser: FirebaseAuthTypes.User | null = null;
@@ -242,6 +245,9 @@ class AuthService {
         lastLoginAt: new Date(),
       };
       
+      // Store user session for persistence
+      await this.storePhoneUser(user);
+      
       return user;
     } catch (error) {
       console.error('❌ [Phone Login] Sign in failed:', error);
@@ -467,8 +473,8 @@ class AuthService {
       if (currentUser) {
         await auth().signOut();
       }
-      // Phone-based users don't have Firebase Auth session,
-      // so we just clear local state (handled in AuthContext)
+      // Clear phone user session from AsyncStorage
+      await this.clearPhoneUser();
       console.log('✅ Sign out successful');
     } catch (error) {
       console.error('Sign out failed:', error);
@@ -576,6 +582,43 @@ class AuthService {
     } catch (error) {
       console.error('Update password failed:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Get stored phone user session
+   */
+  async getStoredPhoneUser(): Promise<User | null> {
+    try {
+      const stored = await AsyncStorage.getItem(PHONE_USER_KEY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (error) {
+      console.error('Error getting stored phone user:', error);
+    }
+    return null;
+  }
+
+  /**
+   * Store phone user session
+   */
+  private async storePhoneUser(user: User): Promise<void> {
+    try {
+      await AsyncStorage.setItem(PHONE_USER_KEY, JSON.stringify(user));
+    } catch (error) {
+      console.error('Error storing phone user:', error);
+    }
+  }
+
+  /**
+   * Clear phone user session
+   */
+  private async clearPhoneUser(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(PHONE_USER_KEY);
+    } catch (error) {
+      console.error('Error clearing phone user:', error);
     }
   }
 
@@ -903,6 +946,9 @@ class AuthService {
         createdAt: new Date(),
         lastLoginAt: new Date(),
       };
+      
+      // Store user session for persistence
+      await this.storePhoneUser(user);
       
       console.log('✅ User created successfully:', user.id);
       return user;

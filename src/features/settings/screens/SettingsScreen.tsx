@@ -124,9 +124,22 @@ export function SettingsScreen() {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isDeletingData, setIsDeletingData] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showDeleteDataModal, setShowDeleteDataModal] = useState(false);
+  const [showClearQueueModal, setShowClearQueueModal] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
+  const [showFontSizeModal, setShowFontSizeModal] = useState(false);
+  const [showRateAppModal, setShowRateAppModal] = useState(false);
   const {profile, toggleNotifications, togglePriceAlerts} = useUser();
   const {showToast} = useToast();
-  const {subscription, trialScansUsed} = useSubscription();
+  const {
+    subscription,
+    trialScansUsed,
+    scansRemaining,
+    isTrialActive,
+    trialDaysRemaining,
+    isExpiringSoon,
+    daysUntilExpiration,
+  } = useSubscription();
   const {isOnline, isSyncing, pendingActions, lastSyncTime, syncNow, clearQueue} = useOffline();
   const {isDarkMode, toggleTheme, themeMode, setThemeMode} = useTheme();
   const {fontScale, isLargeText, shouldReduceMotion} = useDynamicType();
@@ -160,9 +173,13 @@ export function SettingsScreen() {
 
   const currentPlan = subscription?.planId
     ? SUBSCRIPTION_PLANS[subscription.planId]
-    : SUBSCRIPTION_PLANS.free;
+    : SUBSCRIPTION_PLANS.freemium;
 
-  const trialRemaining = Math.max(0, TRIAL_SCAN_LIMIT - trialScansUsed);
+  // Determine if user is on a free/trial plan
+  const isFreePlan = !subscription?.isSubscribed || 
+    subscription?.status === 'freemium' || 
+    subscription?.planId === 'freemium' ||
+    isTrialActive;
 
   const handleToggleNotifications = async (value: boolean) => {
     try {
@@ -267,41 +284,33 @@ export function SettingsScreen() {
   };
 
   const handleDeleteData = () => {
-    Alert.alert(
-      'Supprimer mes données',
-      'Cette action supprimera toutes vos factures scannées. Vos articles et listes de courses seront conservés.',
-      [
-        {text: 'Annuler', style: 'cancel'},
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            if (!user?.uid) {
-              showToast('Utilisateur non connecté', 'error');
-              return;
-            }
+    setShowDeleteDataModal(true);
+  };
 
-            setIsDeletingData(true);
-            try {
-              const count = await receiptStorageService.deleteAllReceipts(user.uid);
-              showToast(
-                `${count} facture${count > 1 ? 's' : ''} supprimée${count > 1 ? 's' : ''} avec succès`,
-                'success',
-                3000,
-              );
-            } catch (error) {
-              console.error('Error deleting receipts:', error);
-              showToast(
-                'Impossible de supprimer les données. Veuillez réessayer.',
-                'error',
-              );
-            } finally {
-              setIsDeletingData(false);
-            }
-          },
-        },
-      ],
-    );
+  const confirmDeleteData = async () => {
+    if (!user?.uid) {
+      showToast('Utilisateur non connecté', 'error');
+      return;
+    }
+
+    setIsDeletingData(true);
+    try {
+      const count = await receiptStorageService.deleteAllReceipts(user.uid);
+      setShowDeleteDataModal(false);
+      showToast(
+        `${count} facture${count > 1 ? 's' : ''} supprimée${count > 1 ? 's' : ''} avec succès`,
+        'success',
+        3000,
+      );
+    } catch (error) {
+      console.error('Error deleting receipts:', error);
+      showToast(
+        'Impossible de supprimer les données. Veuillez réessayer.',
+        'error',
+      );
+    } finally {
+      setIsDeletingData(false);
+    }
   };
 
   const handleDeleteAccount = () => {
@@ -367,8 +376,7 @@ export function SettingsScreen() {
   };
 
   const handleRateApp = () => {
-    // TODO: Link to app store
-    Alert.alert('Merci !', 'Votre avis nous aide beaucoup !');
+    setShowRateAppModal(true);
   };
 
   const handlePrivacyPolicy = () => {
@@ -382,6 +390,11 @@ export function SettingsScreen() {
   const handleForceSync = async () => {
     if (isSyncing) return;
     
+    if (pendingActions === 0) {
+      showToast('Aucune donnée en attente de synchronisation', 'info', 3000);
+      return;
+    }
+    
     try {
       await syncNow();
       showToast('Synchronisation terminée avec succès', 'success', 3000);
@@ -391,21 +404,17 @@ export function SettingsScreen() {
   };
 
   const handleClearQueue = () => {
-    Alert.alert(
-      'Vider la file d\'attente',
-      'Êtes-vous sûr de vouloir supprimer toutes les données en attente de synchronisation ?',
-      [
-        {text: 'Annuler', style: 'cancel'},
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            await clearQueue();
-            Alert.alert('File vidée', 'Toutes les données en attente ont été supprimées.');
-          },
-        },
-      ]
-    );
+    setShowClearQueueModal(true);
+  };
+
+  const confirmClearQueue = async () => {
+    try {
+      await clearQueue();
+      setShowClearQueueModal(false);
+      showToast('File vidée', 'success', 3000);
+    } catch (error) {
+      showToast('Erreur lors du vidage de la file', 'error');
+    }
   };
 
   const getSyncStatusText = () => {
@@ -502,37 +511,50 @@ export function SettingsScreen() {
                 />
               </View>
 
-              {subscription?.planId === 'free' ? (
+              {isFreePlan || isTrialActive ? (
                 <View style={styles.trialProgress}>
                   <Text style={styles.trialText}>
-                    Essai: {trialRemaining}/{TRIAL_SCAN_LIMIT} scans restants
+                    {isTrialActive 
+                      ? `Essai: ${scansRemaining} scans restants (${trialDaysRemaining} jours)`
+                      : `Freemium: ${scansRemaining} scans restants`
+                    }
                   </Text>
                   <View style={styles.trialBar}>
                     <View
                       style={[
                         styles.trialBarFill,
                         {
-                          width: `${
-                            (trialRemaining / TRIAL_SCAN_LIMIT) * 100
-                          }%`,
+                          width: `${Math.min(100, (scansRemaining / (isTrialActive ? TRIAL_SCAN_LIMIT : 3)) * 100)}%`,
                         },
                       ]}
                     />
                   </View>
                 </View>
               ) : (
-                <Text style={styles.subscriptionExpiry}>
-                  Expire le:{' '}
-                  {subscription?.expiryDate
-                    ? formatDate(subscription.expiryDate)
-                    : 'Illimité'}
-                </Text>
+                <>
+                  <Text style={styles.subscriptionExpiry}>
+                    {isExpiringSoon && daysUntilExpiration > 0 ? (
+                      <Text style={styles.expiryWarning}>
+                        Expire dans {daysUntilExpiration} jour{daysUntilExpiration > 1 ? 's' : ''}
+                      </Text>
+                    ) : subscription?.subscriptionEndDate ? (
+                      `Expire le: ${formatDate(subscription.subscriptionEndDate)}`
+                    ) : (
+                      'Actif'
+                    )}
+                  </Text>
+                  <Text style={styles.scansInfo}>
+                    {scansRemaining} scan{scansRemaining > 1 ? 's' : ''} restant{scansRemaining > 1 ? 's' : ''}
+                  </Text>
+                </>
               )}
 
               <View style={styles.upgradeButton}>
                 <Text style={styles.upgradeText}>
                   {subscription?.planId === 'premium'
                     ? 'Gérer mon abonnement'
+                    : subscription?.isSubscribed
+                    ? 'Améliorer mon plan'
                     : 'Passer à Premium'}
                 </Text>
                 <Icon name="arrow-right" size="xs" color={Colors.accent} />
@@ -586,30 +608,7 @@ export function SettingsScreen() {
               }
               showArrow={true}
               iconBgColor={Colors.card.cosmos}
-              onPress={() => {
-                Alert.alert(
-                  'Apparence',
-                  'Choisissez le thème de l\'application',
-                  [
-                    {
-                      text: 'Système (Auto)',
-                      onPress: () => setThemeMode('system'),
-                    },
-                    {
-                      text: 'Mode clair',
-                      onPress: () => setThemeMode('light'),
-                    },
-                    {
-                      text: 'Mode sombre',
-                      onPress: () => setThemeMode('dark'),
-                    },
-                    {
-                      text: 'Annuler',
-                      style: 'cancel',
-                    },
-                  ],
-                );
-              }}
+              onPress={() => setShowThemeModal(true)}
             />
             <SettingItem
               icon="type"
@@ -617,22 +616,7 @@ export function SettingsScreen() {
               subtitle={`${Math.round(fontScale * 100)}% ${isLargeText ? '(Grande taille)' : ''}`}
               showArrow={true}
               iconBgColor={Colors.card.blue}
-              onPress={() => {
-                Alert.alert(
-                  'Taille du texte',
-                  `L'application utilise automatiquement la taille de texte définie dans les réglages de votre téléphone.\n\nÉchelle actuelle: ${Math.round(fontScale * 100)}%\n${shouldReduceMotion ? 'Animations réduites: Activées' : ''}`,
-                  [
-                    {
-                      text: 'Ouvrir les réglages',
-                      onPress: () => Linking.openSettings(),
-                    },
-                    {
-                      text: 'OK',
-                      style: 'cancel',
-                    },
-                  ],
-                );
-              }}
+              onPress={() => setShowFontSizeModal(true)}
             />
             <SettingItem
               icon="bell"
@@ -681,15 +665,17 @@ export function SettingsScreen() {
               }
               showArrow={false}
             />
-            {pendingActions > 0 && (
-              <SettingItem
-                icon="upload"
-                title="Forcer la synchronisation"
-                subtitle={`${pendingActions} action${pendingActions > 1 ? 's' : ''} en attente`}
-                iconBgColor={Colors.card.cream}
-                onPress={handleForceSync}
-              />
-            )}
+            <SettingItem
+              icon="upload"
+              title="Forcer la synchronisation"
+              subtitle={
+                pendingActions > 0 
+                  ? `${pendingActions} action${pendingActions > 1 ? 's' : ''} en attente`
+                  : 'Aucune action en attente'
+              }
+              iconBgColor={Colors.card.cream}
+              onPress={handleForceSync}
+            />
             {pendingActions > 0 && (
               <SettingItem
                 icon="trash-2"
@@ -760,23 +746,130 @@ export function SettingsScreen() {
         </FadeIn>
       </ScrollView>
 
+      {/* Delete Data Modal */}
+      <AnimatedModal
+        visible={showDeleteDataModal}
+        onClose={() => setShowDeleteDataModal(false)}
+        variant="centered"
+        overlayOpacity={0.4}>
+        {/* Close button */}
+        <TouchableOpacity 
+          style={styles.confirmCloseButton} 
+          onPress={() => setShowDeleteDataModal(false)}>
+          <Icon name="x" size="sm" color={Colors.text.tertiary} />
+        </TouchableOpacity>
+        
+        <View style={styles.confirmIconContainer}>
+          <Icon name="trash-2" size="xl" color={Colors.white} />
+        </View>
+        
+        <Text style={styles.confirmModalTitle}>
+          Supprimer mes données
+        </Text>
+        
+        <Text style={styles.confirmModalText}>
+          Cette action supprimera toutes vos factures scannées. Vos articles et listes de courses seront conservés.
+        </Text>
+
+        <View style={styles.confirmModalActions}>
+          <View style={{flex: 1}}>
+            <Button
+              title="Annuler"
+              onPress={() => setShowDeleteDataModal(false)}
+              variant="secondary"
+              size="lg"
+              disabled={isDeletingData}
+            />
+          </View>
+          <View style={{flex: 1}}>
+            <Button
+              title="Supprimer"
+              onPress={confirmDeleteData}
+              variant="danger"
+              size="lg"
+              loading={isDeletingData}
+              disabled={isDeletingData}
+            />
+          </View>
+        </View>
+      </AnimatedModal>
+
+      {/* Clear Queue Modal */}
+      <AnimatedModal
+        visible={showClearQueueModal}
+        onClose={() => setShowClearQueueModal(false)}
+        variant="centered"
+        overlayOpacity={0.4}>
+        {/* Close button */}
+        <TouchableOpacity 
+          style={styles.confirmCloseButton} 
+          onPress={() => setShowClearQueueModal(false)}>
+          <Icon name="x" size="sm" color={Colors.text.tertiary} />
+        </TouchableOpacity>
+        
+        <View style={styles.confirmIconContainer}>
+          <Icon name="refresh-cw" size="xl" color={Colors.white} />
+        </View>
+        
+        <Text style={styles.confirmModalTitle}>
+          Vider la file d'attente
+        </Text>
+        
+        <Text style={styles.confirmModalText}>
+          Êtes-vous sûr de vouloir supprimer toutes les données en attente de synchronisation ?
+        </Text>
+
+        <View style={styles.confirmModalActions}>
+          <View style={{flex: 1}}>
+            <Button
+              title="Annuler"
+              onPress={() => setShowClearQueueModal(false)}
+              variant="secondary"
+              size="lg"
+            />
+          </View>
+          <View style={{flex: 1}}>
+            <Button
+              title="Supprimer"
+              onPress={confirmClearQueue}
+              variant="danger"
+              size="lg"
+            />
+          </View>
+        </View>
+      </AnimatedModal>
+
       {/* Delete Account Modal */}
-      <Modal
+      <AnimatedModal
         visible={showDeleteAccountModal}
-        variant="bottom-sheet"
-        size="large"
-        title="Supprimer mon compte"
         onClose={() => {
           setShowDeleteAccountModal(false);
           setDeletePassword('');
           setShowPassword(false);
-        }}>
-        <ScrollView>
-          <View style={styles.deleteModalContent}>
-            <Icon name="alert-triangle" size="xl" color={Colors.status.error} />
+        }}
+        variant="bottom-sheet"
+        overlayOpacity={0.5}>
+        <View style={styles.deleteModalWrapper}>
+          {/* Close button */}
+          <TouchableOpacity 
+            style={styles.deleteCloseButton} 
+            onPress={() => {
+              setShowDeleteAccountModal(false);
+              setDeletePassword('');
+              setShowPassword(false);
+            }}>
+            <Icon name="x" size="sm" color={Colors.text.tertiary} />
+          </TouchableOpacity>
+          
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={styles.deleteModalContent}>
+            {/* Icon */}
+            <View style={styles.deleteIconContainer}>
+              <Icon name="alert-triangle" size="xl" color={Colors.white} />
+            </View>
             
             <Text style={styles.deleteModalTitle}>
-              Êtes-vous absolument sûr ?
+              Supprimer mon compte
             </Text>
             
             <Text style={styles.deleteModalText}>
@@ -824,29 +917,172 @@ export function SettingsScreen() {
             </View>
 
             <View style={styles.deleteModalActions}>
-              <Button
-                title="Annuler"
-                onPress={() => {
-                  setShowDeleteAccountModal(false);
-                  setDeletePassword('');
-                  setShowPassword(false);
-                }}
-                variant="secondary"
-                fullWidth
-                disabled={isDeletingAccount}
-              />
-              <Button
-                title="Supprimer définitivement"
-                onPress={handleConfirmDeleteAccount}
-                loading={isDeletingAccount}
-                disabled={!deletePassword.trim() || isDeletingAccount}
-                variant="danger"
-                fullWidth
-              />
+              <View style={{flex: 1}}>
+                <Button
+                  title="Annuler"
+                  onPress={() => {
+                    setShowDeleteAccountModal(false);
+                    setDeletePassword('');
+                    setShowPassword(false);
+                  }}
+                  variant="secondary"
+                  size="lg"
+                  disabled={isDeletingAccount}
+                />
+              </View>
+              <View style={{flex: 1}}>
+                <Button
+                  title="Supprimer"
+                  onPress={handleConfirmDeleteAccount}
+                  loading={isDeletingAccount}
+                  disabled={!deletePassword.trim() || isDeletingAccount}
+                  variant="danger"
+                  size="lg"
+                />
+              </View>
             </View>
           </View>
         </ScrollView>
-      </Modal>
+        </View>
+      </AnimatedModal>
+
+      {/* Theme Modal */}
+      <AnimatedModal
+        visible={showThemeModal}
+        onClose={() => setShowThemeModal(false)}
+        variant="centered"
+        overlayOpacity={0.4}>
+        <TouchableOpacity 
+          style={styles.confirmCloseButton} 
+          onPress={() => setShowThemeModal(false)}>
+          <Icon name="x" size="sm" color={Colors.text.tertiary} />
+        </TouchableOpacity>
+        
+        <View style={styles.confirmIconContainer}>
+          <Icon name="moon" size="xl" color={Colors.white} />
+        </View>
+        
+        <Text style={styles.confirmModalTitle}>
+          Apparence
+        </Text>
+        
+        <Text style={styles.confirmModalText}>
+          Choisissez le thème de l'application
+        </Text>
+
+        <View style={styles.optionModalButtons}>
+          <Button
+            title="Système (Auto)"
+            onPress={() => {
+              setThemeMode('system');
+              setShowThemeModal(false);
+            }}
+            variant={themeMode === 'system' ? 'primary' : 'secondary'}
+            size="lg"
+          />
+          <Button
+            title="Mode clair"
+            onPress={() => {
+              setThemeMode('light');
+              setShowThemeModal(false);
+            }}
+            variant={themeMode === 'light' ? 'primary' : 'secondary'}
+            size="lg"
+          />
+          <Button
+            title="Mode sombre"
+            onPress={() => {
+              setThemeMode('dark');
+              setShowThemeModal(false);
+            }}
+            variant={themeMode === 'dark' ? 'primary' : 'secondary'}
+            size="lg"
+          />
+        </View>
+      </AnimatedModal>
+
+      {/* Font Size Modal */}
+      <AnimatedModal
+        visible={showFontSizeModal}
+        onClose={() => setShowFontSizeModal(false)}
+        variant="centered"
+        overlayOpacity={0.4}>
+        <TouchableOpacity 
+          style={styles.confirmCloseButton} 
+          onPress={() => setShowFontSizeModal(false)}>
+          <Icon name="x" size="sm" color={Colors.text.tertiary} />
+        </TouchableOpacity>
+        
+        <View style={styles.confirmIconContainer}>
+          <Icon name="type" size="xl" color={Colors.white} />
+        </View>
+        
+        <Text style={styles.confirmModalTitle}>
+          Taille du texte
+        </Text>
+        
+        <Text style={styles.confirmModalText}>
+          L'application utilise automatiquement la taille de texte définie dans les réglages de votre téléphone.{'\n\n'}
+          Échelle actuelle: {Math.round(fontScale * 100)}%{'\n'}
+          {shouldReduceMotion ? 'Animations réduites: Activées' : ''}
+        </Text>
+
+        <View style={styles.confirmModalActions}>
+          <View style={{flex: 1}}>
+            <Button
+              title="Annuler"
+              onPress={() => setShowFontSizeModal(false)}
+              variant="secondary"
+              size="lg"
+            />
+          </View>
+          <View style={{flex: 1}}>
+            <Button
+              title="Réglages"
+              onPress={() => {
+                setShowFontSizeModal(false);
+                Linking.openSettings();
+              }}
+              variant="primary"
+              size="lg"
+            />
+          </View>
+        </View>
+      </AnimatedModal>
+
+      {/* Rate App Modal */}
+      <AnimatedModal
+        visible={showRateAppModal}
+        onClose={() => setShowRateAppModal(false)}
+        variant="centered"
+        overlayOpacity={0.4}>
+        <TouchableOpacity 
+          style={styles.confirmCloseButton} 
+          onPress={() => setShowRateAppModal(false)}>
+          <Icon name="x" size="sm" color={Colors.text.tertiary} />
+        </TouchableOpacity>
+        
+        <View style={styles.confirmIconContainer}>
+          <Icon name="star" size="xl" color={Colors.white} />
+        </View>
+        
+        <Text style={styles.confirmModalTitle}>
+          Merci !
+        </Text>
+        
+        <Text style={styles.confirmModalText}>
+          Votre avis nous aide beaucoup !
+        </Text>
+
+        <View style={styles.optionModalButtons}>
+          <Button
+            title="OK"
+            onPress={() => setShowRateAppModal(false)}
+            variant="primary"
+            size="lg"
+          />
+        </View>
+      </AnimatedModal>
 
       {/* Logout Confirmation Modal */}
       <AnimatedModal
@@ -862,7 +1098,7 @@ export function SettingsScreen() {
         </TouchableOpacity>
         
         <View style={styles.logoutIconContainer}>
-          <Icon name="log-out" size="xl" color={Colors.white} />
+          <Icon name="logout" size="xl" color={Colors.white} />
         </View>
         
         <Text style={styles.logoutModalTitle}>
@@ -884,7 +1120,7 @@ export function SettingsScreen() {
           </View>
           <View style={{flex: 1}}>
             <Button
-              title="Déconnecter"
+              title="OK"
               onPress={confirmSignOut}
               variant="primary"
               size="lg"
@@ -1043,6 +1279,15 @@ const styles = StyleSheet.create({
   subscriptionExpiry: {
     color: 'rgba(255,255,255,0.8)',
     fontSize: Typography.fontSize.sm,
+    marginBottom: Spacing.xs,
+  },
+  expiryWarning: {
+    color: '#FFD700',
+    fontWeight: Typography.fontWeight.semiBold,
+  },
+  scansInfo: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: Typography.fontSize.xs,
     marginBottom: Spacing.sm,
   },
   upgradeButton: {
@@ -1200,27 +1445,96 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
+  // Confirmation Modals (Delete Data, Clear Queue)
+  confirmCloseButton: {
+    position: 'absolute',
+    top: -Spacing.md,
+    right: -Spacing.md,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.background.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  confirmIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.status.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  confirmModalTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.primary,
+    textAlign: 'center',
+    marginBottom: Spacing.sm,
+  },
+  confirmModalText: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing.xl,
+  },
+  confirmModalActions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    width: '100%',
+  },
+  optionModalButtons: {
+    width: '100%',
+    gap: Spacing.md,
+  },
+
   // Delete Account Modal
+  deleteModalWrapper: {
+    paddingTop: Spacing.md,
+  },
+  deleteCloseButton: {
+    position: 'absolute',
+    top: Spacing.sm,
+    right: Spacing.sm,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.background.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  deleteIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.status.error, // Red for danger action
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
   deleteModalContent: {
-    padding: Spacing.lg,
     paddingHorizontal: Spacing.xl,
     alignItems: 'center',
   },
   deleteModalTitle: {
     fontSize: Typography.fontSize.xl,
-    fontFamily: Typography.fontFamily.bold,
+    fontFamily: Typography.fontFamily.semiBold,
     color: Colors.text.primary,
     textAlign: 'center',
-    marginTop: Spacing.md,
     marginBottom: Spacing.sm,
   },
   deleteModalText: {
-    fontSize: Typography.fontSize.md,
+    fontSize: Typography.fontSize.sm,
     fontFamily: Typography.fontFamily.regular,
     color: Colors.text.secondary,
     textAlign: 'center',
     marginBottom: Spacing.md,
-    lineHeight: 22,
+    lineHeight: 20,
   },
   deleteModalBold: {
     fontFamily: Typography.fontFamily.bold,
@@ -1255,7 +1569,9 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   deleteModalActions: {
-    width: '100%',
+    flexDirection: 'row',
     gap: Spacing.md,
+    width: '100%',
+    marginBottom: Spacing.lg,
   },
 });

@@ -36,41 +36,76 @@ export function AuthProvider({children}: AuthProviderProps) {
 
   // Listen to auth state changes
   useEffect(() => {
-    try {
-      const unsubscribe = authService.onAuthStateChanged(user => {
+    let mounted = true;
 
-        // Track user authentication state
-        if (user) {
-          analyticsService.setUserId(user.uid);
-          // Preload critical data for better performance
-          cachePreloader.preloadCriticalData(user.uid).catch(error => {
+    const initAuth = async () => {
+      try {
+        // First, try to restore phone user session from AsyncStorage
+        const phoneUser = await authService.getStoredPhoneUser();
+        
+        if (phoneUser && mounted) {
+          // Phone user session found - restore it
+          setState({
+            user: phoneUser,
+            isLoading: false,
+            isAuthenticated: true,
+            error: null,
+          });
+          
+          analyticsService.setUserId(phoneUser.uid);
+          cachePreloader.preloadCriticalData(phoneUser.uid).catch(error => {
             console.warn('Cache preload failed:', error);
           });
-        } else {
-          // Reset cache on logout
-          cachePreloader.reset();
         }
 
-        setState({
-          user,
-          isLoading: false,
-          isAuthenticated: !!user,
-          error: null,
-        });
-      });
+        // Then, set up Firebase Auth listener (for Google/Apple/Facebook)
+        const unsubscribe = authService.onAuthStateChanged(user => {
+          if (!mounted) return;
 
-      return unsubscribe;
-    } catch (error) {
-      console.warn('Auth state listener setup failed:', error);
-      // Set to not loading, not authenticated
-      setState({
-        user: null,
-        isLoading: false,
-        isAuthenticated: false,
-        error: 'Firebase not initialized',
-      });
-      return () => {};
-    }
+          // Track user authentication state
+          if (user) {
+            analyticsService.setUserId(user.uid);
+            // Preload critical data for better performance
+            cachePreloader.preloadCriticalData(user.uid).catch(error => {
+              console.warn('Cache preload failed:', error);
+            });
+          } else if (!phoneUser) {
+            // Only reset cache if there's no phone user either
+            cachePreloader.reset();
+          }
+
+          // Only update state if no phone user was already restored
+          if (!phoneUser) {
+            setState({
+              user,
+              isLoading: false,
+              isAuthenticated: !!user,
+              error: null,
+            });
+          }
+        });
+
+        return unsubscribe;
+      } catch (error) {
+        console.warn('Auth initialization failed:', error);
+        if (mounted) {
+          setState({
+            user: null,
+            isLoading: false,
+            isAuthenticated: false,
+            error: 'Failed to restore session',
+          });
+        }
+        return () => {};
+      }
+    };
+
+    const unsubscribePromise = initAuth();
+
+    return () => {
+      mounted = false;
+      unsubscribePromise.then(unsub => unsub());
+    };
   }, []);
 
   // Removed auto sign-in - users must now register/login explicitly

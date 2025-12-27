@@ -36,13 +36,13 @@ export default function ScanPacksScreen() {
 
     const pack = SCAN_PACKS[selectedPack as keyof typeof SCAN_PACKS];
     
-    // Navigate to payment flow with scan pack details
-    navigation.navigate('SubscriptionDuration', {
-      planId: 'basic',
+    // Navigate directly to payment with scan pack details
+    navigation.navigate('MokoPayment', {
+      amount: pack.price,
+      planId: `scanpack_${pack.id}`,
+      planName: `Pack de ${pack.scans} scans`,
       isScanPack: true,
       scanPackId: pack.id,
-      scanPackScans: pack.scans,
-      scanPackPrice: pack.price,
     });
   };
 
