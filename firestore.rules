@@ -158,6 +158,14 @@ service cloud.firestore {
       allow delete: if false;
     }
     
+    // Global config collection (exchange rates, app settings)
+    match /config/{document} {
+      // Allow all users to read global config
+      allow read: if true;
+      // Only allow writes from server/admin (Cloud Functions)
+      allow write: if false;
+    }
+    
     // Deny all other access
     match /{document=**} {
       allow read, write: if false;

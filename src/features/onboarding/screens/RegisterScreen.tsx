@@ -70,6 +70,7 @@ export function RegisterScreen() {
   const [showBiometricModal, setShowBiometricModal] = useState(false);
   const [biometryType, setBiometryType] = useState<'TouchID' | 'FaceID' | 'Biometrics' | null>(null);
   const [biometricData, setBiometricData] = useState<{userId: string; phoneNumber: string; password: string} | null>(null);
+  const [pendingUser, setPendingUser] = useState<any>(null); // Store user until biometric modal is handled
   
   // Modal states
   const [showCountryModal, setShowCountryModal] = useState(false);
@@ -266,11 +267,7 @@ export function RegisterScreen() {
       
       console.log('✅ User created:', user.uid);
       
-      // Set user in AuthContext to log them in
-      setPhoneUser(user);
-      console.log('✅ User set in AuthContext');
-      
-      // Send welcome notification
+      // Send welcome notification (don't block on this)
       try {
         const fcmToken = await getFCMToken();
         console.log('📱 FCM Token:', fcmToken ? 'received' : 'null');
@@ -286,8 +283,14 @@ export function RegisterScreen() {
       }
       
       // Check biometric availability and prompt user
+      console.log('🔐 Checking biometric availability...');
       const {available, biometryType: availableBiometryType} = await biometricService.checkAvailability();
+      console.log('🔐 Biometric check result:', {available, biometryType: availableBiometryType});
+      
       if (available && availableBiometryType) {
+        console.log('🔐 Biometric available, showing modal...');
+        // Store user for later - DON'T call setPhoneUser yet (it would trigger navigation)
+        setPendingUser(user);
         // Store user data for biometric setup
         setBiometricData({
           userId: user.uid,
@@ -297,13 +300,12 @@ export function RegisterScreen() {
         setBiometryType(availableBiometryType);
         setShowBiometricModal(true);
       } else {
-        // Show success toast and navigate to main app immediately if biometrics not available
+        console.log('🔐 Biometric NOT available, logging in user...');
+        // Set user in AuthContext to log them in (this triggers navigation)
+        setPhoneUser(user);
+        console.log('✅ User set in AuthContext');
+        // Show success toast
         showToast('Compte créé avec succès! Bienvenue sur GoShopper 🎉', 'success', 3000);
-        
-        navigation.reset({
-          index: 0,
-          routes: [{name: 'Main'}]
-        });
       }
     } catch (error: any) {
       console.error('Registration error:', error);
@@ -811,6 +813,7 @@ export function RegisterScreen() {
                 phoneNumber: biometricData.phoneNumber,
                 password: biometricData.password,
               });
+              console.log('✅ Biometric enabled successfully');
             }
           } catch (error) {
             console.error('Failed to enable biometric:', error);
@@ -818,26 +821,30 @@ export function RegisterScreen() {
             setShowBiometricModal(false);
             setBiometricData(null);
             
-            // Show success toast and navigate to main app
-            showToast('Compte créé avec succès! Bienvenue sur GoShopper 🎉', 'success', 3000);
+            // Now set the user in AuthContext (this triggers navigation to Main)
+            if (pendingUser) {
+              setPhoneUser(pendingUser);
+              setPendingUser(null);
+              console.log('✅ User set in AuthContext after biometric setup');
+            }
             
-            navigation.reset({
-              index: 0,
-              routes: [{name: 'Main'}]
-            });
+            // Show success toast
+            showToast('Compte créé avec succès! Bienvenue sur GoShopper 🎉', 'success', 3000);
           }
         }}
         onDecline={() => {
           setShowBiometricModal(false);
           setBiometricData(null);
           
-          // Show success toast and navigate to main app
-          showToast('Compte créé avec succès! Bienvenue sur GoShopper 🎉', 'success', 3000);
+          // Now set the user in AuthContext (this triggers navigation to Main)
+          if (pendingUser) {
+            setPhoneUser(pendingUser);
+            setPendingUser(null);
+            console.log('✅ User set in AuthContext after declining biometric');
+          }
           
-          navigation.reset({
-            index: 0,
-            routes: [{name: 'Main'}]
-          });
+          // Show success toast
+          showToast('Compte créé avec succès! Bienvenue sur GoShopper 🎉', 'success', 3000);
         }}
       />
     </SafeAreaView>

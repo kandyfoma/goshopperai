@@ -154,18 +154,17 @@ export function AuthProvider({children}: AuthProviderProps) {
     setState(prev => ({...prev, isLoading: true}));
     try {
       await authService.signOut();
+    } catch (error) {
+      // Log but don't throw - we still want to clear local state
+      console.warn('Auth service sign out warning:', error);
+    } finally {
+      // Always clear local state regardless of Firebase Auth result
       setState({
         user: null,
         isLoading: false,
         isAuthenticated: false,
         error: null,
       });
-    } catch (error) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: 'Échec de la déconnexion',
-      }));
     }
   }, []);
 

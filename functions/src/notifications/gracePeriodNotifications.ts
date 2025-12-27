@@ -59,8 +59,8 @@ async function sendGracePeriodReminder(
     } else if (daysRemaining === 3) {
       title = '3 Days Left - Use Your Scans!';
       titleFr = '3 Jours Restants - Utilisez Vos Scans!';
-      message = `Only 3 days left to use your ${scansRemaining} scans! Renew now to get ${subscription.planId === 'premium' ? '1,000' : subscription.planId === 'standard' ? '100' : '25'} new scans.`;
-      messageFr = `Plus que 3 jours pour utiliser vos ${scansRemaining} scans! Renouvelez maintenant pour obtenir ${subscription.planId === 'premium' ? '1 000' : subscription.planId === 'standard' ? '100' : '25'} nouveaux scans.`;
+      message = `Only 3 days left to use your ${scansRemaining} scans! Renew now to get ${subscription.planId === 'premium' ? '200' : subscription.planId === 'standard' ? '50' : '20'} new scans.`;
+      messageFr = `Plus que 3 jours pour utiliser vos ${scansRemaining} scans! Renouvelez maintenant pour obtenir ${subscription.planId === 'premium' ? '200' : subscription.planId === 'standard' ? '50' : '20'} nouveaux scans.`;
       priority = 'high';
     } else {
       title = 'Last Day of Grace Period!';

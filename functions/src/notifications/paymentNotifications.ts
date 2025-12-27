@@ -48,9 +48,9 @@ export async function sendPaymentSuccessNotification(
     // Plan scan limits
     const scanLimits: {[key: string]: number} = {
       freemium: 3,
-      basic: 25,
-      standard: 100,
-      premium: 1000,
+      basic: 20,
+      standard: 50,
+      premium: 200,
     };
 
     const scans = scanLimits[planId] || 0;

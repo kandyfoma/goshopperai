@@ -305,13 +305,15 @@ export const sendMonthlySummaries = functions
       const lastMonth = now.getMonth() === 0 ? 12 : now.getMonth();
       const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
 
-      // Get all users
+      // Get all users from the app's users collection only
       const usersSnapshot = await db
-        .collectionGroup('users')
+        .collection('artifacts')
+        .doc(config.app.id)
+        .collection('users')
         .where('notificationsEnabled', '==', true)
         .get();
 
-      console.log(`   Processing ${usersSnapshot.size} users...`);
+      console.log(`📊 Processing ${usersSnapshot.size} users...`);
 
       let summariesSent = 0;
 

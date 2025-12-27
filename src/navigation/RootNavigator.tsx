@@ -296,8 +296,9 @@ export function RootNavigator() {
           component={MokoPaymentScreen}
           options={{
             headerShown: false,
-            animation: 'slide_from_bottom',
-            presentation: 'modal',
+            animation: 'fade',
+            presentation: 'transparentModal',
+            contentStyle: { backgroundColor: 'transparent' },
           }}
         />
         <Stack.Screen

@@ -1,5 +1,5 @@
 // Moko Payment Screen - Mobile Money Payment Interface
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,10 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Platform,
+  Animated,
+  Dimensions,
 } from 'react-native';
+import {BlurView} from '@react-native-community/blur';
 import {useNavigation, useRoute, RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
@@ -54,6 +57,37 @@ export function MokoPaymentScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
+  // Animation values
+  const slideAnim = useRef(new Animated.Value(Dimensions.get('window').height)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+
+  // Animate modal entrance
+  useEffect(() => {
+    if (visible) {
+      // Parallel animations for smooth entrance
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 65,
+          friction: 11,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 65,
+          friction: 8,
+        }),
+      ]).start();
+    }
+  }, [visible]);
+
   // Pre-fill phone number from profile on mount
   useEffect(() => {
     if (profile?.phoneNumber && useRegisteredPhone) {
@@ -65,8 +99,22 @@ export function MokoPaymentScreen() {
 
   const handleClose = () => {
     Keyboard.dismiss();
-    setVisible(false);
-    setTimeout(() => navigation.goBack(), 300);
+    // Animate out
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: Dimensions.get('window').height,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setVisible(false);
+      setTimeout(() => navigation.goBack(), 100);
+    });
   };
 
   // Keyboard visibility listener
@@ -172,22 +220,41 @@ export function MokoPaymentScreen() {
     <RNModal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="none"
+      statusBarTranslucent
       onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}>
-        <TouchableOpacity 
-          style={styles.overlayTouchable}
-          activeOpacity={1}
-          onPress={handleClose}
-        />
-        <View 
+      <View style={styles.overlay}>
+        {Platform.OS === 'ios' ? (
+          <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim }]}>
+            <BlurView
+              style={StyleSheet.absoluteFill}
+              blurType="light"
+              blurAmount={25}
+            />
+          </Animated.View>
+        ) : (
+          <Animated.View style={[styles.androidOverlay, { opacity: fadeAnim }]} />
+        )}
+        <KeyboardAvoidingView
+          style={styles.overlayContent}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={0}>
+          <TouchableOpacity 
+            style={styles.overlayTouchable}
+            activeOpacity={1}
+            onPress={handleClose}
+          />
+        <Animated.View 
           style={[
             styles.modalContent,
             keyboardVisible && styles.modalContentKeyboardOpen,
-            { paddingBottom: insets.bottom + Spacing.lg }
+            { 
+              paddingBottom: insets.bottom + Spacing.lg,
+              transform: [
+                { translateY: slideAnim },
+                { scale: scaleAnim },
+              ],
+            }
           ]}>
           {/* Header */}
           <View style={styles.header}>
@@ -316,8 +383,9 @@ export function MokoPaymentScreen() {
               🔒 Paiement sécurisé via FreshPay PayDRC
             </Text>
           </View>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
+      </View>
     </RNModal>
   );
 }
@@ -325,7 +393,14 @@ export function MokoPaymentScreen() {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  androidOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+  },
+  overlayContent: {
+    flex: 1,
     justifyContent: 'flex-end',
   },
   overlayTouchable: {

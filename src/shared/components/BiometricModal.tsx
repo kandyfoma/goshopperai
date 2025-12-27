@@ -1,12 +1,12 @@
 import React from 'react';
 import {
-  Modal,
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
 import Icon from './Icon';
+import {AnimatedModal} from './AnimatedModal';
 import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
 
 // Branding colors
@@ -50,14 +50,13 @@ export const BiometricModal: React.FC<BiometricModalProps> = ({
   };
 
   return (
-    <Modal
+    <AnimatedModal
       visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-    >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
+      onClose={onDecline}
+      variant="centered"
+      overlayOpacity={0.5}
+      disableBackdropPress>
+      <View style={styles.container}>
           {/* Icon with dark blue background */}
           <View style={styles.iconContainer}>
             <Icon 
@@ -96,19 +95,11 @@ export const BiometricModal: React.FC<BiometricModalProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      </View>
-    </Modal>
+    </AnimatedModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.lg,
-  },
   container: {
     backgroundColor: Colors.white,
     borderRadius: BorderRadius.xl,

@@ -21,10 +21,10 @@ const SCAN_LIMIT_THRESHOLDS = {
 // Plan scan limits (must match subscriptionManager.ts)
 const PLAN_SCAN_LIMITS: {[key: string]: number} = {
   freemium: 3,
-  basic: 25,
-  standard: 100,
-  premium: 1000,
-  trial: 50,
+  basic: 20,
+  standard: 50,
+  premium: 200,
+  trial: 10,
 };
 
 /**

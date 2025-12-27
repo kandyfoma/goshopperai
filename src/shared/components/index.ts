@@ -55,6 +55,7 @@ export {
 
 // Modal Components
 export {Modal} from './Modal';
+export {AnimatedModal} from './AnimatedModal';
 export {ConfirmationModal, type ConfirmationModalProps} from './ConfirmationModal';
 export {SwipeToDelete} from './SwipeToDelete';
 

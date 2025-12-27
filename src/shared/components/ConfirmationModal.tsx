@@ -1,9 +1,8 @@
 import React from 'react';
-import {View, Text, StyleSheet, Modal as RNModal, TouchableOpacity, Dimensions} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import Icon from './Icon';
-import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
-
-const {width} = Dimensions.get('window');
+import {AnimatedModal} from './AnimatedModal';
+import {Colors, Typography, Spacing, BorderRadius} from '@/shared/theme/theme';
 
 export interface ConfirmationModalProps {
   visible: boolean;
@@ -96,74 +95,70 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   };
 
   return (
-    <RNModal
+    <AnimatedModal
       visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={handleCancel}>
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
-          {/* Close button */}
-          {!singleButton && (
-            <TouchableOpacity style={styles.closeButton} onPress={handleCancel}>
-              <Icon name="x" size="sm" color={Colors.text.tertiary} />
-            </TouchableOpacity>
-          )}
+      onClose={handleCancel}
+      variant="centered"
+      overlayOpacity={0.4}>
+      {/* Close button */}
+      {!singleButton && (
+        <TouchableOpacity style={styles.closeButton} onPress={handleCancel}>
+          <Icon name="x" size="sm" color={Colors.text.tertiary} />
+        </TouchableOpacity>
+      )}
 
-          {/* Icon Circle - Centered */}
-          {variantConfig.iconName && (
-            <View style={[styles.iconContainer, {backgroundColor: variantConfig.iconBgColor}]}>
-              <Icon
-                name={variantConfig.iconName}
-                size="xl"
-                color={variantConfig.iconColor}
-              />
-            </View>
-          )}
-
-          {/* Title */}
-          <Text style={styles.title}>{title}</Text>
-
-          {/* Message */}
-          {message && <Text style={styles.message}>{message}</Text>}
-
-          {/* Buttons */}
-          {singleButton ? (
-            // Single button mode (like Done button in the design)
-            <TouchableOpacity
-              style={[styles.singleButton]}
-              onPress={handleConfirm}
-              disabled={loading}
-              activeOpacity={0.8}>
-              <Text style={styles.singleButtonText}>
-                {loading ? 'En cours...' : confirmText}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            // Two button mode
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.secondaryButton]}
-                onPress={handleCancel}
-                disabled={loading}
-                activeOpacity={0.7}>
-                <Text style={styles.secondaryButtonText}>{cancelText}</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.button, styles.primaryButton]}
-                onPress={handleConfirm}
-                disabled={loading}
-                activeOpacity={0.7}>
-                <Text style={styles.primaryButtonText}>
-                  {loading ? 'En cours...' : confirmText}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
+      {/* Icon Circle - Centered */}
+      {variantConfig.iconName && (
+        <View style={[styles.iconContainer, {backgroundColor: variantConfig.iconBgColor}]}>
+          <Icon
+            name={variantConfig.iconName}
+            size="xl"
+            color={variantConfig.iconColor}
+          />
         </View>
-      </View>
-    </RNModal>
+      )}
+
+      {/* Title */}
+      <Text style={styles.title}>{title}</Text>
+
+      {/* Message */}
+      {message && <Text style={styles.message}>{message}</Text>}
+
+      {/* Buttons */}
+      {singleButton ? (
+        // Single button mode (like Done button in the design)
+        <TouchableOpacity
+          style={[styles.singleButton]}
+          onPress={handleConfirm}
+          disabled={loading}
+          activeOpacity={0.8}>
+          <Text style={styles.singleButtonText}>
+            {loading ? 'En cours...' : confirmText}
+          </Text>
+        </TouchableOpacity>
+      ) : (
+        // Two button mode
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={handleCancel}
+            disabled={loading}
+            activeOpacity={0.7}>
+            <Text style={styles.secondaryButtonText}>{cancelText}</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.button, styles.primaryButton]}
+            onPress={handleConfirm}
+            disabled={loading}
+            activeOpacity={0.7}>
+            <Text style={styles.primaryButtonText}>
+              {loading ? 'En cours...' : confirmText}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </AnimatedModal>
   );
 };
 
@@ -171,28 +166,10 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 // STYLES - Finly Design System
 // ============================================
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-  },
-  modalContainer: {
-    backgroundColor: Colors.white,
-    borderRadius: 24,
-    paddingTop: Spacing.xl,
-    paddingBottom: Spacing.lg,
-    paddingHorizontal: Spacing.xl,
-    width: width - (Spacing.xl * 2),
-    maxWidth: 340,
-    alignItems: 'center',
-    ...Shadows.lg,
-  },
   closeButton: {
     position: 'absolute',
-    top: Spacing.md,
-    right: Spacing.md,
+    top: -Spacing.md,
+    right: -Spacing.md,
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -208,7 +185,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.lg,
-    marginTop: Spacing.md,
   },
   title: {
     fontSize: Typography.fontSize.xl,

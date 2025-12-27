@@ -5,12 +5,13 @@
  */
 
 import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Modal} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RootStackParamList} from '@/shared/types';
 import Icon from '@/shared/components/Icon';
 import {Colors, Typography, Spacing} from '@/shared/theme/theme';
+import {AnimatedModal} from './AnimatedModal';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -118,13 +119,12 @@ export default function SubscriptionLimitModal({
   const showBuyScansOption = limitType === 'scan';
 
   return (
-    <Modal
+    <AnimatedModal
       visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={handleGoBack}>
-      <View style={styles.overlay}>
-        <View style={styles.modal}>
+      onClose={handleGoBack}
+      variant="centered"
+      overlayOpacity={0.6}>
+      <View style={styles.modal}>
           {/* Icon */}
           <View style={styles.iconContainer}>
             <View style={styles.iconOuter}>
@@ -176,20 +176,12 @@ export default function SubscriptionLimitModal({
           <TouchableOpacity style={styles.secondaryButton} onPress={handleGoBack}>
             <Text style={styles.secondaryButtonText}>Plus tard</Text>
           </TouchableOpacity>
-        </View>
       </View>
-    </Modal>
+    </AnimatedModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
   modal: {
     backgroundColor: Colors.white,
     borderRadius: 24,

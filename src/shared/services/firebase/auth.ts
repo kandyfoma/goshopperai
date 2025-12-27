@@ -206,7 +206,7 @@ class AuthService {
       
       console.log('✅ [Phone Login] User found:', userProfile.userId);
       
-      // Verify password (you'll need to implement password hashing/verification)
+      // Verify password
       if (!await this.verifyPassword(userProfile.userId, password)) {
         console.error('❌ [Phone Login] Invalid password for user:', userProfile.userId);
         throw new Error('Mot de passe incorrect');
@@ -214,20 +214,35 @@ class AuthService {
       
       console.log('✅ [Phone Login] Password verified');
       
-      // Sign in with phone number
-      const confirmation = await auth().signInWithPhoneNumber(phoneNumber, true);
-      // For existing users, you might want to skip verification or use a different approach
-      // This is a simplified implementation
+      // Update last login timestamp
+      try {
+        await firestore()
+          .collection('artifacts')
+          .doc(APP_ID)
+          .collection('users')
+          .doc(userProfile.userId)
+          .update({
+            lastLoginAt: firestore.FieldValue.serverTimestamp(),
+          });
+      } catch (updateError) {
+        console.warn('Could not update lastLoginAt:', updateError);
+      }
       
       console.log('✅ [Phone Login] Login successful');
       
-      // Return user data from Firestore
-      const firebaseUser = await auth().currentUser;
-      if (firebaseUser) {
-        return this.mapFirebaseUser(firebaseUser);
-      }
+      // Return user data from Firestore (no Firebase Auth needed for phone login)
+      const user: User = {
+        id: userProfile.userId,
+        uid: userProfile.userId,
+        phoneNumber: userProfile.phoneNumber || phoneNumber,
+        displayName: userProfile.displayName || userProfile.phoneNumber || phoneNumber,
+        email: userProfile.email,
+        isAnonymous: false,
+        createdAt: userProfile.createdAt instanceof Date ? userProfile.createdAt : new Date(),
+        lastLoginAt: new Date(),
+      };
       
-      throw new Error('Erreur de connexion');
+      return user;
     } catch (error) {
       console.error('❌ [Phone Login] Sign in failed:', error);
       throw error;
@@ -447,7 +462,14 @@ class AuthService {
   async signOut(): Promise<void> {
     try {
       await this.ensureInitialized();
-      await auth().signOut();
+      // Only sign out from Firebase Auth if there's a current user
+      const currentUser = auth().currentUser;
+      if (currentUser) {
+        await auth().signOut();
+      }
+      // Phone-based users don't have Firebase Auth session,
+      // so we just clear local state (handled in AuthContext)
+      console.log('✅ Sign out successful');
     } catch (error) {
       console.error('Sign out failed:', error);
       throw error;
@@ -680,6 +702,23 @@ class AuthService {
    * Get user profile by phone number
    */
   private async getUserProfileByPhone(phoneNumber: string): Promise<UserProfile | null> {
+    // First check the main users collection (where phone-registered users are stored)
+    const usersRef = firestore()
+      .collection('artifacts')
+      .doc(APP_ID)
+      .collection('users');
+    const usersQuery = await usersRef.where('phoneNumber', '==', phoneNumber).limit(1).get();
+    
+    if (!usersQuery.empty) {
+      const userData = usersQuery.docs[0].data();
+      return {
+        userId: usersQuery.docs[0].id,
+        phoneNumber: userData.phoneNumber,
+        ...userData,
+      } as UserProfile;
+    }
+    
+    // Fallback: check legacy userProfiles collection
     const profilesRef = firestore().collection('userProfiles');
     const query = await profilesRef.where('phoneNumber', '==', phoneNumber).limit(1).get();
     
@@ -705,9 +744,25 @@ class AuthService {
   /**
    * Verify password (implement proper password verification in production)
    */
-  private async verifyPassword(userId: string, password: string): Promise<boolean> {
+  async verifyPassword(userId: string, password: string): Promise<boolean> {
     // In production, use proper password verification
     try {
+      // First check if password is stored in the user document itself (new format)
+      const userRef = firestore()
+        .collection('artifacts')
+        .doc(APP_ID)
+        .collection('users')
+        .doc(userId);
+      const userDoc = await userRef.get();
+      
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        if (userData?.passwordHash) {
+          return userData.passwordHash === password; // This should use proper password comparison
+        }
+      }
+      
+      // Fallback: check legacy passwords collection
       const passwordRef = firestore().doc(`passwords/${userId}`);
       const doc = await passwordRef.get();
       
@@ -720,6 +775,61 @@ class AuthService {
     } catch (error) {
       console.error('Password verification failed:', error);
       return false;
+    }
+  }
+
+  /**
+   * Delete user account (works for both Firebase Auth and phone users)
+   */
+  async deleteAccount(userId: string, password: string): Promise<void> {
+    try {
+      const currentAuthUser = auth().currentUser;
+      
+      // Check if this is a Firebase Auth user
+      if (currentAuthUser && currentAuthUser.uid === userId) {
+        // Firebase Auth user - need to reauthenticate
+        if (currentAuthUser.email) {
+          const credential = auth.EmailAuthProvider.credential(
+            currentAuthUser.email,
+            password
+          );
+          await currentAuthUser.reauthenticateWithCredential(credential);
+        }
+        
+        // Delete Firebase Auth account
+        await currentAuthUser.delete();
+      } else {
+        // Phone-based user - verify password first
+        const isValid = await this.verifyPassword(userId, password);
+        if (!isValid) {
+          throw new Error('Invalid password');
+        }
+      }
+      
+      // Delete user document from Firestore (artifacts collection)
+      await firestore()
+        .collection('artifacts')
+        .doc(APP_ID)
+        .collection('users')
+        .doc(userId)
+        .delete();
+      
+      // Delete user profile if exists
+      await firestore()
+        .collection('userProfiles')
+        .doc(userId)
+        .delete();
+      
+      // Delete password document if exists
+      await firestore()
+        .collection('passwords')
+        .doc(userId)
+        .delete();
+      
+      console.log('Account deleted successfully');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      throw error;
     }
   }
 
@@ -742,7 +852,7 @@ class AuthService {
       
       const userData = {
         phoneNumber,
-        city,
+        defaultCity: city,
         countryCode,
         passwordHash: password, // In production, hash this properly
         createdAt: firestore.FieldValue.serverTimestamp(),

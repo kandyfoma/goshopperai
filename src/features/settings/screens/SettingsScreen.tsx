@@ -26,11 +26,11 @@ import {
   BorderRadius,
   Shadows,
 } from '@/shared/theme/theme';
-import {Icon, FadeIn, SlideIn, AppFooter, BackButton, Modal, Input, Button, ConfirmationModal} from '@/shared/components';
+import {Icon, FadeIn, SlideIn, AppFooter, BackButton, Modal, Input, Button, ConfirmationModal, AnimatedModal} from '@/shared/components';
 import {useDynamicType, useOffline} from '@/shared/hooks';
 import {SUBSCRIPTION_PLANS, TRIAL_SCAN_LIMIT} from '@/shared/utils/constants';
 import {formatDate} from '@/shared/utils/helpers';
-import {receiptStorageService} from '@/shared/services/firebase';
+import {receiptStorageService, authService} from '@/shared/services/firebase';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -316,17 +316,8 @@ export function SettingsScreen() {
 
     setIsDeletingAccount(true);
     try {
-      // Re-authenticate user before deleting account
-      const auth = require('@react-native-firebase/auth').default;
-      const credential = auth.EmailAuthProvider.credential(
-        user?.email || '',
-        deletePassword
-      );
-      
-      await auth().currentUser?.reauthenticateWithCredential(credential);
-
-      // Delete user account from Firebase Auth
-      await auth().currentUser?.delete();
+      // Use auth service to delete account (handles both Firebase Auth and phone users)
+      await authService.deleteAccount(user!.uid, deletePassword);
 
       // Sign out and navigate
       await signOut();
@@ -353,7 +344,9 @@ export function SettingsScreen() {
       console.error('Error deleting account:', error);
       let errorMessage = 'Impossible de supprimer le compte';
       
-      if (error.code === 'auth/wrong-password') {
+      if (error.message === 'Invalid password') {
+        errorMessage = 'Mot de passe incorrect';
+      } else if (error.code === 'auth/wrong-password') {
         errorMessage = 'Mot de passe incorrect';
       } else if (error.code === 'auth/invalid-credential') {
         errorMessage = 'Identifiants invalides';
@@ -856,18 +849,45 @@ export function SettingsScreen() {
       </Modal>
 
       {/* Logout Confirmation Modal */}
-      <ConfirmationModal
+      <AnimatedModal
         visible={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
-        title="Déconnexion"
-        message="Êtes-vous sûr de vouloir vous déconnecter ?"
-        icon="logout"
-        variant="danger"
-        confirmText="Déconnecter"
-        cancelText="Annuler"
-        onConfirm={confirmSignOut}
-        onCancel={() => setShowLogoutModal(false)}
-      />
+        variant="centered"
+        overlayOpacity={0.4}>
+        {/* Close button */}
+        <TouchableOpacity 
+          style={styles.logoutCloseButton} 
+          onPress={() => setShowLogoutModal(false)}>
+          <Icon name="x" size="sm" color={Colors.text.tertiary} />
+        </TouchableOpacity>
+        
+        <View style={styles.logoutIconContainer}>
+          <Icon name="log-out" size="xl" color={Colors.white} />
+        </View>
+        
+        <Text style={styles.logoutModalTitle}>
+          Déconnexion
+        </Text>
+        
+        <Text style={styles.logoutModalText}>
+          Êtes-vous sûr de vouloir vous déconnecter ?
+        </Text>
+
+        <View style={styles.logoutModalActions}>
+          <Button
+            title="Annuler"
+            onPress={() => setShowLogoutModal(false)}
+            variant="secondary"
+            size="lg"
+          />
+          <Button
+            title="Déconnecter"
+            onPress={confirmSignOut}
+            variant="primary"
+            size="lg"
+          />
+        </View>
+      </AnimatedModal>
     </SafeAreaView>
   );
 }
@@ -1131,6 +1151,49 @@ const styles = StyleSheet.create({
   appCopyright: {
     fontSize: Typography.fontSize.xs,
     color: Colors.text.tertiary,
+  },
+
+  // Logout Modal
+  logoutCloseButton: {
+    position: 'absolute',
+    top: -Spacing.md,
+    right: -Spacing.md,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.background.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  logoutIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.accent, // Cosmos Blue #003049 - matches payment modal
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  logoutModalTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontFamily: Typography.fontFamily.semiBold,
+    color: Colors.text.primary,
+    textAlign: 'center',
+    marginBottom: Spacing.sm,
+  },
+  logoutModalText: {
+    fontSize: Typography.fontSize.sm,
+    fontFamily: Typography.fontFamily.regular,
+    color: Colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing.xl,
+  },
+  logoutModalActions: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    width: '100%',
   },
 
   // Delete Account Modal

@@ -78,7 +78,7 @@ const getErrorMessage = (errorCode: string): string => {
 export function LoginScreen() {
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
-  const {signInWithGoogle, signInWithApple, signInWithFacebook} = useAuth();
+  const {signInWithGoogle, signInWithApple, signInWithFacebook, setPhoneUser} = useAuth();
   const {showToast} = useToast();
 
   // Form state
@@ -294,6 +294,11 @@ export function LoginScreen() {
       
       // Record successful login
       await loginSecurityService.recordAttempt(formattedPhone, true);
+      
+      // Set user in AuthContext (this triggers navigation to main app)
+      setPhoneUser(userCredential);
+      console.log('✅ User logged in and set in AuthContext:', userCredential.uid);
+      
       showToast('Connexion réussie!', 'success', 3000);
 
       // Check if biometric is available but not enabled

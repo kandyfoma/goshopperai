@@ -269,7 +269,7 @@ class PushNotificationService {
         body: notification.body,
         android: {
           channelId,
-          smallIcon: 'ic_notification',
+          smallIcon: 'notification_icon',
           pressAction: {
             id: 'default',
           },

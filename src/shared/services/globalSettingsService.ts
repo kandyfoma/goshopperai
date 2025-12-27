@@ -38,12 +38,8 @@ class GlobalSettingsService {
   private async initialize() {
     // Set up real-time listener for global settings
     const settingsRef = firebaseFirestore()
-      .collection('artifacts')
-      .doc(APP_ID)
-      .collection('public')
-      .doc('data')
-      .collection('settings')
-      .doc('global');
+      .collection('config')
+      .doc('globalSettings');
 
     this.unsubscribeFirestore = settingsRef.onSnapshot(
       (docSnapshot) => {
@@ -75,12 +71,8 @@ class GlobalSettingsService {
   private async createDefaultSettings() {
     try {
       const settingsRef = firebaseFirestore()
-        .collection('artifacts')
-        .doc(APP_ID)
-        .collection('public')
-        .doc('data')
-        .collection('settings')
-        .doc('global');
+        .collection('config')
+        .doc('globalSettings');
 
       await settingsRef.set({
         exchangeRates: {

@@ -1,6 +1,5 @@
 import React, {ReactNode} from 'react';
 import {
-  Modal as RNModal,
   View,
   Text,
   TouchableOpacity,
@@ -12,6 +11,7 @@ import {
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Colors, Typography, Spacing, BorderRadius, Shadows} from '@/shared/theme/theme';
 import {Icon} from '../../shared/components';
+import {AnimatedModal} from './AnimatedModal';
 
 export interface ModalProps extends Omit<RNModalProps, 'children'> {
   // Content
@@ -69,33 +69,6 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
 
-  // Determine modal presentation based on variant
-  const getModalConfig = () => {
-    switch (variant) {
-      case 'fullscreen':
-        return {
-          transparent: false,
-          presentationStyle: 'pageSheet' as const,
-          animationType: animationType,
-        };
-      case 'centered':
-        return {
-          transparent: true,
-          presentationStyle: 'overFullScreen' as const,
-          animationType: animationType,
-        };
-      case 'bottom-sheet':
-      default:
-        return {
-          transparent: true,
-          presentationStyle: 'overFullScreen' as const,
-          animationType: animationType,
-        };
-    }
-  };
-
-  const modalConfig = getModalConfig();
-
   // Get content container style based on variant and size
   const getContentStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
@@ -146,19 +119,6 @@ export const Modal: React.FC<ModalProps> = ({
     }
   };
 
-  // Render overlay for transparent modals
-  const renderOverlay = () => {
-    if (!modalConfig.transparent) return null;
-
-    return (
-      <TouchableOpacity
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={onClose}
-      />
-    );
-  };
-
   // Render header
   const renderHeader = () => {
     if (!title && !showCloseButton) return null;
@@ -192,27 +152,31 @@ export const Modal: React.FC<ModalProps> = ({
     return <View style={styles.handle} />;
   };
 
+  // Determine modal config
+  const getVariantForAnimated = (): 'bottom-sheet' | 'centered' => {
+    return variant === 'bottom-sheet' ? 'bottom-sheet' : 'centered';
+  };
+
+  const getOverlayOpacity = (): number => {
+    return variant === 'centered' ? 0.3 : 0.3;
+  };
+
   const contentContainerStyle = getContentStyle();
-  
-  // Container style based on variant
-  const containerStyle = variant === 'bottom-sheet' 
-    ? { flex: 1, justifyContent: 'flex-end' as const }
-    : { flex: 1, justifyContent: 'center' as const };
 
   return (
-    <RNModal {...modalConfig} {...modalProps}>
-      {renderOverlay()}
-
-      <View style={[styles.container, containerStyle]}>
-        <View style={[contentContainerStyle, contentStyle]}>
-          {renderHandle()}
-          {renderHeader()}
-          <View style={styles.body}>
-            {children}
-          </View>
+    <AnimatedModal
+      visible={modalProps.visible ?? false}
+      onClose={onClose || (() => {})}
+      variant={getVariantForAnimated()}
+      overlayOpacity={getOverlayOpacity()}>
+      <View style={[contentContainerStyle, contentStyle]}>
+        {renderHandle()}
+        {renderHeader()}
+        <View style={styles.body}>
+          {children}
         </View>
       </View>
-    </RNModal>
+    </AnimatedModal>
   );
 };
 
@@ -220,14 +184,6 @@ export const Modal: React.FC<ModalProps> = ({
 // STYLES
 // ============================================
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  },
   header: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.lg,

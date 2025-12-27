@@ -4,13 +4,14 @@
  */
 
 import React, {useEffect, useState} from 'react';
-import {View, Text, StyleSheet, TouchableOpacity, Modal} from 'react-native';
+import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {useSubscription} from '@/shared/contexts';
 import {RootStackParamList} from '@/shared/types';
 import {PLAN_SCAN_LIMITS} from '@/shared/utils/constants';
 import Icon from '@/shared/components/Icon';
+import {AnimatedModal} from './AnimatedModal';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -96,13 +97,12 @@ export default function ScanUsageWarning() {
   const content = getWarningContent();
 
   return (
-    <Modal
+    <AnimatedModal
       visible={showWarning}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setShowWarning(false)}>
-      <View style={styles.overlay}>
-        <View style={styles.modal}>
+      onClose={() => setShowWarning(false)}
+      variant="centered"
+      overlayOpacity={0.5}>
+      <View style={styles.modal}>
           <View style={[styles.iconContainer, {backgroundColor: content.iconColor + '20'}]}>
             <Icon name={content.icon} size="xl" color={content.iconColor} />
           </View>
@@ -119,20 +119,12 @@ export default function ScanUsageWarning() {
             onPress={warningType === 'emergency' ? () => setShowWarning(false) : handleUpgrade}>
             <Text style={styles.secondaryButtonText}>{content.secondaryAction}</Text>
           </TouchableOpacity>
-        </View>
       </View>
-    </Modal>
+    </AnimatedModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
   modal: {
     backgroundColor: '#FFF',
     borderRadius: 20,

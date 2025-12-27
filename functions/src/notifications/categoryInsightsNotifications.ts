@@ -272,9 +272,11 @@ export const sendCategoryInsights = functions
     console.log('🔔 Starting category insights notification job...');
 
     try {
-      // Get all users
+      // Get all users from the app's users collection only
       const usersSnapshot = await db
-        .collectionGroup('users')
+        .collection('artifacts')
+        .doc(config.app.id)
+        .collection('users')
         .where('fcmToken', '!=', null)
         .get();
 
